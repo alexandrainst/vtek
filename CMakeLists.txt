@@ -30,6 +30,7 @@ set (src
   include/vtek/vtek_device.h
   include/vtek/vtek_host_allocator.h
   include/vtek/vtek_instance.h
+  include/vtek/vtek_logging.h
   include/vtek/vtek_main.h
   include/vtek/vtek_physical_device.h
   include/vtek/vtek_queue.h
@@ -40,6 +41,7 @@ set (src
   src/vtek_device.cpp
   src/vtek_host_allocator.cpp
   src/vtek_instance.cpp
+  src/vtek_logging.cpp
   src/vtek_main.cpp
   src/vtek_physical_device.cpp
   src/vtek_queue.cpp
