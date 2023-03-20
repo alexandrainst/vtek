@@ -1,6 +1,6 @@
 // vtek
+#include "impl/vtek_host_allocator.h"
 #include "vtek_command_pool.h"
-#include "vtek_host_allocator.h"
 #include "vtek_logging.h"
 
 

@@ -7,9 +7,9 @@
 #include <vector>
 
 // vtek
+#include "impl/vtek_host_allocator.h"
 #include "vtek_logging.h"
 #include "vtek_physical_device.h"
-#include "vtek_host_allocator.h"
 
 
 /* struct implementation */

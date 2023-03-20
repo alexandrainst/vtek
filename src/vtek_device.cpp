@@ -6,8 +6,8 @@
 #include <vector>
 
 // vtek
-#include "vtek_device.h" // TODO: Write our own logger
-#include "vtek_host_allocator.h"
+#include "impl/vtek_host_allocator.h"
+#include "vtek_device.h"
 #include "vtek_logging.h"
 #include "vtek_physical_device.h"
 

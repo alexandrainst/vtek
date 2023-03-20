@@ -4,8 +4,8 @@
 #include <vulkan/vk_enum_string_helper.h> // string_VkObjectType(VkObjectType input_value)
 
 // vtek
+#include "impl/vtek_host_allocator.h"
 #include "vtek_instance.h"
-#include "vtek_host_allocator.h"
 #include "vtek_logging.h"
 #include "vtek_vulkan_version.h"
 

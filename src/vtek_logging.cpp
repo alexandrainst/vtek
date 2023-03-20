@@ -22,8 +22,14 @@ static auto convert_log_level(vtek::LogLevel level)
 
 
 /* interface */
-void vtek::initialize_logging(const LoggingCreateInfo* info)
+void vtek::initialize_logging(const vtek::InitInfo* info)
 {
+	if (info->disableLogging)
+	{
+		vtek::disable_logging();
+		return;
+	}
+
 	spdlog::set_pattern("%^[%T] %n(%l): %v%$");
 	auto minLevel = convert_log_level(info->minimumLogLevel);
 

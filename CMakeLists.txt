@@ -4,6 +4,10 @@ project(vtek)
 # spdlog submodule
 add_subdirectory(external/spdlog)
 
+# Project configuration
+option(VTEK_BUILD_WARNINGS "Enable compiler warnings" ON)
+option(VTEK_SHARED_LIB "Build vtek as shared library" OFF)
+
 # glm as either local installation or CMake subcontent
 find_package(glm QUIET)
 if (NOT ${glm_FOUND})
@@ -21,13 +25,11 @@ endif()
 # TODO: Conditional glfw find
 # NOTE: Could possibly we written as `cmake -DUSE_GLFW=true`, or something like that
 
-option(SPDLOG_BUILD_WARNINGS "Enable compiler warnings" OFF)
+
 
 set (src
-  include/vtek/impl/vtek_queue_struct.h
   include/vtek/vtek_command_pool.h
   include/vtek/vtek_device.h
-  include/vtek/vtek_host_allocator.h
   include/vtek/vtek_instance.h
   include/vtek/vtek_logging.h
   include/vtek/vtek_main.h
@@ -35,6 +37,9 @@ set (src
   include/vtek/vtek_queue.h
   include/vtek/vtek_swapchain.h
   include/vtek/vtek_vulkan_helpers.h
+
+  src/impl/vtek_host_allocator.h
+  src/impl/vtek_queue_struct.h
 
   src/vtek_command_pool.cpp
   src/vtek_device.cpp
@@ -48,13 +53,21 @@ set (src
   src/vtek_vulkan_helpers.cpp
   )
 
-add_library(${PROJECT_NAME} ${src})
+if(VTEK_SHARED_LIB)
+  add_library(${PROJECT_NAME} SHARED ${src})
+else()
+  add_library(${PROJECT_NAME} ${src})
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include/vtek)
 target_include_directories(${PROJECT_NAME} PRIVATE external/spdlog/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra) # -Werror
+if(VTEK_BUILD_WARNINGS)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra) # -Werror
+  endif()
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)

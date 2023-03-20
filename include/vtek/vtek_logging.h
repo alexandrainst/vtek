@@ -32,6 +32,9 @@
 #include <string>
 #include <spdlog/spdlog.h>
 
+#include "vtek_main.h"
+
+
 /*
  * NOTE:
  * For special purposes, such as unit tests, logging can be disabled entirely
@@ -41,21 +44,7 @@
  */
 namespace vtek
 {
-	enum class LogLevel
-	{
-		trace, debug, info, warn, error, fatal
-	};
-
-	struct LoggingCreateInfo
-	{
-		std::string applicationTitle {"application"};
-		LogLevel minimumLogLevel {LogLevel::trace};
-		bool logToFile {false};
-		bool multiThreadedLogging {false}; // TODO: This is not implemented!
-	};
-
-	void initialize_logging(const LoggingCreateInfo* info);
-	//void initialize_multithreaded_logging(); // REVIEW: ?
+	void initialize_logging(const InitInfo* info);
 	void terminate_logging();
 	void disable_logging();
 
