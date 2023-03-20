@@ -1,9 +1,10 @@
 #pragma once
 
-#include "vulkan/vulkan.h"
-
+#include <vulkan/vulkan.h>
 #include <cstdint>
 #include <vector>
+
+#include "vtek_glfw_window.h"
 
 
 namespace vtek
@@ -41,6 +42,7 @@ namespace vtek
 	struct Instance; // opaque handle
 
 	Instance* instance_create(InstanceCreateInfo* info);
+	Instance* instance_create(InstanceCreateInfo* info, ApplicationWindow* window);
 	void instance_destroy(Instance* instance);
 
 	VkInstance instance_get_handle(const Instance* instance);
