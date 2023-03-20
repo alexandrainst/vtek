@@ -65,7 +65,7 @@ namespace vtek
 
 	Device* device_create(
 		const LogicalDeviceCreateInfo* info, const Instance* instance,
-		const PhysicalDevice* physicalDevice, VkSurfaceKHR surface);
+		const PhysicalDevice* physicalDevice);
 
 	void device_destroy(Device* device);
 

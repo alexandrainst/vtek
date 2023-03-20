@@ -5,7 +5,7 @@
 
 
 /* helper functions*/
-static auto convert_loglevel(vtek::LogLevel level)
+static auto convert_log_level(vtek::LogLevel level)
 {
 	switch (level)
 	{
@@ -13,8 +13,8 @@ static auto convert_loglevel(vtek::LogLevel level)
 	case vtek::LogLevel::debug: return spdlog::level::debug;
 	case vtek::LogLevel::info:  return spdlog::level::info;
 	case vtek::LogLevel::warn:  return spdlog::level::warn;
-	case vtek::LogLevel::error: return spdlog::level::error;
-	case vtek::LogLevel::fatal: return spdlog::level::fatal;
+	case vtek::LogLevel::error: return spdlog::level::err;
+	case vtek::LogLevel::fatal: return spdlog::level::critical;
 	default:
 		return spdlog::level::trace;
 	}
@@ -32,60 +32,60 @@ void vtek::initialize_logging(const LoggingCreateInfo* info)
 		auto daily_sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(
 			"logfile", 23, 59);
 
-		core::LogContainer::sVtekLogger = std::make_shared<spdlog::logger>(
+		vtek::LogContainer::sVtekLogger = std::make_shared<spdlog::logger>(
 			"vtek", daily_sink);
-		core::LogContainer::sVtekLogger->set_level(minLevel);
+		vtek::LogContainer::sVtekLogger->set_level(minLevel);
 
-		core::LogContainer::sClientLogger = std::make_shared<spdlog::logger>(
+		vtek::LogContainer::sClientLogger = std::make_shared<spdlog::logger>(
 			info->applicationTitle, daily_sink);
-		core::LogContainer::sClientLogger->set_level(minLevel);
+		vtek::LogContainer::sClientLogger->set_level(minLevel);
 	}
 	else
 	{
-		core::LogContainer::sVtekLogger = spdlog::stdout_color_mt("vtek");
-		core::LogContainer::sVtekLogger->set_level(minLevel);
+		vtek::LogContainer::sVtekLogger = spdlog::stdout_color_mt("vtek");
+		vtek::LogContainer::sVtekLogger->set_level(minLevel);
 
-		core::LogContainer::sClientLogger = spdlog::stdout_color_mt(
+		vtek::LogContainer::sClientLogger = spdlog::stdout_color_mt(
 			info->applicationTitle);
-		core::LogContainer::sClientLogger->set_level(minLevel);
+		vtek::LogContainer::sClientLogger->set_level(minLevel);
 	}
 
-	log_core_trace("...initialized logger!");
+	vtek_log_trace("...initialized logger!");
 }
 
-void core::terminate_logging()
+void vtek::terminate_logging()
 {
 	// TODO: Log a message saying that log is terminating
-	log_core_trace("Terminating core logger...");
+	vtek_log_trace("Terminating logger...");
 
-	core::LogContainer::sVtekLogger->flush();
-	core::LogContainer::sClientLogger->flush();
+	vtek::LogContainer::sVtekLogger->flush();
+	vtek::LogContainer::sClientLogger->flush();
 
-	core::LogContainer::sVtekLogger = nullptr;
-	core::LogContainer::sClientLogger = nullptr;
+	vtek::LogContainer::sVtekLogger = nullptr;
+	vtek::LogContainer::sClientLogger = nullptr;
 
 	spdlog::shutdown();
 }
 
-void core::disable_logging()
+void vtek::disable_logging()
 {
-	if(core::LogContainer::sVtekLogger == nullptr) {
-		core::LogContainer::sVtekLogger = spdlog::stdout_color_mt("null-corelog");
+	if(vtek::LogContainer::sVtekLogger == nullptr) {
+		vtek::LogContainer::sVtekLogger = spdlog::stdout_color_mt("null-corelog");
 	}
-	if(core::LogContainer::sClientLogger == nullptr) {
-		core::LogContainer::sClientLogger = spdlog::stdout_color_mt("null-gamelog");
+	if(vtek::LogContainer::sClientLogger == nullptr) {
+		vtek::LogContainer::sClientLogger = spdlog::stdout_color_mt("null-gamelog");
 	}
 
-	core::LogContainer::sVtekLogger->set_level(spdlog::level::off);
-	core::LogContainer::sClientLogger->set_level(spdlog::level::off);
+	vtek::LogContainer::sVtekLogger->set_level(spdlog::level::off);
+	vtek::LogContainer::sClientLogger->set_level(spdlog::level::off);
 }
 
-void core::flush_core_logger()
+void vtek::flush_vtek_logger()
 {
-	core::LogContainer::sVtekLogger->flush();
+	vtek::LogContainer::sVtekLogger->flush();
 }
 
-void core::flush_game_logger()
+void vtek::flush_client_logger()
 {
-	core::LogContainer::sClientLogger->flush();
+	vtek::LogContainer::sClientLogger->flush();
 }

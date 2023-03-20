@@ -25,8 +25,6 @@ struct vtek::Instance
 	VkDebugUtilsMessengerEXT debugMessenger {VK_NULL_HANDLE};
 	bool validationLayersEnabled {false};
 	bool rayTracingExtensionEnabled {false};
-
-
 };
 
 
@@ -56,9 +54,7 @@ static bool checkValidationLayerSupport()
 		}
 		if (!found)
 		{
-			std::string err = "Cannot find validation layer: ";
-			err += layer;
-			Fundament::FmDebugging().logError(err, __FILE__, __LINE__);
+			vtek_log_error("Cannot find validation layer: {}", layer);
 			allLayersFound = false;
 		}
 	}
@@ -85,9 +81,7 @@ static bool checkInstanceExtensionSupport(const std::vector<const char*>& extens
 
 		if (it == properties.end())
 		{
-			std::string err = "Required instance extension is not available: ";
-			err += ext;
-			Fundament::FmDebugging().logError(err, __FILE__, __LINE__);
+			vtek_log_error("Required instance extension is not available: {}", ext);
 			allSupported = false;
 		}
 	}
@@ -112,8 +106,7 @@ static uint32_t get_vulkan_instance_version()
 	VkResult result = vkEnumerateInstanceVersion(&apiVersion);
 	if (result != VK_SUCCESS)
 	{
-		Fundament::FmDebugging().logCritical(
-			"Failed to enumerate instance version! Cannot create an instance.", __FILE__, __LINE__);
+		vtek_log_error("Failed to enumerate instance version! Cannot create an instance.");
 		return VK_API_VERSION_1_0;
 	}
 
@@ -121,9 +114,9 @@ static uint32_t get_vulkan_instance_version()
 	uint32_t minor = VK_API_VERSION_MINOR(apiVersion);
 	uint32_t patch = VK_API_VERSION_PATCH(apiVersion);
 
-	// TODO: What to do if variant is not 0? Described here:
-	// https://registry.khronos.org/vulkan/specs/1.2-extensions/html/vkspec.html#extendingvulkan-coreversions-versionnumbers
-	std::printf("Supported Vulkan Instance version (%u): %u.%u.%u\n", apiVersion, major, minor, patch);
+	// NOTE: The packed `apiVersion` also contains a variant, which will always be 0 except for
+	// non-standard Vulkan implementations (Perhaps MoltenVk included?).
+	vtek_log_info("Supported Vulkan Instance version {}: {}.{}.{}", apiVersion, major, minor, patch);
 
 #if defined(VK_API_VERSION_1_3)
 	if (major >= 1 && minor >= 3) { return VK_API_VERSION_1_3; }
@@ -172,9 +165,9 @@ static void destroyVulkanDebugMessenger(
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-	VkDebugUtilsMessageTypeFlagsEXT type,
+	VkDebugUtilsMessageTypeFlagsEXT /*type*/,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData)
+	void* /*pUserData*/)
 {
 	// `pCallbackData` refers to a struct containing message details,
 	// and has several members, the most important being:
@@ -189,32 +182,28 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
 	switch (severity)
 	{
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-		// TODO: This creates an unnecessary copy of the error message!
-		// TODO: Check that `FmDebugging()` has an overload for a `const char*`
-		// TODO: Check that `FmDebugging()` pipe operator returns an `std::ostream` object!
-		Fundament::FmDebugging() << Fundament::FmDebug::StringTuple{"Vulkan[verbose]: ", pCallbackData->pMessage};
+		vtek_log_debug("Vulkan[verbose]: {}", pCallbackData->pMessage);
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-		Fundament::FmDebugging() << Fundament::FmDebug::StringTuple{"Vulkan[info]: ", pCallbackData->pMessage};
+		vtek_log_debug("Vulkan[info]: {}", pCallbackData->pMessage);
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-		Fundament::FmDebugging() << Fundament::FmDebug::StringTuple{"Vulkan[warning]: ", pCallbackData->pMessage};
+		vtek_log_warn("Vulkan[warning]: {}", pCallbackData->pMessage);
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-		Fundament::FmDebugging() << Fundament::FmDebug::StringTuple{"Vulkan[error]: ", pCallbackData->pMessage};
+		vtek_log_error("Vulkan[error]: {}", pCallbackData->pMessage);
 		break;
 	default:
-		Fundament::FmDebugging() << Fundament::FmDebug::StringTuple{"Vulkan[unrecognized]: ", pCallbackData->pMessage};
+		vtek_log_error("Vulkan[unrecognized]: {}", pCallbackData->pMessage);
 		break;
 	}
 
 	if (pCallbackData->pObjects != VK_NULL_HANDLE)
 	{
-		// TODO: Same as above with `FmDebugging()`.
-		Fundament::FmDebugging() << Fundament::FmDebug::StringTuple{
-			"validation vulkan object handle: ", std::to_string(pCallbackData->pObjects->objectHandle).c_str()};
-		Fundament::FmDebugging() << Fundament::FmDebug::StringTuple{
-			"validation vulkan object type: ", string_VkObjectType(pCallbackData->pObjects->objectType)};
+		// handle: pCallbackData->pObjects->objectHandle
+		// type: pCallbackData->pObjects->objectType
+		// REVIEW: We could print something extra, although this information is not very useful,
+		// except for looking up for a proper identifier in a hash table.
 	}
 
 	return VK_FALSE;
@@ -226,17 +215,17 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
 /* instance functions */
 vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 {
-	std::cout << "TRACE: vtek::instance_create\n";
+	vtek_log_trace("instance_create()");
 	if (info->enableValidationLayers && !checkValidationLayerSupport())
 	{
-		Fundament::FmDebugging().logError("Unsupported validation layer(s)", __FILE__, __LINE__);
+		vtek_log_error("Unsupported validation layer(s)");
 		return nullptr;
 	}
 
 	vtek::Instance* instance = sAllocator.alloc();
 	if (instance == nullptr)
 	{
-		Fundament::FmDebugging().logCritical("Failed to allocate instance!", __FILE__, __LINE__);
+		vtek_log_fatal("Failed to allocate instance!");
 		return nullptr;
 	}
 
@@ -282,8 +271,7 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 	// Check for instance extension support
 	if (!checkInstanceExtensionSupport(info->requiredExtensions))
 	{
-		Fundament::FmDebugging().logError("Not all required instance extensions are available!" , __FILE__, __LINE__);
-		Fundament::FmDebugging().logError("Suspending application. This behavior may be modified." , __FILE__, __LINE__);
+		vtek_log_error("Not all required instance extensions are available!");
 		return nullptr;
 	}
 
@@ -353,7 +341,7 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 	VkResult result = vkCreateInstance(&createInfo, nullptr, &instance->vulkanHandle);
 	if (result != VK_SUCCESS)
 	{
-		Fundament::FmDebugging().logError("Failed to create Vulkan instance!" , __FILE__, __LINE__);
+		vtek_log_error("Failed to create Vulkan instance!");
 		return nullptr;
 	}
 
@@ -366,9 +354,8 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 			instance->vulkanHandle, &debugCreateInfo, nullptr, &instance->debugMessenger);
 		if (debugResult != VK_SUCCESS)
 		{
-			Fundament::FmDebugging().logError("Failed to setup Vulkan debug messenger" , __FILE__, __LINE__);
-			Fundament::FmDebugging().logError(
-				"Validation layers will not be used, Vulkan might still work." , __FILE__, __LINE__);
+			vtek_log_error("Failed to setup Vulkan debug messenger!");
+			vtek_log_warn("Validation layers will not be used, Vulkan might still work.");
 		}
 	}
 
@@ -380,19 +367,20 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 
 void vtek::instance_destroy(vtek::Instance* instance)
 {
-	if (instance == nullptr || instance->vulkanHandle == VK_NULL_HANDLE) {
-		return;
-	}
+	if (instance == nullptr) { return; }
 
-	if (instance->validationLayersEnabled && instance->debugMessenger != VK_NULL_HANDLE)
+	if (instance->vulkanHandle != VK_NULL_HANDLE)
 	{
-		destroyVulkanDebugMessenger(
-			instance->vulkanHandle, instance->debugMessenger, nullptr);
-	}
-	vkDestroyInstance(instance->vulkanHandle, nullptr);
+		if (instance->validationLayersEnabled && instance->debugMessenger != VK_NULL_HANDLE)
+		{
+			destroyVulkanDebugMessenger(
+				instance->vulkanHandle, instance->debugMessenger, nullptr);
+		}
 
-	instance->vulkanHandle = VK_NULL_HANDLE;
-	instance->debugMessenger = VK_NULL_HANDLE;
+		vkDestroyInstance(instance->vulkanHandle, nullptr);
+		instance->debugMessenger = VK_NULL_HANDLE;
+		instance->vulkanHandle = VK_NULL_HANDLE;
+	}
 
 	sAllocator.free(instance);
 }
@@ -415,7 +403,7 @@ bool vtek::instance_get_validation_enabled(const vtek::Instance* instance)
 	return instance->validationLayersEnabled;
 }
 
-const std::vector<const char*>& vtek::instance_get_validation_layer_names(const vtek::Instance* instance)
+const std::vector<const char*>& vtek::instance_get_validation_layer_names(const vtek::Instance*)
 {
 	return sValidationLayers;
 }

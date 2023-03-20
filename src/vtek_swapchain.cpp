@@ -399,8 +399,7 @@ std::vector<VkSurfaceFormatKHR> getSupportedSurfaceFormats(
 	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &count, nullptr);
 	if (count == 0)
 	{
-		Fundament::FmDebugging().logError(
-			"Failed to find any supported surface formats for swapchain!", __FILE__, __LINE__);
+		vtek_log_error("Failed to find any supported surface formats for swapchain!");
 		return formats;
 	}
 
@@ -418,8 +417,7 @@ std::vector<VkPresentModeKHR> getSupportedPresentModes(
 	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &count, nullptr);
 	if (count == 0)
 	{
-		Fundament::FmDebugging().logError(
-			"Failed to find any supported present modes for swapchain!", __FILE__, __LINE__);
+		vtek_log_error("Failed to find any supported present modes for swapchain!");
 		return modes;
 	}
 
@@ -561,7 +559,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	vtek::Swapchain* swapchain = sAllocator.alloc();
 	if (swapchain == nullptr)
 	{
-		Fundament::FmDebugging().logCritical("Failed to allocate swapchain!", __FILE__, __LINE__);
+		vtek_log_error("Failed to allocate swapchain!");
 		return nullptr;
 	}
 
@@ -569,7 +567,7 @@ vtek::Swapchain* vtek::swapchain_create(
 		dev, &createInfo, nullptr, &swapchain->vulkanHandle);
 	if (result != VK_SUCCESS)
 	{
-		Fundament::FmDebugging().logError("Failed to create swapchain!", __FILE__, __LINE__);
+		vtek_log_error("Failed to create swapchain!");
 		return nullptr;
 	}
 
@@ -590,8 +588,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	// Create image views
 	if (!createImageViews(swapchain, dev))
 	{
-		Fundament::FmDebugging().logError(
-			"Failed to create swapchain image views!", __FILE__, __LINE__);
+		vtek_log_error("Failed to create swapchain image views!");
 		return nullptr;
 	}
 
@@ -610,8 +607,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	if (!findSupportedImageFormat(
 		    physDev, depthFormatCandidates, tiling, features, &swapchain->depthImageFormat))
 	{
-		Fundament::FmDebugging().logError(
-			"Failed to find supported depth image format!", __FILE__, __LINE__);
+		vtek_log_error("Failed to find supported depth image format!");
 		return nullptr;
 	}
 
@@ -621,7 +617,7 @@ vtek::Swapchain* vtek::swapchain_create(
 
 bool vtek::swapchain_recreate(vtek::Swapchain* swapchain)
 {
-	VTEK_LOG_ERROR("vtek::swapchain_recreate(): Not implemented!");
+	vtek_log_error("vtek::swapchain_recreate(): Not implemented!");
 	return false;
 }
 

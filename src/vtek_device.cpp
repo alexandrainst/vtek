@@ -319,8 +319,8 @@ static bool create_queue_infos(
 
 // Call this function _after_ device creation to create the queues
 static void create_device_queues(
-	const vtek::PhysicalDevice* physicalDevice, vtek::Device* device,
-	const vtek::LogicalDeviceCreateInfo* info, const QueueFamilySelections* selections)
+	vtek::Device* device, const vtek::LogicalDeviceCreateInfo* info,
+	const QueueFamilySelections* selections)
 {
 	// const vtek::PhysicalDeviceQueueSupport* support = vtek::physical_device_get_queue_support(physicalDevice);
 	VkDevice handle = device->vulkanHandle;
@@ -456,7 +456,7 @@ static void create_device_queues(
 		{
 			if (i >= description.familyMaxCount) // error, this should never happen, but better be safe!
 			{
-				VTEK_LOG_ERROR("i >= description.familyMaxCount, cannot create enough separate transfer queues!");
+				vtek_log_error("i >= description.familyMaxCount, cannot create enough separate transfer queues!");
 				break;
 			}
 
@@ -473,7 +473,6 @@ static void create_device_queues(
 	if (selections->compute.has_value())
 	{
 		const QueueDescription& description = selections->compute.value();
-		const uint32_t maxNum = description.familyMaxCount;
 		const uint32_t num = description.queueCount;
 		const uint32_t familyIndex = description.familyIndex;
 
@@ -564,16 +563,16 @@ static void create_device_queues(
 /* device interface */
 vtek::Device* vtek::device_create(
 	const vtek::LogicalDeviceCreateInfo* info, const vtek::Instance* instance,
-	const vtek::PhysicalDevice* physicalDevice, VkSurfaceKHR surface)
+	const vtek::PhysicalDevice* physicalDevice)
 {
-	std::cout << "TRACE: vtek::device_create\n";
+	vtek_log_trace("device_create()");
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
 
 	// Allocate device
 	vtek::Device* device = sAllocator.alloc();
 	if (device == nullptr)
 	{
-		VTEK_LOG_ERROR("Failed to allocate (logical) device!");
+		vtek_log_error("Failed to allocate (logical) device!");
 		return nullptr;
 	}
 
@@ -581,7 +580,7 @@ vtek::Device* vtek::device_create(
 	QueueFamilySelections queueSelections{};
 	if (!create_queue_infos(info, physicalDevice, queueCreateInfos, &queueSelections))
 	{
-		VTEK_LOG_ERROR("Failed to get device queue infos! Device creation cannot proceed.");
+		vtek_log_error("Failed to get device queue infos! Device creation cannot proceed.");
 		return nullptr;
 	}
 
@@ -609,7 +608,7 @@ vtek::Device* vtek::device_create(
 	// Bindless texture support----------------------------------------
 	if (info->enableBindlessTextureSupport)
 	{
-		VTEK_LOG_ERROR("Bindless texture support untested/not implemented");
+		vtek_log_error("Bindless texture support untested/not implemented");
 		/*VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 		  vkGetPhysicalDeviceFeatures2(physicalDevice_, &physicalDeviceFeatures2);
 		  VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr };
@@ -634,13 +633,13 @@ vtek::Device* vtek::device_create(
 
 	if (vkCreateDevice(physDev, &createInfo, nullptr, &device->vulkanHandle) != VK_SUCCESS)
 	{
-		VTEK_LOG_ERROR("Failed to create logical device!");
+		vtek_log_error("Failed to create logical device!");
 		return nullptr;
 	}
 
 	// Retrieve device queues
 	device->queueAllocator = new vtek::HostAllocator<vtek::Queue>("vtek_device_queues");
-	create_device_queues(physicalDevice, device, info, &queueSelections);
+	create_device_queues(device, info, &queueSelections);
 
 	// TODO: Optional info logging that a (logical) device was created.
 	return device;

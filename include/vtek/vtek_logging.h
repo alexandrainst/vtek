@@ -84,31 +84,31 @@ inline void vtek_log_trace(const char* message, const Args &... args)
 }
 
 template<typename... Args>
-inline void log_core_debug(const char* message, const Args &... args)
+inline void vtek_log_debug(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sVtekLogger->debug(message, args...);
 }
 
 template<typename... Args>
-inline void log_core_info(const char* message, const Args &... args)
+inline void vtek_log_info(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sVtekLogger->info(message, args...);
 }
 
 template<typename... Args>
-inline void log_core_warn(const char* message, const Args &... args)
+inline void vtek_log_warn(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sVtekLogger->warn(message, args...);
 }
 
 template<typename... Args>
-inline void log_core_error(const char* message, const Args &... args)
+inline void vtek_log_error(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sVtekLogger->error(message, args...);
 }
 
 template<typename... Args>
-inline void log_core_fatal(const char* message, const Args &... args)
+inline void vtek_log_fatal(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sVtekLogger->critical(message, args...);
 }

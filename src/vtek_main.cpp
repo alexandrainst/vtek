@@ -1,15 +1,13 @@
 #include "vtek_main.h"
 #include "vtek_host_allocator.h"
-
-#include "FmDebug.h" // TODO: Write our own logger.
+#include "vtek_logging.h"
 
 
 bool vtek::initialize(const vtek::InitInfo* info)
 {
 	if (!vtek::host_allocator_initialize())
 	{
-		Fundament::FmDebugging().logCritical(
-			"Failed to initialize vtek host allocator!", __FILE__, __LINE__);
+		vtek_log_fatal("Failed to initialize vtek host allocator!");
 		return false;
 	}
 

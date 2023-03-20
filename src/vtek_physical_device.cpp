@@ -57,7 +57,6 @@ static void get_queue_family_support(vtek::PhysicalDevice* physicalDevice, VkSur
 
 	// status
 	bool graphicsFound = false;
-	bool presentFound = false;
 	bool transferFound = false;
 	bool computeFound = false;
 
@@ -95,8 +94,6 @@ static void get_queue_family_support(vtek::PhysicalDevice* physicalDevice, VkSur
 				{
 					queueSupport->present = true;
 					queueSupport->graphicsHasPresent = true;
-
-					presentFound = true;
 				}
 			}
 
@@ -152,7 +149,7 @@ static void get_queue_family_support(vtek::PhysicalDevice* physicalDevice, VkSur
 			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &present);
 			if (present)
 			{
-				queueSupport->separateComputeHasPresent;
+				queueSupport->separateComputeHasPresent = true;
 			}
 
 			computeFound = true;
@@ -206,7 +203,7 @@ static bool has_required_extension_support(
 		support->swapchain = swapchain;
 		if (!swapchain)
 		{
-			VTEK_LOG_ERROR("Swapchain extension not supported!");
+			vtek_log_error("Swapchain extension not supported!");
 			return false;
 		}
 		requiredExtRef.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -222,8 +219,7 @@ static bool has_required_extension_support(
 		bool hasPipelineExt = my_find_if(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
 		if (!hasPipelineExt)
 		{
-			Fundament::FmDebugging().logError(
-				"Ray tracing pipeline extension not supported!", __FILE__, __LINE__);
+			vtek_log_error("Ray tracing pipeline extension not supported!");
 			return false;
 		}
 		requiredExtRef.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
@@ -233,8 +229,7 @@ static bool has_required_extension_support(
 		bool hasSpirv14Ext = my_find_if(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 		if (!hasSpirv14Ext)
 		{
-			Fundament::FmDebugging().logError(
-				"Spir-V 1.4 extension not supported!", __FILE__, __LINE__);
+			vtek_log_error("Spir-V 1.4 extension not supported!");
 			return false;
 		}
 		requiredExtRef.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
@@ -242,8 +237,7 @@ static bool has_required_extension_support(
 		bool hasAccelExt = my_find_if(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
 		if (!hasAccelExt)
 		{
-			Fundament::FmDebugging().logError(
-				"Acceleration structure extension not supported!", __FILE__, __LINE__);
+			vtek_log_error("Acceleration structure extension not supported!");
 			return false;
 		}
 		requiredExtRef.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
@@ -251,8 +245,7 @@ static bool has_required_extension_support(
 		bool hasRayQueryExt = my_find_if(VK_KHR_RAY_QUERY_EXTENSION_NAME);
 		if (!hasRayQueryExt)
 		{
-			Fundament::FmDebugging().logError(
-				"Ray query extension not supported!", __FILE__, __LINE__);
+			vtek_log_error("Ray query extension not supported!");
 			return false;
 		}
 		requiredExtRef.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
@@ -280,169 +273,169 @@ static bool has_required_features(
 	bool support = true;
 
 	if (required->robustBufferAccess                             && !supported.robustBufferAccess) {
-		VTEK_LOG_ERROR("robustBufferAccess feature required but not supported"); support = false;
+		vtek_log_error("robustBufferAccess feature required but not supported"); support = false;
 	}
 	if (required->fullDrawIndexUint32                            && !supported.fullDrawIndexUint32) {
-		VTEK_LOG_ERROR("fullDrawIndexUint32 feature required but not supported"); support = false;
+		vtek_log_error("fullDrawIndexUint32 feature required but not supported"); support = false;
 	}
 	if (required->imageCubeArray                                 && !supported.imageCubeArray) {
-		VTEK_LOG_ERROR("imageCubeArray feature required but not supported"); support = false;
+		vtek_log_error("imageCubeArray feature required but not supported"); support = false;
 	}
 	if (required->independentBlend                               && !supported.independentBlend) {
-		VTEK_LOG_ERROR("independentBlend feature required but not supported"); support = false;
+		vtek_log_error("independentBlend feature required but not supported"); support = false;
 	}
 	if (required->geometryShader                                 && !supported.geometryShader) {
-		VTEK_LOG_ERROR("geometryShader feature required but not supported"); support = false;
+		vtek_log_error("geometryShader feature required but not supported"); support = false;
 	}
 	if (required->tessellationShader                             && !supported.tessellationShader) {
-		VTEK_LOG_ERROR("tessellationShader feature required but not supported"); support = false;
+		vtek_log_error("tessellationShader feature required but not supported"); support = false;
 	}
 	if (required->sampleRateShading                              && !supported.sampleRateShading) {
-		VTEK_LOG_ERROR("sampleRateShading feature required but not supported"); support = false;
+		vtek_log_error("sampleRateShading feature required but not supported"); support = false;
 	}
 	if (required->dualSrcBlend                                   && !supported.dualSrcBlend) {
-		VTEK_LOG_ERROR("dualSrcBlend feature required but not supported"); support = false;
+		vtek_log_error("dualSrcBlend feature required but not supported"); support = false;
 	}
 	if (required->logicOp                                        && !supported.logicOp) {
-		VTEK_LOG_ERROR("logicOp feature required but not supported"); support = false;
+		vtek_log_error("logicOp feature required but not supported"); support = false;
 	}
 	if (required->multiDrawIndirect                              && !supported.multiDrawIndirect) {
-		VTEK_LOG_ERROR("multiDrawIndirect feature required but not supported"); support = false;
+		vtek_log_error("multiDrawIndirect feature required but not supported"); support = false;
 	}
 	if (required->drawIndirectFirstInstance                      && !supported.drawIndirectFirstInstance) {
-		VTEK_LOG_ERROR("drawIndirectFirstInstance feature required but not supported"); support = false;
+		vtek_log_error("drawIndirectFirstInstance feature required but not supported"); support = false;
 	}
 	if (required->depthClamp                                     && !supported.depthClamp) {
-		VTEK_LOG_ERROR("depthClamp feature required but not supported"); support = false;
+		vtek_log_error("depthClamp feature required but not supported"); support = false;
 	}
 	if (required->depthBiasClamp                                 && !supported.depthBiasClamp) {
-		VTEK_LOG_ERROR("depthBiasClamp feature required but not supported"); support = false;
+		vtek_log_error("depthBiasClamp feature required but not supported"); support = false;
 	}
 	if (required->fillModeNonSolid                               && !supported.fillModeNonSolid) {
-		VTEK_LOG_ERROR("fillModeNonSolid feature required but not supported"); support = false;
+		vtek_log_error("fillModeNonSolid feature required but not supported"); support = false;
 	}
 	if (required->depthBounds                                    && !supported.depthBounds) {
-		VTEK_LOG_ERROR("depthBounds feature required but not supported"); support = false;
+		vtek_log_error("depthBounds feature required but not supported"); support = false;
 	}
 	if (required->wideLines                                      && !supported.wideLines) {
-		VTEK_LOG_ERROR("wideLines feature required but not supported"); support = false;
+		vtek_log_error("wideLines feature required but not supported"); support = false;
 	}
 	if (required->largePoints                                    && !supported.largePoints) {
-		VTEK_LOG_ERROR("largePoints feature required but not supported"); support = false;
+		vtek_log_error("largePoints feature required but not supported"); support = false;
 	}
 	if (required->alphaToOne                                     && !supported.alphaToOne) {
-		VTEK_LOG_ERROR("alphaToOne feature required but not supported"); support = false;
+		vtek_log_error("alphaToOne feature required but not supported"); support = false;
 	}
 	if (required->multiViewport                                  && !supported.multiViewport) {
-		VTEK_LOG_ERROR("multiViewport feature required but not supported"); support = false;
+		vtek_log_error("multiViewport feature required but not supported"); support = false;
 	}
 	if (required->samplerAnisotropy                              && !supported.samplerAnisotropy) {
-		VTEK_LOG_ERROR("samplerAnisotropy feature required but not supported"); support = false;
+		vtek_log_error("samplerAnisotropy feature required but not supported"); support = false;
 	}
 	if (required->textureCompressionETC2                         && !supported.textureCompressionETC2) {
-		VTEK_LOG_ERROR("textureCompressionETC2 feature required but not supported"); support = false;
+		vtek_log_error("textureCompressionETC2 feature required but not supported"); support = false;
 	}
 	if (required->textureCompressionASTC_LDR                     && !supported.textureCompressionASTC_LDR) {
-		VTEK_LOG_ERROR("textureCompressionASTC_LDR feature required but not supported"); support = false;
+		vtek_log_error("textureCompressionASTC_LDR feature required but not supported"); support = false;
 	}
 	if (required->textureCompressionBC                           && !supported.textureCompressionBC) {
-		VTEK_LOG_ERROR("textureCompressionBC feature required but not supported"); support = false;
+		vtek_log_error("textureCompressionBC feature required but not supported"); support = false;
 	}
 	if (required->occlusionQueryPrecise                          && !supported.occlusionQueryPrecise) {
-		VTEK_LOG_ERROR("occlusionQueryPrecise feature required but not supported"); support = false;
+		vtek_log_error("occlusionQueryPrecise feature required but not supported"); support = false;
 	}
 	if (required->pipelineStatisticsQuery                        && !supported.pipelineStatisticsQuery) {
-		VTEK_LOG_ERROR("pipelineStatisticsQuery feature required but not supported"); support = false;
+		vtek_log_error("pipelineStatisticsQuery feature required but not supported"); support = false;
 	}
 	if (required->vertexPipelineStoresAndAtomics                 && !supported.vertexPipelineStoresAndAtomics) {
-		VTEK_LOG_ERROR("vertexPipelineStoresAndAtomics feature required but not supported"); support = false;
+		vtek_log_error("vertexPipelineStoresAndAtomics feature required but not supported"); support = false;
 	}
 	if (required->fragmentStoresAndAtomics                       && !supported.fragmentStoresAndAtomics) {
-		VTEK_LOG_ERROR("fragmentStoresAndAtomics feature required but not supported"); support = false;
+		vtek_log_error("fragmentStoresAndAtomics feature required but not supported"); support = false;
 	}
 	if (required->shaderTessellationAndGeometryPointSize         && !supported.shaderTessellationAndGeometryPointSize) {
-		VTEK_LOG_ERROR("shaderTessellationAndGeometryPointSize feature required but not supported"); support = false;
+		vtek_log_error("shaderTessellationAndGeometryPointSize feature required but not supported"); support = false;
 	}
 	if (required->shaderImageGatherExtended                      && !supported.shaderImageGatherExtended) {
-		VTEK_LOG_ERROR("shaderImageGatherExtended feature required but not supported"); support = false;
+		vtek_log_error("shaderImageGatherExtended feature required but not supported"); support = false;
 	}
 	if (required->shaderStorageImageExtendedFormats              && !supported.shaderStorageImageExtendedFormats) {
-		VTEK_LOG_ERROR("shaderStorageImageExtendedFormats feature required but not supported"); support = false;
+		vtek_log_error("shaderStorageImageExtendedFormats feature required but not supported"); support = false;
 	}
 	if (required->shaderStorageImageMultisample                  && !supported.shaderStorageImageMultisample) {
-		VTEK_LOG_ERROR("shaderStorageImageMultisample feature required but not supported"); support = false;
+		vtek_log_error("shaderStorageImageMultisample feature required but not supported"); support = false;
 	}
 	if (required->shaderStorageImageReadWithoutFormat            && !supported.shaderStorageImageReadWithoutFormat) {
-		VTEK_LOG_ERROR("shaderStorageImageReadWithoutFormat feature required but not supported"); support = false;
+		vtek_log_error("shaderStorageImageReadWithoutFormat feature required but not supported"); support = false;
 	}
 	if (required->shaderStorageImageWriteWithoutFormat           && !supported.shaderStorageImageWriteWithoutFormat) {
-		VTEK_LOG_ERROR("shaderStorageImageWriteWithoutFormat feature required but not supported"); support = false;
+		vtek_log_error("shaderStorageImageWriteWithoutFormat feature required but not supported"); support = false;
 	}
 	if (required->shaderUniformBufferArrayDynamicIndexing        && !supported.shaderUniformBufferArrayDynamicIndexing) {
-		VTEK_LOG_ERROR("shaderUniformBufferArrayDynamicIndexing feature required but not supported"); support = false;
+		vtek_log_error("shaderUniformBufferArrayDynamicIndexing feature required but not supported"); support = false;
 	}
 	if (required->shaderSampledImageArrayDynamicIndexing         && !supported.shaderSampledImageArrayDynamicIndexing) {
-		VTEK_LOG_ERROR("shaderSampledImageArrayDynamicIndexing feature required but not supported"); support = false;
+		vtek_log_error("shaderSampledImageArrayDynamicIndexing feature required but not supported"); support = false;
 	}
 	if (required->shaderStorageBufferArrayDynamicIndexing        && !supported.shaderStorageBufferArrayDynamicIndexing) {
-		VTEK_LOG_ERROR("shaderStorageBufferArrayDynamicIndexing feature required but not supported"); support = false;
+		vtek_log_error("shaderStorageBufferArrayDynamicIndexing feature required but not supported"); support = false;
 	}
 	if (required->shaderStorageImageArrayDynamicIndexing         && !supported.shaderStorageImageArrayDynamicIndexing) {
-		VTEK_LOG_ERROR("shaderStorageImageArrayDynamicIndexing feature required but not supported"); support = false;
+		vtek_log_error("shaderStorageImageArrayDynamicIndexing feature required but not supported"); support = false;
 	}
 	if (required->shaderClipDistance                             && !supported.shaderClipDistance) {
-		VTEK_LOG_ERROR("shaderClipDistance feature required but not supported"); support = false;
+		vtek_log_error("shaderClipDistance feature required but not supported"); support = false;
 	}
 	if (required->shaderCullDistance                             && !supported.shaderCullDistance) {
-		VTEK_LOG_ERROR("shaderCullDistance feature required but not supported"); support = false;
+		vtek_log_error("shaderCullDistance feature required but not supported"); support = false;
 	}
 	if (required->shaderFloat64                                  && !supported.shaderFloat64) {
-		VTEK_LOG_ERROR("shaderFloat64 feature required but not supported"); support = false;
+		vtek_log_error("shaderFloat64 feature required but not supported"); support = false;
 	}
 	if (required->shaderInt64                                    && !supported.shaderInt64) {
-		VTEK_LOG_ERROR("shaderInt64 feature required but not supported"); support = false;
+		vtek_log_error("shaderInt64 feature required but not supported"); support = false;
 	}
 	if (required->shaderInt16                                    && !supported.shaderInt16) {
-		VTEK_LOG_ERROR("shaderInt16 feature required but not supported"); support = false;
+		vtek_log_error("shaderInt16 feature required but not supported"); support = false;
 	}
 	if (required->shaderResourceResidency                        && !supported.shaderResourceResidency) {
-		VTEK_LOG_ERROR("shaderResourceResidency feature required but not supported"); support = false;
+		vtek_log_error("shaderResourceResidency feature required but not supported"); support = false;
 	}
 	if (required->shaderResourceMinLod                           && !supported.shaderResourceMinLod) {
-		VTEK_LOG_ERROR("shaderResourceMinLod feature required but not supported"); support = false;
+		vtek_log_error("shaderResourceMinLod feature required but not supported"); support = false;
 	}
 	if (required->sparseBinding                                  && !supported.sparseBinding) {
-		VTEK_LOG_ERROR("sparseBinding feature required but not supported"); support = false;
+		vtek_log_error("sparseBinding feature required but not supported"); support = false;
 	}
 	if (required->sparseResidencyBuffer                          && !supported.sparseResidencyBuffer) {
-		VTEK_LOG_ERROR("sparseResidencyBuffer feature required but not supported"); support = false;
+		vtek_log_error("sparseResidencyBuffer feature required but not supported"); support = false;
 	}
 	if (required->sparseResidencyImage2D                         && !supported.sparseResidencyImage2D) {
-		VTEK_LOG_ERROR("sparseResidencyImage2D feature required but not supported"); support = false;
+		vtek_log_error("sparseResidencyImage2D feature required but not supported"); support = false;
 	}
 	if (required->sparseResidencyImage3D                         && !supported.sparseResidencyImage3D) {
-		VTEK_LOG_ERROR("sparseResidencyImage3D feature required but not supported"); support = false;
+		vtek_log_error("sparseResidencyImage3D feature required but not supported"); support = false;
 	}
 	if (required->sparseResidency2Samples                        && !supported.sparseResidency2Samples) {
-		VTEK_LOG_ERROR("sparseResidency2Samples feature required but not supported"); support = false;
+		vtek_log_error("sparseResidency2Samples feature required but not supported"); support = false;
 	}
 	if (required->sparseResidency4Samples                        && !supported.sparseResidency4Samples) {
-		VTEK_LOG_ERROR("sparseResidency4Samples feature required but not supported"); support = false;
+		vtek_log_error("sparseResidency4Samples feature required but not supported"); support = false;
 	}
 	if (required->sparseResidency8Samples                        && !supported.sparseResidency8Samples) {
-		VTEK_LOG_ERROR("sparseResidency8Samples feature required but not supported"); support = false;
+		vtek_log_error("sparseResidency8Samples feature required but not supported"); support = false;
 	}
 	if (required->sparseResidency16Samples                       && !supported.sparseResidency16Samples) {
-		VTEK_LOG_ERROR("sparseResidency16Samples feature required but not supported"); support = false;
+		vtek_log_error("sparseResidency16Samples feature required but not supported"); support = false;
 	}
 	if (required->sparseResidencyAliased                         && !supported.sparseResidencyAliased) {
-		VTEK_LOG_ERROR("sparseResidencyAliased feature required but not supported"); support = false;
+		vtek_log_error("sparseResidencyAliased feature required but not supported"); support = false;
 	}
 	if (required->variableMultisampleRate                        && !supported.variableMultisampleRate) {
-		VTEK_LOG_ERROR("variableMultisampleRate feature required but not supported"); support = false;
+		vtek_log_error("variableMultisampleRate feature required but not supported"); support = false;
 	}
 	if (required->inheritedQueries                               && !supported.inheritedQueries) {
-		VTEK_LOG_ERROR("inheritedQueries feature required but not supported"); support = false;
+		vtek_log_error("inheritedQueries feature required but not supported"); support = false;
 	}
 
 	return support;
@@ -460,17 +453,17 @@ static bool check_device_suitability(
 	vtek::PhysicalDeviceQueueSupport* queueSupport = &(device->queueSupport);
 	if (info->requireGraphicsQueue && !queueSupport->graphics)
 	{
-		VTEK_LOG_ERROR("Graphics queue required but not supported");
+		vtek_log_error("Graphics queue required but not supported");
 		queueFamilySupport = false;
 	}
 	if (info->requirePresentQueue && !queueSupport->present)
 	{
-		VTEK_LOG_ERROR("Presentation queue required but not supported");
+		vtek_log_error("Presentation queue required but not supported");
 		queueFamilySupport = false;
 	}
 	if (info->requireComputeQueue && !queueSupport->compute)
 	{
-		VTEK_LOG_ERROR("Compute queue required but not supported");
+		vtek_log_error("Compute queue required but not supported");
 		queueFamilySupport = false;
 	}
 
@@ -529,7 +522,7 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 vtek::PhysicalDevice* vtek::physical_device_pick(
 	const PhysicalDeviceInfo* info, const vtek::Instance* instance, VkSurfaceKHR surface)
 {
-	std::cout << "TRACE: vtek::physical_device_pick\n";
+	vtek_log_trace("physical_device_pick()");
 	VkInstance inst = vtek::instance_get_handle(instance);
 
 	// Enumerate physical devices
@@ -537,7 +530,7 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 	vkEnumeratePhysicalDevices(inst, &deviceCount, nullptr);
 	if (deviceCount == 0)
 	{
-		Fundament::FmDebugging().logError("Failed to find GPUs with Vulkan support!", __FILE__, __LINE__);
+		vtek_log_error("Failed to find GPUs with Vulkan support!");
 		return nullptr;
 	}
 	std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -576,17 +569,12 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 
 	std::sort(
 		weightedDevices.begin(), weightedDevices.end(), [](auto& p1, auto& p2) { return p1.first < p2.first; });
-	for (const auto& weightedDevice : weightedDevices)
-	{
-		std::cout << "GPU" << static_cast<uint32_t>(weightedDevice.first) << ": "
-		          << weightedDevice.second.properties.deviceName << '\n';
-	}
 
 	// Allocate
 	vtek::PhysicalDevice* physicalDevice = sAllocator.alloc();
 	if (physicalDevice == nullptr)
 	{
-		Fundament::FmDebugging().logCritical("Failed to allocate physical device!", __FILE__, __LINE__);
+		vtek_log_fatal("Failed to allocate physical device!");
 		return nullptr;
 	}
 
@@ -615,8 +603,6 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 		// Provided by VK_VERSION_1_1
 		// Provided by VK_KHR_get_physical_device_properties2
 		vkGetPhysicalDeviceProperties2(physicalDevice->vulkanHandle, &properties2);
-		// NOTE: If driverName == "NVIDIA" we can probably use NV extensions
-		std::cout << "driverName: " << driverProperties.driverName << '\n';
 #endif
 
 		// Get supported Vulkan features
@@ -625,6 +611,9 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 		bool isSuitable = check_device_suitability(info, physicalDevice, surface);
 		if (isSuitable)
 		{
+			// NOTE: If driverName == "NVIDIA" we can probably use NV extensions
+			vtek_log_info("Picked physical device[{}]: {}",
+			              driverProperties.driverName, choice.properties.deviceName);
 			// Now that we found a suitable device, query the rest of the necessary data
 			// Get Vulkan features, properties, and memory properties
 			// TODO: Do we need memory properties?
@@ -636,7 +625,7 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 	}
 
 	// FAIL: We didn't manage to find a suitable physical device!
-	Fundament::FmDebugging().logError("Failed to find a suitable GPU!", __FILE__, __LINE__);
+	vtek_log_error("Failed to find a suitable GPU!");
 	return nullptr;
 }
 

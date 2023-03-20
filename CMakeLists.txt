@@ -23,7 +23,6 @@ endif()
 
 option(SPDLOG_BUILD_WARNINGS "Enable compiler warnings" OFF)
 
-
 set (src
   include/vtek/impl/vtek_queue_struct.h
   include/vtek/vtek_command_pool.h
@@ -53,3 +52,9 @@ add_library(${PROJECT_NAME} ${src})
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include/vtek)
 target_include_directories(${PROJECT_NAME} PRIVATE external/spdlog/include)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra) # -Werror
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog)

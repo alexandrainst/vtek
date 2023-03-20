@@ -22,14 +22,13 @@ vtek::CommandPool* vtek::command_pool_create(
 	vtek::CommandPool* commandPool = sAllocator.alloc();
 	if (commandPool == nullptr)
 	{
-		VTEK_LOG_ERROR("Failed to allocate command pool!");
+		vtek_log_error("Failed to allocate command pool!");
 		return nullptr;
 	}
 
 	VkCommandPoolCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	uint32_t index = vtek::queue_get_family_index(queue);
-	std::cout << "graphics index: " << index << '\n';
 	createInfo.queueFamilyIndex = index;
 
 	// There are two flags, which can be set for command pools.
@@ -53,14 +52,22 @@ vtek::CommandPool* vtek::command_pool_create(
 	VkResult result = vkCreateCommandPool(dev, &createInfo, nullptr, &commandPool->vulkanHandle);
 	if (result != VK_SUCCESS)
 	{
-		VTEK_LOG_ERROR("Failed to create command pool!");
+		vtek_log_error("Failed to create command pool!");
 		return nullptr;
 	}
 
 	return commandPool;
 }
 
-void vtek::command_pool_destroy(vtek::CommandPool* commandPool)
+void vtek::command_pool_destroy(const vtek::Device* device, vtek::CommandPool* commandPool)
 {
+	if (commandPool == nullptr) { return; }
 
+	if (commandPool->vulkanHandle != VK_NULL_HANDLE)
+	{
+		VkDevice dev = vtek::device_get_handle(device);
+
+		vkDestroyCommandPool(dev, commandPool->vulkanHandle, nullptr);
+		commandPool->vulkanHandle = VK_NULL_HANDLE;
+	}
 }
