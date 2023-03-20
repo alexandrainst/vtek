@@ -1,12 +1,35 @@
 cmake_minimum_required(VERSION 3.10)
-project(vtek)
+project(vtek CXX)
+
+
+# --------------------------------------------------------------------------------
+# Set VTEK_EXAMPLES_CONF to ON if we are building vtek
+# --------------------------------------------------------------------------------
+# Check if vtek is being used directly, or via add_subdirectory for another project
+if(NOT DEFINED VTEK_EXAMPLES_CONF)
+  if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+	set(VTEK_EXAMPLES_CONF ON)
+  else()
+	set(VTEK_EXAMPLES_CONF OFF)
+  endif()
+endif()
+
+
+# --------------------------------------------------------------------------------
+# Project configuration
+# --------------------------------------------------------------------------------
+option(VTEK_BUILD_WARNINGS "Enable compiler warnings" ON)
+option(VTEK_SHARED_LIB "Build vtek as shared library" OFF)
+option(VTEK_CREATE_EXAMPLES "Build example programs" ${VTEK_EXAMPLES_CONF})
+
+
+# --------------------------------------------------------------------------------
+# Dependencies for building vtek
+# --------------------------------------------------------------------------------
+find_package(Vulkan REQUIRED)
 
 # spdlog submodule
 add_subdirectory(external/spdlog)
-
-# Project configuration
-option(VTEK_BUILD_WARNINGS "Enable compiler warnings" ON)
-option(VTEK_SHARED_LIB "Build vtek as shared library" OFF)
 
 # glm as either local installation or CMake subcontent
 find_package(glm QUIET)
@@ -24,7 +47,9 @@ endif()
 
 # TODO: Conditional glfw find
 # NOTE: Could possibly we written as `cmake -DUSE_GLFW=true`, or something like that
-
+if(VTEK_CREATE_EXAMPLES)
+  find_package(glfw3)
+endif()
 
 
 set (src
@@ -54,14 +79,16 @@ set (src
   )
 
 if(VTEK_SHARED_LIB)
+  message("Build vtek as shared library")
   add_library(${PROJECT_NAME} SHARED ${src})
 else()
-  add_library(${PROJECT_NAME} ${src})
+  message("Build vtek as static library")
+  add_library(${PROJECT_NAME} STATIC ${src})
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
-target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include/vtek)
-target_include_directories(${PROJECT_NAME} PRIVATE external/spdlog/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include/vtek)
+target_include_directories(${PROJECT_NAME} PUBLIC external/spdlog/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 if(VTEK_BUILD_WARNINGS)
@@ -70,4 +97,23 @@ if(VTEK_BUILD_WARNINGS)
   endif()
 endif()
 
-target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog Vulkan::Vulkan)
+
+
+# --------------------------------------------------------------------------------
+# Conditionally build example programs
+# --------------------------------------------------------------------------------
+if(VTEK_CREATE_EXAMPLES)
+  set(examples
+	examples/triangle_plain.cpp
+	)
+
+  foreach(expath ${examples})
+	cmake_path(GET expath STEM exname)
+	add_executable(${exname} ${expath})
+	set_target_properties(${exname} PROPERTIES CXX_STANDARD 17)
+	target_link_libraries(${exname} PRIVATE ${PROJECT_NAME} spdlog::spdlog glfw Vulkan::Vulkan)
+	target_link_directories(${exname} PRIVATE ${CMAKE_OUTPUT_DIR})
+  endforeach()
+
+endif()

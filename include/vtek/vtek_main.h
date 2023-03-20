@@ -11,7 +11,7 @@ namespace vtek
 	struct InitInfo
 	{
 		// === app info ===
-		const char* applicationTitle {"app"};
+		const char* applicationTitle {"app"}; // TODO: For logging purposes should always be "app" ??
 
 		// === logging ===
 		bool disableLogging {false};
