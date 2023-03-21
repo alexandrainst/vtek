@@ -6,6 +6,7 @@
 #include <vector>
 
 // vtek
+#include "impl/vtek_host_allocator.h"
 #include "vtek_application_window.h"
 #include "vtek_logging.h"
 #include "vtek_main.h"
@@ -19,6 +20,9 @@ struct vtek::ApplicationWindow
 	int framebufferHeight {0};
 };
 
+
+/* host allocator */
+static vtek::HostAllocator<vtek::ApplicationWindow> sAllocator("application_window");
 
 
 /* implementation of GLFW backend */
@@ -79,7 +83,12 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	}
 
 	// Allocate window
-	vtek::ApplicationWindow* appWindow = new vtek::ApplicationWindow();
+	vtek::ApplicationWindow* appWindow = sAllocator.alloc();
+	if (appWindow == nullptr)
+	{
+		vtek_log_fatal("Failed to allocate application window!");
+		return nullptr;
+	}
 
 	// Get framebuffer size, needed when creating a swapchain. Description below:
 	//

@@ -4,6 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include <iostream>
+
 
 namespace vtek
 {
@@ -22,9 +24,8 @@ namespace vtek
 	};
 
 
-	bool host_allocator_initialize();
-	void host_allocator_destroy();
 	void host_allocator_register_allocator(IHostAllocator* allocator);
+	void host_allocator_check_all_freed();
 
 
 	template<typename T>
@@ -45,6 +46,10 @@ namespace vtek
 		inline void free(T* ptr)
 		{
 			if (ptr == nullptr) return;
+			for (auto& it : mPool)
+			{
+				if (&it == ptr) { std::cout << "HostAllocator<T>::free(): FOUND\n"; }
+			}
 		}
 		inline void clear()
 		{

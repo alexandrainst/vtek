@@ -31,7 +31,7 @@ struct vtek::Instance
 
 
 /* host allocator */
-static vtek::HostAllocator<vtek::Instance> sAllocator("vtek_instance");
+static vtek::HostAllocator<vtek::Instance> sAllocator("instance");
 
 
 /* helper functions */

@@ -3,26 +3,13 @@
 
 
 /* allocator storage */
-struct HostAllocatorStorage
-{
-	std::vector<vtek::IHostAllocator*> allocators;
-};
-static HostAllocatorStorage* sStorage;
+static std::vector<vtek::IHostAllocator*> sAllocators = {};
 
 
 /* interface */
-bool vtek::host_allocator_initialize()
+void vtek::host_allocator_check_all_freed()
 {
-	sStorage = new HostAllocatorStorage();
-
-	return true;
-}
-
-void vtek::host_allocator_destroy()
-{
-	if (sStorage == nullptr) { return; }
-
-	for (auto* a : sStorage->allocators)
+	for (auto* a : sAllocators)
 	{
 		if (a->GetNumAllocations() > 0)
 		{
@@ -30,11 +17,11 @@ void vtek::host_allocator_destroy()
 		}
 	}
 
-	sStorage->allocators.clear();
-	sStorage = nullptr;
+	sAllocators.clear();
+	sAllocators = {};
 }
 
 void vtek::host_allocator_register_allocator(vtek::IHostAllocator* allocator)
 {
-	sStorage->allocators.push_back(allocator);
+	sAllocators.push_back(allocator);
 }
