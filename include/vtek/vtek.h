@@ -21,6 +21,7 @@
 #include "vtek_application_window.h"
 #include "vtek_command_pool.h"
 #include "vtek_device.h"
+#include "vtek_input.h"
 #include "vtek_instance.h"
 #include "vtek_logging.h"
 #include "vtek_physical_device.h"

@@ -1,6 +1,29 @@
 #include <vtek/vtek.h>
 #include <iostream>
 
+// global data
+vtek::ApplicationWindow* window = nullptr;
+
+
+void keyCallback(vtek::Key key, vtek::KeyAction action)
+{
+	if (action == vtek::press)
+	{
+
+	}
+	else if (action == vtek::release)
+	{
+		switch (key)
+		{
+		case vtek::escape:
+			vtek::window_set_should_close(window, true);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 
 int main()
 {
@@ -14,19 +37,20 @@ int main()
 		return -1;
 	}
 
-	// // Create window
+	// Create window
 	vtek::WindowCreateInfo windowInfo{};
 	windowInfo.title = "triangle_plain";
 	windowInfo.width = 500;
 	windowInfo.height = 500;
-	vtek::ApplicationWindow* window = vtek::window_create(&windowInfo);
+	window = vtek::window_create(&windowInfo);
 	if (window == nullptr)
 	{
 		log_error("Failed to create window!");
 		return -1;
 	}
+	vtek::window_set_key_handler(window, keyCallback);
 
-	// // Vulkan instance
+	// Vulkan instance
 	vtek::InstanceCreateInfo instanceInfo{};
 	instanceInfo.applicationName = "triangle_plain";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
@@ -38,7 +62,7 @@ int main()
 		return -1;
 	}
 
-	// // Surface
+	// Surface
 	VkSurfaceKHR surface = vtek::window_create_surface(window, instance);
 	if (surface == VK_NULL_HANDLE)
 	{
@@ -96,6 +120,10 @@ int main()
 
 
 
+	while (vtek::window_is_running(window))
+	{
+
+	}
 
 
 
