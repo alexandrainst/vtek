@@ -15,6 +15,7 @@
 /* struct implementation */
 struct vtek::PhysicalDevice
 {
+	uint64_t id {VTEK_INVALID_ID};
 	VkPhysicalDevice vulkanHandle { VK_NULL_HANDLE };
 	VkPhysicalDeviceProperties properties {};
 
@@ -571,12 +572,13 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 		weightedDevices.begin(), weightedDevices.end(), [](auto& p1, auto& p2) { return p1.first < p2.first; });
 
 	// Allocate
-	vtek::PhysicalDevice* physicalDevice = sAllocator.alloc();
+	auto [id, physicalDevice] = sAllocator.alloc();
 	if (physicalDevice == nullptr)
 	{
 		vtek_log_fatal("Failed to allocate physical device!");
 		return nullptr;
 	}
+	physicalDevice->id = id;
 
 	// Run through them in sorted order and check if the physical device supports:
 	// extensions, features, property coverage, and if so - pick it.
@@ -637,7 +639,8 @@ void vtek::physical_device_release(vtek::PhysicalDevice* physicalDevice)
 	physicalDevice->supportedExtensions.clear();
 	physicalDevice->requiredExtensions.clear();
 
-	sAllocator.free(physicalDevice);
+	sAllocator.free(physicalDevice->id);
+	physicalDevice->id = VTEK_INVALID_ID;
 }
 
 

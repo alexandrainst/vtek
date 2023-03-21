@@ -19,6 +19,7 @@
 /* struct implementation */
 struct vtek::Device
 {
+	uint64_t id {VTEK_INVALID_ID};
 	VkDevice vulkanHandle {VK_NULL_HANDLE};
 
 	VkPhysicalDeviceFeatures enabledFeatures {};
@@ -569,12 +570,13 @@ vtek::Device* vtek::device_create(
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
 
 	// Allocate device
-	vtek::Device* device = sAllocator.alloc();
+	auto[id, device] = sAllocator.alloc();
 	if (device == nullptr)
 	{
 		vtek_log_error("Failed to allocate (logical) device!");
 		return nullptr;
 	}
+	device->id = id;
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	QueueFamilySelections queueSelections{};
@@ -666,7 +668,8 @@ void vtek::device_destroy(Device* device)
 	}
 	device->queueAllocator = nullptr;
 
-	sAllocator.free(device);
+	sAllocator.free(device->id);
+	device->id = VTEK_INVALID_ID;
 }
 
 

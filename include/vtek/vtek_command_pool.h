@@ -25,5 +25,5 @@ namespace vtek
 	CommandPool* command_pool_create(
 		const CommandPoolCreateInfo* info, const Device* device, const Queue* queue);
 
-	void command_pool_destroy(const Device* device, CommandPool* commandPool);
+	void command_pool_destroy(CommandPool* commandPool, const Device* device);
 }

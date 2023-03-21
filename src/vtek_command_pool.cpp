@@ -7,6 +7,7 @@
 /* struct implementation */
 struct vtek::CommandPool
 {
+	uint64_t id {VTEK_INVALID_ID};
 	VkCommandPool vulkanHandle;
 };
 
@@ -19,12 +20,13 @@ vtek::CommandPool* vtek::command_pool_create(
 	const vtek::CommandPoolCreateInfo* info, const vtek::Device* device, const vtek::Queue* queue)
 {
 	// Allocate device
-	vtek::CommandPool* commandPool = sAllocator.alloc();
+	auto [id, commandPool] = sAllocator.alloc();
 	if (commandPool == nullptr)
 	{
 		vtek_log_error("Failed to allocate command pool!");
 		return nullptr;
 	}
+	commandPool->id = id;
 
 	VkCommandPoolCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -59,7 +61,7 @@ vtek::CommandPool* vtek::command_pool_create(
 	return commandPool;
 }
 
-void vtek::command_pool_destroy(const vtek::Device* device, vtek::CommandPool* commandPool)
+void vtek::command_pool_destroy(vtek::CommandPool* commandPool, const vtek::Device* device)
 {
 	if (commandPool == nullptr) { return; }
 
@@ -70,4 +72,7 @@ void vtek::command_pool_destroy(const vtek::Device* device, vtek::CommandPool* c
 		vkDestroyCommandPool(dev, commandPool->vulkanHandle, nullptr);
 		commandPool->vulkanHandle = VK_NULL_HANDLE;
 	}
+
+	sAllocator.free(commandPool->id);
+	commandPool->id = VTEK_INVALID_ID;
 }

@@ -21,6 +21,7 @@ static const std::vector<const char*> sValidationLayers = {
 /* struct implementation */
 struct vtek::Instance
 {
+	uint64_t id {VTEK_INVALID_ID};
 	VkInstance vulkanHandle {VK_NULL_HANDLE};
 	vtek::VulkanVersion vulkanVersion {0};
 
@@ -118,7 +119,8 @@ static uint32_t get_vulkan_instance_version()
 
 	// NOTE: The packed `apiVersion` also contains a variant, which will always be 0 except for
 	// non-standard Vulkan implementations (Perhaps MoltenVk included?).
-	vtek_log_info("Supported Vulkan Instance version {}: {}.{}.{}", apiVersion, major, minor, patch);
+	vtek_log_info("Supported Vulkan Instance version: {}.{}.{} ({})",
+	              major, minor, patch, apiVersion);
 
 #if defined(VK_API_VERSION_1_3)
 	if (major >= 1 && minor >= 3) { return VK_API_VERSION_1_3; }
@@ -236,12 +238,13 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 		return nullptr;
 	}
 
-	vtek::Instance* instance = sAllocator.alloc();
+	auto [id, instance] = sAllocator.alloc();
 	if (instance == nullptr)
 	{
 		vtek_log_fatal("Failed to allocate instance!");
 		return nullptr;
 	}
+	instance->id = id;
 
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -402,7 +405,8 @@ void vtek::instance_destroy(vtek::Instance* instance)
 		instance->vulkanHandle = VK_NULL_HANDLE;
 	}
 
-	sAllocator.free(instance);
+	sAllocator.free(instance->id);
+	instance->id = VTEK_INVALID_ID;
 }
 
 

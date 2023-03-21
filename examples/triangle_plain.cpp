@@ -39,18 +39,76 @@ int main()
 	}
 
 	// // Surface
-	// VkSurfaceKHR surface = vtek::window_create_surface(window, instance);
-	// if (surface == VK_NULL_HANDLE)
-	// {
-	// 	log_error("Failed to create Vulkan window surface!");
-	// 	return -1;
-	// }
+	VkSurfaceKHR surface = vtek::window_create_surface(window, instance);
+	if (surface == VK_NULL_HANDLE)
+	{
+		log_error("Failed to create Vulkan window surface!");
+		return -1;
+	}
+
+	// Physical device
+	vtek::PhysicalDeviceInfo physicalDeviceInfo{};
+	physicalDeviceInfo.requireGraphicsQueue = true;
+	physicalDeviceInfo.requirePresentQueue = true;
+	physicalDeviceInfo.requireSwapchainSupport = true;
+	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(&physicalDeviceInfo, instance, surface);
+	if (physicalDevice == nullptr)
+	{
+		log_error("Failed to pick physical device!");
+		return -1;
+	}
+
+	// Device
+	vtek::LogicalDeviceCreateInfo deviceCreateInfo{};
+	deviceCreateInfo.enableSwapchainExtension = true; // TODO: We probably don't want to do this here!
+	vtek::Device* device = vtek::device_create(&deviceCreateInfo, instance, physicalDevice);
+	if (device == nullptr)
+	{
+		log_error("Failed to create device!");
+		return -1;
+	}
+
+	// Graphics queue
+	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
+	if (graphicsQueue == nullptr)
+	{
+		log_error("Failed to get graphics queue!");
+		return -1;
+	}
+
+	// Graphics command pool
+	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
+	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
+		&commandPoolCreateInfo, device, graphicsQueue);
+
+	// Swapchain
+	vtek::SwapchainCreateInfo swapchainCreateInfo{};
+	swapchainCreateInfo.vsync = true;
+	swapchainCreateInfo.prioritizeLowLatency = false;
+	vtek::window_get_framebuffer_size(
+		window, &swapchainCreateInfo.framebufferWidth, &swapchainCreateInfo.framebufferHeight);
+	vtek::Swapchain* swapchain = vtek::swapchain_create(&swapchainCreateInfo, surface, physicalDevice, device);
+	if (swapchain == nullptr)
+	{
+		log_error("Failed to create swapchain!");
+		return -1;
+	}
 
 
-	// // Cleanup
-	// log_debug("All went well!");
 
-	// vtek::window_destroy(window);
+
+
+
+	// Cleanup
+	vtek::swapchain_destroy(swapchain, device);
+	vtek::command_pool_destroy(graphicsCommandPool, device);
+	vtek::device_destroy(device);
+	vtek::physical_device_release(physicalDevice);
+	vtek::window_surface_destroy(surface, instance);
+	vtek::instance_destroy(instance);
+	vtek::window_destroy(window);
+
+	log_debug("All went well!");
 	vtek::terminate();
 
 	return 0;

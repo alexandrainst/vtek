@@ -26,10 +26,9 @@ namespace vtek
 
 	// surface for the application window, needed for Vulkan
 	VkSurfaceKHR window_create_surface(ApplicationWindow* window, Instance* instance);
-	void window_surface_destroy();
+	void window_surface_destroy(VkSurfaceKHR surface, Instance* instance);
 
 	void window_set_key_handler(ApplicationWindow* window);
 
 	void window_get_framebuffer_size(ApplicationWindow* window, int* width, int* height);
-	const std::vector<std::string>& window_get_required_instance_extensions(ApplicationWindow* window);
 }

@@ -15,6 +15,7 @@
 /* struct implementation */
 struct vtek::Swapchain
 {
+	uint64_t id {VTEK_INVALID_ID};
 	VkSwapchainKHR vulkanHandle {VK_NULL_HANDLE};
 	uint32_t length {0};
 	VkExtent2D imageExtent {0, 0};
@@ -556,12 +557,13 @@ vtek::Swapchain* vtek::swapchain_create(
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	// Create the swap chain.
-	vtek::Swapchain* swapchain = sAllocator.alloc();
+	auto [id, swapchain] = sAllocator.alloc();
 	if (swapchain == nullptr)
 	{
 		vtek_log_error("Failed to allocate swapchain!");
 		return nullptr;
 	}
+	swapchain->id = id;
 
 	VkResult result = vkCreateSwapchainKHR(
 		dev, &createInfo, nullptr, &swapchain->vulkanHandle);
@@ -631,7 +633,8 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	destroy_swapchain_handle(swapchain, dev);
 	swapchain->isInvalidated = false;
 
-	sAllocator.free(swapchain);
+	sAllocator.free(swapchain->id);
+	swapchain->id = VTEK_INVALID_ID;
 }
 
 bool vtek::swapchain_acquire_next_image_index(vtek::Swapchain* swapchain, uint32_t* outImageIndex)

@@ -15,6 +15,7 @@
 /* struct implementation */
 struct vtek::ApplicationWindow
 {
+	uint64_t id {0UL};
 	GLFWwindow* glfwHandle {nullptr};
 	int framebufferWidth {0};
 	int framebufferHeight {0};
@@ -75,18 +76,20 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwSwapInterval(1);
 
-	GLFWwindow* window = glfwCreateWindow(info->width, info->height, info->title, NULL, NULL);
-	if (window == nullptr)
-	{
-		vtek_log_error("Failed to create GLFW window!");
-		return nullptr;
-	}
-
 	// Allocate window
-	vtek::ApplicationWindow* appWindow = sAllocator.alloc();
+	auto [id, appWindow] = sAllocator.alloc();
 	if (appWindow == nullptr)
 	{
 		vtek_log_fatal("Failed to allocate application window!");
+		return nullptr;
+	}
+	appWindow->id = id;
+
+	appWindow->glfwHandle = glfwCreateWindow(
+		info->width, info->height, info->title, NULL, NULL);
+	if (appWindow->glfwHandle == nullptr)
+	{
+		vtek_log_error("Failed to create GLFW window!");
 		return nullptr;
 	}
 
@@ -98,7 +101,8 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	// So after the window is created, we can query GLFW for the
 	// framebuffer size, which is always in pixels, and use this value
 	// to determine an appropriate swap image size.
-	glfwGetFramebufferSize(window, &appWindow->framebufferWidth, &appWindow->framebufferHeight);
+	glfwGetFramebufferSize(
+		appWindow->glfwHandle, &appWindow->framebufferWidth, &appWindow->framebufferHeight);
 
 	return appWindow;
 }
@@ -111,6 +115,8 @@ void vtek::window_destroy(vtek::ApplicationWindow* window)
 	{
 		glfwDestroyWindow(window->glfwHandle);
 	}
+
+	sAllocator.free(window->id);
 }
 
 VkSurfaceKHR vtek::window_create_surface(
@@ -126,4 +132,18 @@ VkSurfaceKHR vtek::window_create_surface(
 	}
 
 	return surface;
+}
+
+void vtek::window_surface_destroy(VkSurfaceKHR surface, vtek::Instance* instance)
+{
+	if (surface == VK_NULL_HANDLE) { return; }
+
+	VkInstance inst = vtek::instance_get_handle(instance);
+	vkDestroySurfaceKHR(inst, surface, nullptr);
+}
+
+void vtek::window_get_framebuffer_size(vtek::ApplicationWindow* window, int* width, int* height)
+{
+	*width = window->framebufferWidth;
+	*height = window->framebufferHeight;
 }
