@@ -26,4 +26,8 @@ namespace vtek
 
 	bool initialize(const InitInfo* info);
 	void terminate();
+
+
+	// context query
+	bool vtek_context_get_glfw_enabled();
 }

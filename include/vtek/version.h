@@ -1,0 +1,5 @@
+#pragma once
+
+#define VTEK_VERSION_MAJOR 0
+#define VTEK_VERSION_MINOR 1
+#define VTEK_VERSION_PATCH 0

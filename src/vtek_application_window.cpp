@@ -6,8 +6,9 @@
 #include <vector>
 
 // vtek
-#include "vtek_glfw_window.h"
+#include "vtek_application_window.h"
 #include "vtek_logging.h"
+#include "vtek_main.h"
 
 
 /* struct implementation */
@@ -24,14 +25,12 @@ struct vtek::ApplicationWindow
 #include "impl/vtek_glfw_backend.h"
 
 static std::vector<std::string> sRequiredInstanceExtensions {};
-static bool sGlfwEnabled {false};
 
 bool vtek::glfw_backend_initialize()
 {
 	if (!glfwInit()) { return false; }
 
 	// Get required instance extensions from GLFW
-	glfwMakeContextCurrent(window);
 	uint32_t extensionCount = 0;
 	const char** extensions;
 	extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
@@ -48,9 +47,16 @@ void vtek::glfw_backend_terminate()
 	glfwTerminate();
 }
 
-bool vtek::glfw_backend_is_enabled()
+void vtek::glfw_backend_get_required_instance_extensions(
+	std::vector<const char*>& list)
 {
+	// This function may be safely called even when GLFW is not used
+	if (!vtek::vtek_context_get_glfw_enabled()) { return; }
 
+	for (auto& s : sRequiredInstanceExtensions)
+	{
+		list.push_back(s.c_str());
+	}
 }
 
 
@@ -96,4 +102,19 @@ void vtek::window_destroy(vtek::ApplicationWindow* window)
 	{
 		glfwDestroyWindow(window->glfwHandle);
 	}
+}
+
+VkSurfaceKHR vtek::window_create_surface(
+	vtek::ApplicationWindow* window, vtek::Instance* instance)
+{
+	VkInstance inst = vtek::instance_get_handle(instance);
+
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	if (glfwCreateWindowSurface(inst, window->glfwHandle, nullptr, &surface) != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create GLFW window surface!");
+		return VK_NULL_HANDLE;
+	}
+
+	return surface;
 }

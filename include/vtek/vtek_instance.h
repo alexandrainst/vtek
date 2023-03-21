@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "vtek_glfw_window.h"
+#include "vtek_vulkan_version.h"
 
 
 namespace vtek
@@ -25,9 +25,7 @@ namespace vtek
 	{
 		// General settings
 		const char* applicationName {""};
-		uint32_t applicationVersion {0U};
-		const char* engineName {""};
-		uint32_t engineVersion {0U};
+		VulkanVersion applicationVersion {0};
 
 		// Extension settings
 		std::vector<const char*> requiredExtensions {}; // Prerequisites, e.g. provided by window library
@@ -42,7 +40,6 @@ namespace vtek
 	struct Instance; // opaque handle
 
 	Instance* instance_create(InstanceCreateInfo* info);
-	Instance* instance_create(InstanceCreateInfo* info, ApplicationWindow* window);
 	void instance_destroy(Instance* instance);
 
 	VkInstance instance_get_handle(const Instance* instance);

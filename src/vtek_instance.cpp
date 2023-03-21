@@ -4,7 +4,9 @@
 #include <vulkan/vk_enum_string_helper.h> // string_VkObjectType(VkObjectType input_value)
 
 // vtek
+#include "impl/vtek_glfw_backend.h"
 #include "impl/vtek_host_allocator.h"
+#include "version.h"
 #include "vtek_instance.h"
 #include "vtek_logging.h"
 #include "vtek_vulkan_version.h"
@@ -133,6 +135,18 @@ static uint32_t get_vulkan_instance_version()
 	return VK_API_VERSION_1_0;
 }
 
+static uint32_t get_vtek_vulkan_version()
+{
+	// These values are defined in the local header `version.h`, which is
+	// also the appropriate place to update them when/as needed.
+	vtek::VulkanVersion v(
+		VTEK_VERSION_MAJOR,
+		VTEK_VERSION_MINOR,
+		VTEK_VERSION_PATCH);
+
+	return v.getVulkan();
+}
+
 static VkResult createVulkanDebugMessenger(
 	VkInstance instance,
 	const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
@@ -232,9 +246,10 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = info->applicationName;
-	appInfo.applicationVersion = info->applicationVersion;
-	appInfo.pEngineName = info->engineName;
-	appInfo.engineVersion = info->engineVersion;
+	appInfo.applicationVersion = info->applicationVersion.getVulkan();
+	// NOTE: Here we extract version from vtek itself
+	appInfo.pEngineName = "vtek";
+	appInfo.engineVersion = get_vtek_vulkan_version();
 
 	uint32_t supportedInstanceVersion = get_vulkan_instance_version();
 	instance->vulkanVersion = vtek::VulkanVersion(supportedInstanceVersion);
@@ -243,6 +258,11 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 	VkInstanceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
+
+	// Fill out the extension list with extensions provided by GLFW.
+	// If GLFW is not used (ie. has not been queried for during vtek initialization),
+	// then this function will do nothing.
+	vtek::glfw_backend_get_required_instance_extensions(info->requiredExtensions);
 
 	if (info->enableValidationLayers)
 	{

@@ -53,6 +53,8 @@ endif()
 
 
 set (src
+  include/vtek/version.h
+  include/vtek/vtek_application_window.h
   include/vtek/vtek_command_pool.h
   include/vtek/vtek_device.h
   include/vtek/vtek_instance.h
@@ -63,9 +65,11 @@ set (src
   include/vtek/vtek_swapchain.h
   include/vtek/vtek_vulkan_helpers.h
 
+  src/impl/vtek_glfw_backend.h
   src/impl/vtek_host_allocator.h
   src/impl/vtek_queue_struct.h
 
+  src/vtek_application_window.cpp
   src/vtek_command_pool.cpp
   src/vtek_device.cpp
   src/vtek_host_allocator.cpp
@@ -87,9 +91,10 @@ else()
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include/vtek)
+target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include/vtek)
 target_include_directories(${PROJECT_NAME} PUBLIC external/spdlog/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
 
 if(VTEK_BUILD_WARNINGS)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -97,7 +102,7 @@ if(VTEK_BUILD_WARNINGS)
   endif()
 endif()
 
-target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog Vulkan::Vulkan)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog glfw Vulkan::Vulkan)
 
 
 # --------------------------------------------------------------------------------
@@ -112,8 +117,8 @@ if(VTEK_CREATE_EXAMPLES)
 	cmake_path(GET expath STEM exname)
 	add_executable(${exname} ${expath})
 	set_target_properties(${exname} PROPERTIES CXX_STANDARD 17)
-	target_link_libraries(${exname} PRIVATE ${PROJECT_NAME} spdlog::spdlog glfw Vulkan::Vulkan)
-	target_link_directories(${exname} PRIVATE ${CMAKE_OUTPUT_DIR})
+	target_link_libraries(${exname} PUBLIC vtek spdlog::spdlog Vulkan::Vulkan)
+	target_link_directories(${exname} PUBLIC ${CMAKE_OUTPUT_DIR})
   endforeach()
 
 endif()

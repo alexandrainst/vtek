@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "vtek_instance.h"
+
 
 namespace vtek
 {
@@ -21,6 +23,10 @@ namespace vtek
 
 	ApplicationWindow* window_create(const WindowCreateInfo* info);
 	void window_destroy(ApplicationWindow* window);
+
+	// surface for the application window, needed for Vulkan
+	VkSurfaceKHR window_create_surface(ApplicationWindow* window, Instance* instance);
+	void window_surface_destroy();
 
 	void window_set_key_handler(ApplicationWindow* window);
 
