@@ -72,143 +72,151 @@ void vtek::glfw_backend_get_required_instance_extensions(
 
 
 /* helper functions */
-static vtek::Key get_key_from_glfw(int key)
+static vtek::KeyboardKey get_key_from_glfw(int key)
 {
-	switch (glfw_key)
+	using vtek::KeyboardKey;
+
+	switch (key)
 	{
-	case GLFW_KEY_UNKNOWN:       return vtek::unknown; //-1
+	case GLFW_KEY_UNKNOWN:       return KeyboardKey::unknown; //-1
 
-	case GLFW_KEY_SPACE:         return vtek::space; //32
-	case GLFW_KEY_APOSTROPHE:    return vtek::apostrophe; //39 /* ' */
-	case GLFW_KEY_COMMA:         return vtek::comma; // 44 /* , */
-	case GLFW_KEY_MINUS:         return vtek::minus; // 45 /* - */
-	case GLFW_KEY_PERIOD:        return vtek::period; // 46 /* . */
-	case GLFW_KEY_SLASH:         return vtek::slash; // 47 /* / */
+	case GLFW_KEY_SPACE:         return KeyboardKey::space; //32
+	case GLFW_KEY_APOSTROPHE:    return KeyboardKey::apostrophe; //39 /* ' */
+	case GLFW_KEY_COMMA:         return KeyboardKey::comma; // 44 /* , */
+	case GLFW_KEY_MINUS:         return KeyboardKey::minus; // 45 /* - */
+	case GLFW_KEY_PERIOD:        return KeyboardKey::period; // 46 /* . */
+	case GLFW_KEY_SLASH:         return KeyboardKey::slash; // 47 /* / */
 
-	case GLFW_KEY_0:             return vtek::num_0; // 48
-	case GLFW_KEY_1:             return vtek::num_1; // 49
-	case GLFW_KEY_2:             return vtek::num_2; // 50
-	case GLFW_KEY_3:             return vtek::num_3; // 51
-	case GLFW_KEY_4:             return vtek::num_4; // 52
-	case GLFW_KEY_5:             return vtek::num_5; // 53
-	case GLFW_KEY_6:             return vtek::num_6; // 54
-	case GLFW_KEY_7:             return vtek::num_7; // 55
-	case GLFW_KEY_8:             return vtek::num_8; // 56
-	case GLFW_KEY_9:             return vtek::num_9; // 57
-	case GLFW_KEY_SEMICOLON:     return vtek::semicolon; // 59 /* ; */
-	case GLFW_KEY_EQUAL:         return vtek::equal; // 61 /* = */
-	case GLFW_KEY_A:             return vtek::a; // 65
-	case GLFW_KEY_B:             return vtek::b; // 66
-	case GLFW_KEY_C:             return vtek::c; // 67
-	case GLFW_KEY_D:             return vtek::d; // 68
-	case GLFW_KEY_E:             return vtek::e; // 69
-	case GLFW_KEY_F:             return vtek::f; // 70
-	case GLFW_KEY_G:             return vtek::g; // 71
-	case GLFW_KEY_H:             return vtek::h; // 72
-	case GLFW_KEY_I:             return vtek::i; // 73
-	case GLFW_KEY_J:             return vtek::j; // 74
-	case GLFW_KEY_K:             return vtek::k; // 75
-	case GLFW_KEY_L:             return vtek::l; // 76
-	case GLFW_KEY_M:             return vtek::m; // 77
-	case GLFW_KEY_N:             return vtek::n; // 78
-	case GLFW_KEY_O:             return vtek::o; // 79
-	case GLFW_KEY_P:             return vtek::p; // 80
-	case GLFW_KEY_Q:             return vtek::q; // 81
-	case GLFW_KEY_R:             return vtek::r; // 82
-	case GLFW_KEY_S:             return vtek::s; // 83
-	case GLFW_KEY_T:             return vtek::t; // 84
-	case GLFW_KEY_U:             return vtek::u; // 85
-	case GLFW_KEY_V:             return vtek::v; // 86
-	case GLFW_KEY_W:             return vtek::w; // 87
-	case GLFW_KEY_X:             return vtek::x; // 88
-	case GLFW_KEY_Y:             return vtek::y; // 89
-	case GLFW_KEY_Z:             return vtek::z; // 90
-	case GLFW_KEY_LEFT_BRACKET:  return vtek::left_bracket; // 91 /* [ */
-	case GLFW_KEY_BACKSLASH:     return vtek::backslash; // 92 /* \ */
-	case GLFW_KEY_RIGHT_BRACKET: return vtek::right_bracket;   // 93 /* ] */
-	case GLFW_KEY_GRAVE_ACCENT:  return vtek::grave_accent;  // 96 /* ` */
-	case GLFW_KEY_WORLD_1:       return vtek::world_1; // 161 /* non-US #1 */
-	case GLFW_KEY_WORLD_2:       return vtek::world_2; // 162 /* non-US #2 */
-	case GLFW_KEY_ESCAPE:        return vtek::escape; // 256
-	case GLFW_KEY_ENTER:         return vtek::enter;// 257
-	case GLFW_KEY_TAB:           return vtek::tab; // 258
-	case GLFW_KEY_BACKSPACE:     return vtek::backspace; // 259
+	case GLFW_KEY_0:             return KeyboardKey::num_0; // 48
+	case GLFW_KEY_1:             return KeyboardKey::num_1; // 49
+	case GLFW_KEY_2:             return KeyboardKey::num_2; // 50
+	case GLFW_KEY_3:             return KeyboardKey::num_3; // 51
+	case GLFW_KEY_4:             return KeyboardKey::num_4; // 52
+	case GLFW_KEY_5:             return KeyboardKey::num_5; // 53
+	case GLFW_KEY_6:             return KeyboardKey::num_6; // 54
+	case GLFW_KEY_7:             return KeyboardKey::num_7; // 55
+	case GLFW_KEY_8:             return KeyboardKey::num_8; // 56
+	case GLFW_KEY_9:             return KeyboardKey::num_9; // 57
+	case GLFW_KEY_SEMICOLON:     return KeyboardKey::semicolon; // 59 /* ; */
+	case GLFW_KEY_EQUAL:         return KeyboardKey::equal; // 61 /* = */
+	case GLFW_KEY_A:             return KeyboardKey::a; // 65
+	case GLFW_KEY_B:             return KeyboardKey::b; // 66
+	case GLFW_KEY_C:             return KeyboardKey::c; // 67
+	case GLFW_KEY_D:             return KeyboardKey::d; // 68
+	case GLFW_KEY_E:             return KeyboardKey::e; // 69
+	case GLFW_KEY_F:             return KeyboardKey::f; // 70
+	case GLFW_KEY_G:             return KeyboardKey::g; // 71
+	case GLFW_KEY_H:             return KeyboardKey::h; // 72
+	case GLFW_KEY_I:             return KeyboardKey::i; // 73
+	case GLFW_KEY_J:             return KeyboardKey::j; // 74
+	case GLFW_KEY_K:             return KeyboardKey::k; // 75
+	case GLFW_KEY_L:             return KeyboardKey::l; // 76
+	case GLFW_KEY_M:             return KeyboardKey::m; // 77
+	case GLFW_KEY_N:             return KeyboardKey::n; // 78
+	case GLFW_KEY_O:             return KeyboardKey::o; // 79
+	case GLFW_KEY_P:             return KeyboardKey::p; // 80
+	case GLFW_KEY_Q:             return KeyboardKey::q; // 81
+	case GLFW_KEY_R:             return KeyboardKey::r; // 82
+	case GLFW_KEY_S:             return KeyboardKey::s; // 83
+	case GLFW_KEY_T:             return KeyboardKey::t; // 84
+	case GLFW_KEY_U:             return KeyboardKey::u; // 85
+	case GLFW_KEY_V:             return KeyboardKey::v; // 86
+	case GLFW_KEY_W:             return KeyboardKey::w; // 87
+	case GLFW_KEY_X:             return KeyboardKey::x; // 88
+	case GLFW_KEY_Y:             return KeyboardKey::y; // 89
+	case GLFW_KEY_Z:             return KeyboardKey::z; // 90
+	case GLFW_KEY_LEFT_BRACKET:  return KeyboardKey::left_bracket; // 91 /* [ */
+	case GLFW_KEY_BACKSLASH:     return KeyboardKey::backslash; // 92 /* \ */
+	case GLFW_KEY_RIGHT_BRACKET: return KeyboardKey::right_bracket;   // 93 /* ] */
+	case GLFW_KEY_GRAVE_ACCENT:  return KeyboardKey::grave_accent;  // 96 /* ` */
+	case GLFW_KEY_WORLD_1:       return KeyboardKey::world_1; // 161 /* non-US #1 */
+	case GLFW_KEY_WORLD_2:       return KeyboardKey::world_2; // 162 /* non-US #2 */
+	case GLFW_KEY_ESCAPE:        return KeyboardKey::escape; // 256
+	case GLFW_KEY_ENTER:         return KeyboardKey::enter;// 257
+	case GLFW_KEY_TAB:           return KeyboardKey::tab; // 258
+	case GLFW_KEY_BACKSPACE:     return KeyboardKey::backspace; // 259
 
-	case GLFW_KEY_INSERT:        return vtek::insert; // 260
-	case GLFW_KEY_DELETE:        return vtek::del; // 261
-	case GLFW_KEY_RIGHT:         return vtek::right; // 262
-	case GLFW_KEY_LEFT:          return vtek::left; // 263
-	case GLFW_KEY_DOWN:          return vtek::down; // 264
-	case GLFW_KEY_UP:            return vtek::up; // 265
-	case GLFW_KEY_PAGE_UP:       return vtek::page_up; // 266
-	case GLFW_KEY_PAGE_DOWN:     return vtek::page_down; // 267
-	case GLFW_KEY_HOME:          return vtek::home; // 268
-	case GLFW_KEY_END:           return vtek::end; // 269
-	case GLFW_KEY_CAPS_LOCK:     return vtek::caps_lock; // 280
-	case GLFW_KEY_SCROLL_LOCK:   return vtek::scroll_lock; // 281
-	case GLFW_KEY_NUM_LOCK:      return vtek::num_lock; // 282
-	case GLFW_KEY_PRINT_SCREEN:  return vtek::print_screen; // 283
-	case GLFW_KEY_PAUSE:         return vtek::pause_break; // 284
+	case GLFW_KEY_INSERT:        return KeyboardKey::insert; // 260
+	case GLFW_KEY_DELETE:        return KeyboardKey::del; // 261
+	case GLFW_KEY_RIGHT:         return KeyboardKey::right; // 262
+	case GLFW_KEY_LEFT:          return KeyboardKey::left; // 263
+	case GLFW_KEY_DOWN:          return KeyboardKey::down; // 264
+	case GLFW_KEY_UP:            return KeyboardKey::up; // 265
+	case GLFW_KEY_PAGE_UP:       return KeyboardKey::page_up; // 266
+	case GLFW_KEY_PAGE_DOWN:     return KeyboardKey::page_down; // 267
+	case GLFW_KEY_HOME:          return KeyboardKey::home; // 268
+	case GLFW_KEY_END:           return KeyboardKey::end; // 269
+	case GLFW_KEY_CAPS_LOCK:     return KeyboardKey::caps_lock; // 280
+	case GLFW_KEY_SCROLL_LOCK:   return KeyboardKey::scroll_lock; // 281
+	case GLFW_KEY_NUM_LOCK:      return KeyboardKey::num_lock; // 282
+	case GLFW_KEY_PRINT_SCREEN:  return KeyboardKey::print_screen; // 283
+	case GLFW_KEY_PAUSE:         return KeyboardKey::pause_break; // 284
 
-	case GLFW_KEY_F1:            return vtek::f1; // 290
-	case GLFW_KEY_F2:            return vtek::f2; // 291
-	case GLFW_KEY_F3:            return vtek::f3; // 292
-	case GLFW_KEY_F4:            return vtek::f4; // 293
-	case GLFW_KEY_F5:            return vtek::f5; // 294
-	case GLFW_KEY_F6:            return vtek::f6; // 295
-	case GLFW_KEY_F7:            return vtek::f7; // 296
-	case GLFW_KEY_F8:            return vtek::f8; // 297
-	case GLFW_KEY_F9:            return vtek::f9; // 298
-	case GLFW_KEY_F10:           return vtek::f10; // 299
-	case GLFW_KEY_F11:           return vtek::f11; // 300
-	case GLFW_KEY_F12:           return vtek::f12; // 301
+	case GLFW_KEY_F1:            return KeyboardKey::f1; // 290
+	case GLFW_KEY_F2:            return KeyboardKey::f2; // 291
+	case GLFW_KEY_F3:            return KeyboardKey::f3; // 292
+	case GLFW_KEY_F4:            return KeyboardKey::f4; // 293
+	case GLFW_KEY_F5:            return KeyboardKey::f5; // 294
+	case GLFW_KEY_F6:            return KeyboardKey::f6; // 295
+	case GLFW_KEY_F7:            return KeyboardKey::f7; // 296
+	case GLFW_KEY_F8:            return KeyboardKey::f8; // 297
+	case GLFW_KEY_F9:            return KeyboardKey::f9; // 298
+	case GLFW_KEY_F10:           return KeyboardKey::f10; // 299
+	case GLFW_KEY_F11:           return KeyboardKey::f11; // 300
+	case GLFW_KEY_F12:           return KeyboardKey::f12; // 301
 
-	case GLFW_KEY_KP_0:          return vtek::numpad_0; // 320
-	case GLFW_KEY_KP_1:          return vtek::numpad_1; // 321
-	case GLFW_KEY_KP_2:          return vtek::numpad_2; // 322
-	case GLFW_KEY_KP_3:          return vtek::numpad_3; // 323
-	case GLFW_KEY_KP_4:          return vtek::numpad_4; // 324
-	case GLFW_KEY_KP_5:          return vtek::numpad_5; // 325
-	case GLFW_KEY_KP_6:          return vtek::numpad_6; // 326
-	case GLFW_KEY_KP_7:          return vtek::numpad_7; // 327
-	case GLFW_KEY_KP_8:          return vtek::numpad_8; // 328
-	case GLFW_KEY_KP_9:          return vtek::numpad_9; // 329
-	case GLFW_KEY_KP_DECIMAL:    return vtek::numpad_decimal; // 330
-	case GLFW_KEY_KP_DIVIDE:     return vtek::numpad_divide; // 331
-	case GLFW_KEY_KP_MULTIPLY:   return vtek::numpad_multiply; // 332
-	case GLFW_KEY_KP_SUBTRACT:   return vtek::numpad_subtract; // 333
-	case GLFW_KEY_KP_ADD:        return vtek::numpad_add; // 334
-	case GLFW_KEY_KP_ENTER:      return vtek::numpad_enter; // 335
-	case GLFW_KEY_KP_EQUAL:      return vtek::numpad_equal; // 336
+	case GLFW_KEY_KP_0:          return KeyboardKey::numpad_0; // 320
+	case GLFW_KEY_KP_1:          return KeyboardKey::numpad_1; // 321
+	case GLFW_KEY_KP_2:          return KeyboardKey::numpad_2; // 322
+	case GLFW_KEY_KP_3:          return KeyboardKey::numpad_3; // 323
+	case GLFW_KEY_KP_4:          return KeyboardKey::numpad_4; // 324
+	case GLFW_KEY_KP_5:          return KeyboardKey::numpad_5; // 325
+	case GLFW_KEY_KP_6:          return KeyboardKey::numpad_6; // 326
+	case GLFW_KEY_KP_7:          return KeyboardKey::numpad_7; // 327
+	case GLFW_KEY_KP_8:          return KeyboardKey::numpad_8; // 328
+	case GLFW_KEY_KP_9:          return KeyboardKey::numpad_9; // 329
+	case GLFW_KEY_KP_DECIMAL:    return KeyboardKey::numpad_decimal; // 330
+	case GLFW_KEY_KP_DIVIDE:     return KeyboardKey::numpad_divide; // 331
+	case GLFW_KEY_KP_MULTIPLY:   return KeyboardKey::numpad_multiply; // 332
+	case GLFW_KEY_KP_SUBTRACT:   return KeyboardKey::numpad_subtract; // 333
+	case GLFW_KEY_KP_ADD:        return KeyboardKey::numpad_add; // 334
+	case GLFW_KEY_KP_ENTER:      return KeyboardKey::numpad_enter; // 335
+	case GLFW_KEY_KP_EQUAL:      return KeyboardKey::numpad_equal; // 336
 
-	case GLFW_KEY_LEFT_SHIFT:    return vtek::left_shift; // 340
-	case GLFW_KEY_LEFT_CONTROL:  return vtek::left_control; // 341
-	case GLFW_KEY_LEFT_ALT:      return vtek::left_alt; // 342
-	case GLFW_KEY_LEFT_SUPER:    return vtek::left_super; // 343
-	case GLFW_KEY_RIGHT_SHIFT:   return vtek::right_shift; // 344
-	case GLFW_KEY_RIGHT_CONTROL: return vtek::right_control; // 345
-	case GLFW_KEY_RIGHT_ALT:     return vtek::right_alt; // 346
-	case GLFW_KEY_RIGHT_SUPER:   return vtek::right_super; // 347
+	case GLFW_KEY_LEFT_SHIFT:    return KeyboardKey::left_shift; // 340
+	case GLFW_KEY_LEFT_CONTROL:  return KeyboardKey::left_control; // 341
+	case GLFW_KEY_LEFT_ALT:      return KeyboardKey::left_alt; // 342
+	case GLFW_KEY_LEFT_SUPER:    return KeyboardKey::left_super; // 343
+	case GLFW_KEY_RIGHT_SHIFT:   return KeyboardKey::right_shift; // 344
+	case GLFW_KEY_RIGHT_CONTROL: return KeyboardKey::right_control; // 345
+	case GLFW_KEY_RIGHT_ALT:     return KeyboardKey::right_alt; // 346
+	case GLFW_KEY_RIGHT_SUPER:   return KeyboardKey::right_super; // 347
 
 	// These two are defined as the same, that is - last is defined as menu!
 	//case GLFW_KEY_LAST:   // 348
-	case GLFW_KEY_MENU:          return vtek::menu;
+	case GLFW_KEY_MENU:          return KeyboardKey::menu;
 
 	default:
-		return vtek::unknown;
+		return KeyboardKey::unknown;
 	}
 }
 
-static vtek::KeyAction get_key_action_from_glfw(int action)
+static vtek::InputAction get_input_action_from_glfw(int action)
 {
+	using vtek::InputAction;
+
 	switch (action)
 	{
-	case GLFW_PRESS: return vtek::press;
+	case GLFW_PRESS:   return InputAction::press;
+	case GLFW_RELEASE: return InputAction::release;
+	case GLFW_REPEAT:  return InputAction::repeat;
+	default:
+		return InputAction::ignore;
 	}
 }
 
-static void default_key_callback(vtek::Key, vtek::KeyAction) {}
-static void default_mouse_button_callback(vtek::MouseButton, vtek::MouseAction) {}
+static void default_key_callback(vtek::KeyboardKey, vtek::InputAction) {}
+static void default_mouse_button_callback(vtek::MouseButton, vtek::InputAction) {}
 static void default_mouse_move_callback(double, double) {}
 static void default_mouse_scroll_callback(double, double) {}
 
@@ -217,52 +225,51 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	// TODO: Multiple windows??
 	static const vtek::ApplicationWindow* appWindow =
 		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	ASSERT_MSG(context != nullptr,
-	           "key_callback: error fetching GLFW user pointer!");
+	// ASSERT_MSG(context != nullptr,
+	//            "key_callback: error fetching GLFW user pointer!");
 
-	vtek::Key vKey = get_key_from_glfw(key);
-	vtek::KeyAction vAction = get_key_action_from_glfw(action);
+	vtek::KeyboardKey vKey = get_key_from_glfw(key);
+	vtek::InputAction vAction = get_input_action_from_glfw(action);
 
 	// By storing only a pointer to the context, and _not_ the callback itself,
 	// we can change the key callback at runtime.
 	// NOTE: This will be less efficient!
 	// REVIEW: We may simply force upon the application to never change the callback?
-	context->windowInterface.fKey(vKey, vAction);
+	// context->windowInterface.fKey(vKey, vAction);
+	appWindow->fKeyCallback(vKey, vAction);
 }
 
 static void mouse_move_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	static const vtek::ApplicationWindow* appWindow =
 		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	ASSERT_MSG(context != nullptr,
-	           "mouse_move_callback: error fetching GLFW user pointer!");
+	// ASSERT_MSG(context != nullptr,
+	//            "mouse_move_callback: error fetching GLFW user pointer!");
 
-	context->windowInterface.fMouseMove(xpos, ypos);
+	// context->windowInterface.fMouseMove(xpos, ypos);
 }
 
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	static const vtek::ApplicationWindow* appWindow =
 		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	ASSERT_MSG(context != nullptr,
-	           "mouse_button_callback: error fetching GLFW user pointer!");
+	// ASSERT_MSG(context != nullptr,
+	//            "mouse_button_callback: error fetching GLFW user pointer!");
 
-	// yggdrasil::input::MouseButtonType button,
-	// yggdrasil::input::InputActionType action
-	input::MouseButtonType bt = graphics::get_glfw_mouse_button(button);
-	input::MouseActionType at = graphics::get_glfw_mouse_action(action);
+	// vtek::MouseButtonType bt = graphics::get_glfw_mouse_button(button);
+	vtek::InputAction vAction = get_input_action_from_glfw(action);
 
-	context->windowInterface.fMouseButton(bt, at);
+	// context->windowInterface.fMouseButton(bt, at);
 }
 
 static void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	static const vtek::ApplicationWindow* appWindow =
 		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	ASSERT_MSG(context != nullptr,
-	           "mouse_scroll_callback: error fetching GLFW user pointer!");
+	// ASSERT_MSG(context != nullptr,
+	//            "mouse_scroll_callback: error fetching GLFW user pointer!");
 
-	context->windowInterface.fMouseScroll(xoffset, yoffset);
+	// context->windowInterface.fMouseScroll(xoffset, yoffset);
 }
 
 
@@ -302,10 +309,10 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 		appWindow->glfwHandle, &appWindow->framebufferWidth, &appWindow->framebufferHeight);
 
 	// Setup default event handlers
-	window->fKeyCallback = default_key_handler;
-	window->fMouseButtonCallback = default_mouse_button_callback;
-	window->fMouseMoveCallback = default_mouse_move_callback;
-	window->fMouseScrollCallback = default_mouse_scroll_callback;
+	appWindow->fKeyCallback = default_key_callback;
+	appWindow->fMouseButtonCallback = default_mouse_button_callback;
+	appWindow->fMouseMoveCallback = default_mouse_move_callback;
+	appWindow->fMouseScrollCallback = default_mouse_scroll_callback;
 
 	glfwSetWindowUserPointer(appWindow->glfwHandle, static_cast<void*>(appWindow));
 
@@ -340,6 +347,27 @@ void vtek::window_destroy(vtek::ApplicationWindow* window)
 	sAllocator.free(window->id);
 }
 
+void vtek::window_get_framebuffer_size(vtek::ApplicationWindow* window, int* width, int* height)
+{
+	*width = window->framebufferWidth;
+	*height = window->framebufferHeight;
+}
+
+void vtek::window_poll_events()
+{
+	glfwPollEvents();
+}
+
+bool vtek::window_get_should_close(vtek::ApplicationWindow* window)
+{
+	return !glfwWindowShouldClose(window->glfwHandle);
+}
+
+void vtek::window_set_should_close(vtek::ApplicationWindow* window, bool shouldClose)
+{
+	glfwSetWindowShouldClose(window->glfwHandle, shouldClose ? GLFW_TRUE : GLFW_FALSE);
+}
+
 VkSurfaceKHR vtek::window_create_surface(
 	vtek::ApplicationWindow* window, vtek::Instance* instance)
 {
@@ -363,8 +391,26 @@ void vtek::window_surface_destroy(VkSurfaceKHR surface, vtek::Instance* instance
 	vkDestroySurfaceKHR(inst, surface, nullptr);
 }
 
-void vtek::window_get_framebuffer_size(vtek::ApplicationWindow* window, int* width, int* height)
+void vtek::window_set_key_handler(
+	vtek::ApplicationWindow* window, vtek::tKeyCallback fn)
 {
-	*width = window->framebufferWidth;
-	*height = window->framebufferHeight;
+	window->fKeyCallback = fn;
+}
+
+void vtek::window_set_mouse_button_handler(
+	vtek::ApplicationWindow* window, vtek::tMouseButtonCallback fn)
+{
+	window->fMouseButtonCallback = fn;
+}
+
+void vtek::window_set_mouse_move_handler(
+	vtek::ApplicationWindow* window, vtek::tMouseMoveCallback fn)
+{
+	window->fMouseMoveCallback = fn;
+}
+
+void vtek::window_set_mouse_scroll_handler(
+	vtek::ApplicationWindow* window, vtek::tMouseScrollCallback fn)
+{
+	window->fMouseScrollCallback = fn;
 }

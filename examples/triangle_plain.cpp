@@ -5,17 +5,21 @@
 vtek::ApplicationWindow* window = nullptr;
 
 
-void keyCallback(vtek::Key key, vtek::KeyAction action)
+void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 {
-	if (action == vtek::press)
+	std::cout << "key callback\n";
+	using vtek::KeyboardKey;
+	using vtek::InputAction;
+
+	if (action == InputAction::press)
 	{
 
 	}
-	else if (action == vtek::release)
+	else if (action == InputAction::release)
 	{
 		switch (key)
 		{
-		case vtek::escape:
+		case KeyboardKey::escape:
 			vtek::window_set_should_close(window, true);
 			break;
 		default:
@@ -120,9 +124,9 @@ int main()
 
 
 
-	while (vtek::window_is_running(window))
+	while (vtek::window_get_should_close(window))
 	{
-
+		vtek::window_poll_events();
 	}
 
 

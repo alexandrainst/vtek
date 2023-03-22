@@ -28,17 +28,20 @@ namespace vtek
 	ApplicationWindow* window_create(const WindowCreateInfo* info);
 	void window_destroy(ApplicationWindow* window);
 
+	void window_poll_events();
 	void window_get_framebuffer_size(ApplicationWindow* window, int* width, int* height);
+	bool window_get_should_close(ApplicationWindow* window);
+	void window_set_should_close(ApplicationWindow* window, bool shouldClose);
 
 	// surface for the application window, needed for Vulkan
 	VkSurfaceKHR window_create_surface(ApplicationWindow* window, Instance* instance);
 	void window_surface_destroy(VkSurfaceKHR surface, Instance* instance);
 
 	// event handling
-	typedef std::function<void(Key,KeyAction)> tKeyCallback;
-	typedef std::function<void(MouseButton, KeyAction)> tMouseButtonCallback;
+	typedef std::function<void(KeyboardKey,InputAction)> tKeyCallback;
+	typedef std::function<void(MouseButton,InputAction)> tMouseButtonCallback;
 	typedef std::function<void(double,double)> tMouseMoveCallback;
-	typedef std::function<void(double double)> tMouseScrollCallback;
+	typedef std::function<void(double, double)> tMouseScrollCallback;
 
 	void window_set_key_handler(ApplicationWindow* window, tKeyCallback fn);
 	void window_set_mouse_button_handler(ApplicationWindow* window, tMouseButtonCallback fn);

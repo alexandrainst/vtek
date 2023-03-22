@@ -103,7 +103,7 @@ target_compile_definitions(vtek PRIVATE SPDLOG_COMPILED_LIB)
 
 if(VTEK_BUILD_WARNINGS)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-	target_compile_options(vtek PRIVATE -Wall -Wextra -ggdb3) # -Werror
+	target_compile_options(vtek PRIVATE -Wall -Wextra -Wno-unused-parameter -ggdb3) # -Werror
   endif()
 endif()
 

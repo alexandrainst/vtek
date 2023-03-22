@@ -3,9 +3,9 @@
 
 namespace vtek
 {
-	enum KeyAction { press, release, repeat }; // TODO: , ignore ?
+	enum class InputAction { press, release, repeat, ignore };
 
-	enum Key {
+	enum class KeyboardKey {
 		unknown,
 		space, apostrophe, comma, minus, period, slash,
 		num_0, num_1, num_2, num_3, num_4, num_5, num_6, num_7, num_8, num_9,
@@ -22,5 +22,5 @@ namespace vtek
 		menu
 	};
 
-	enum MouseButton { left, middle, right };  // TODO: , ignore ?
+	enum class MouseButton { left, middle, right, ignore };  // TODO: , ignore ?
 }
