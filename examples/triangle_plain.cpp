@@ -122,6 +122,22 @@ int main()
 		return -1;
 	}
 
+	// Vulkan render pass
+
+	// Vulkan swapchain framebuffers (after render pass ?)
+
+	// Vulkan framebuffers
+
+	// Vulkan graphics pipeline
+
+	// REVIEW: geometry ?
+
+	// Vulkan command buffers
+
+	// Vulkan sync objects
+
+	// NOTE: Proper order can be fetched from VV/src Vulkan setup!
+
 
 
 	while (vtek::window_get_should_close(window))

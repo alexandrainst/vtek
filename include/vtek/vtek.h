@@ -24,5 +24,6 @@
 #include "vtek_input.h"
 #include "vtek_instance.h"
 #include "vtek_logging.h"
+#include "vtek_render_pass.h"
 #include "vtek_physical_device.h"
 #include "vtek_swapchain.h"

@@ -50,7 +50,7 @@ endif()
 # TODO: Conditional glfw find
 # NOTE: Could possibly we written as `cmake -DUSE_GLFW=true`, or something like that
 if(VTEK_CREATE_EXAMPLES)
-  find_package(glfw3)
+  find_package(glfw3 REQUIRED)
 endif()
 
 
@@ -64,6 +64,7 @@ set (src
   include/vtek/vtek_main.h
   include/vtek/vtek_physical_device.h
   include/vtek/vtek_queue.h
+  include/vtek/vtek_render_pass.h
   include/vtek/vtek_swapchain.h
   include/vtek/vtek_vulkan_helpers.h
   include/vtek/vtek_vulkan_version.h
