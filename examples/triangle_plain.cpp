@@ -108,6 +108,11 @@ int main()
 	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
 		&commandPoolCreateInfo, device, graphicsQueue);
+	if (graphicsCommandPool == nullptr)
+	{
+		log_error("Failed to create graphics command pool!");
+		return -1;
+	}
 
 	// Swapchain
 	vtek::SwapchainCreateInfo swapchainCreateInfo{};
@@ -123,16 +128,32 @@ int main()
 	}
 
 	// Vulkan render pass
+	// DONE: We use dynamic rendering
 
 	// Vulkan swapchain framebuffers (after render pass ?)
+	// DONE: We use dynamic rendering
 
 	// Vulkan framebuffers
+	// DONE: We use dynamic rendering
 
 	// Vulkan graphics pipeline
+	vtek::GraphicsPipeline graphicsPipeline = vtek::graphics_pipeline_create();
+	if (graphicsPipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline!");
+		return -1;
+	}
 
 	// REVIEW: geometry ?
 
 	// Vulkan command buffers
+	vtek::CommandBufferCreateInfo commandBufferInfo{};
+	vtek::CommandBuffer commandBuffer = vtek::command_buffer_create(&commandBufferInfo);
+	if (commandBuffer == nullptr)
+	{
+		log_error("Failed to create command buffer!");
+		return -1;
+	}
 
 	// Vulkan sync objects
 

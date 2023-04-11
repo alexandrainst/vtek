@@ -8,7 +8,8 @@
 struct vtek::CommandPool
 {
 	uint64_t id {VTEK_INVALID_ID};
-	VkCommandPool vulkanHandle;
+	VkCommandPool vulkanHandle {VK_NULL_HANDLE};
+	bool allowIndividualBufferReset {false};
 };
 
 
@@ -44,6 +45,7 @@ vtek::CommandPool* vtek::command_pool_create(
 	if (info->allowIndividualBufferReset)
 	{
 		createInfo.flags |= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		commandPool->allowIndividualBufferReset = true;
 	}
 	if (info->hintRerecordOften)
 	{
@@ -75,4 +77,9 @@ void vtek::command_pool_destroy(vtek::CommandPool* commandPool, const vtek::Devi
 
 	sAllocator.free(commandPool->id);
 	commandPool->id = VTEK_INVALID_ID;
+}
+
+bool vtek::command_pool_allow_individual_reset(vtek::CommandPool* commandPool)
+{
+	return commandPool->allowIndividualBufferReset;
 }

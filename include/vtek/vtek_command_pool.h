@@ -26,4 +26,10 @@ namespace vtek
 		const CommandPoolCreateInfo* info, const Device* device, const Queue* queue);
 
 	void command_pool_destroy(CommandPool* commandPool, const Device* device);
+
+	// The return value directly reflects the ´allowIndividualBufferReset´ flag
+	// passed to the `CommandPoolCreateInfo` when the pool was created.
+	// If it is false, command buffers allocated from this pool may still be
+	// reset, but only by resetting them all at once!
+	bool command_pool_allow_individual_reset(CommandPool* commandPool);
 }

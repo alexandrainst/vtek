@@ -5,7 +5,22 @@ using CBState = vtek::CommandBufferStateType;
 
 
 /* struct implementation */
-struct vtek::CommandBuffer
+// TODO: Can we do this trick? Would be really awesome!
+namespace vtek
+{
+	struct OpaqueHandle
+	{
+	public:
+		uint64_t id {VTEK_INVALID_ID}; // Implemented in impl/vtek_host_allocator.h
+
+		inline OpaqueHandle() { id = global_id++; }
+		inline virtual ~OpaqueHandle() {}
+	private:
+		static uint64_t global_id = 0;
+	};
+}
+
+struct vtek::CommandBuffer : public OpaqueHandle
 {
 	VkCommandBuffer vulkanHandle {VK_NULL_HANDLE};
 	CBState state {CBState::invalid};
@@ -18,14 +33,82 @@ struct vtek::CommandBuffer
 	bool isSecondary {false}; // TODO: What to use this for?
 };
 
-vtek::CommandBuffer* vtek::command_buffer_create()
+vtek::CommandBuffer* vtek::command_buffer_create(
+	const vtek::CommandBufferCreateInfo* info, vtek::CommandPool* pool, vtek::Device* device)
 {
+	auto commandBuffer = new vtek::CommandBuffer();
 
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.pNext = nullptr;
+	allocInfo.commandPool = vtek::command_pool_get_handle(pool);
+	allocInfo.level = (info->isSecondary)
+		? VK_COMMAND_BUFFER_LEVEL_SECONDARY
+		: VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	VkResult allocResult = vkAllocateCommandBuffers(
+		vtek::device_get_handle(device), &allocInfo, &commandBuffer->vulkanHandle);
+	if (allocResult != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to allocate command buffer!");
+		delete commandBuffer;
+		return nullptr;
+	}
+
+	commandBuffer->isSecondary = info->isSecondary;
+	return commandBuffer;
+}
+
+std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
+	const vtek::CommandBufferCreateInfo* info, uint32_t createCount,
+	vtek::CommandPool* pool, vtek::Device* device)
+{
+	auto allocations = new vtek::CommandBuffer[createCount];
+	std::vector<vtek::CommandBuffer*> commandBuffers(allocations);
+
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.pNext = nullptr;
+	allocInfo.commandPool = vtek::command_pool_get_handle(pool);
+	allocInfo.level = (info->isSecondary)
+		? VK_COMMAND_BUFFER_LEVEL_SECONDARY
+		: VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = createCount;
+
+	std::vector<VkCommandBuffer> vulkanHandles(createCount, VK_NULL_HANDLE);
+
+	VkResult allocResult = vkAllocateCommandBuffers(
+		vtek::device_get_handle(device), &allocInfo, vulkanHandles.data());
+	if (allocResult != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to allocate command buffer!");
+		delete commandBuffer;
+		return nullptr;
+	}
+
+	bool reset = vtek::command_pool_allow_individual_reset(pool);
+	bool secondary = info->isSecondary;
+
+	for (uint32_t i = 0; i < createCount; i++)
+	{
+		commandBuffers[i]->vulkanHandle = vulkanHandles[i];
+		commandBuffers[i]->supportsReset = reset;
+		commandBuffers[i]->secondary = secondary;
+	}
+
+	return commandBuffers;
 }
 
 void vtek::command_buffer_destroy(vtek::CommandBuffer* commandBuffer)
 {
 
+}
+
+void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers)
+{
+	delete[] commandBuffers->data();
+	commandBuffers.reset();
 }
 
 bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)

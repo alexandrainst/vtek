@@ -1,11 +1,20 @@
 #pragma once
 
+#include <vector>
+#include <vulkan/vulkan.h>
+#include "vtek_command_pool.h"
+
+
 namespace vtek
 {
 	// State for a command buffer. See:
 	// https://registry.khronos.org/vulkan/specs/1.2-extensions/html/vkspec.html#commandbuffers-lifecycle
 	enum class CommandBufferStateType
 	{
+		// A command buffer is not allocated, or it was explicitly deallocated.
+		// TODO: Do we need this safety measure?
+		not_allocated,
+
 		// When a command buffer has been allocated.
 		// Some commands can reset a command buffer back to this state from executable, recording, or invalid.
 		// Command buffers in initial state can only be moved to recording state, or freed.
@@ -31,10 +40,23 @@ namespace vtek
 		invalid
 	};
 
+	struct CommandBufferCreateInfo
+	{
+		bool isSecondary {false};
+	};
+
 	struct CommandBuffer; // opaque handle
 
-	CommandBuffer* command_buffer_create();
+
+	CommandBuffer* command_buffer_create(
+		const CommandBufferCreateInfo* info, CommandPool* pool, Device* device);
+	std::vector<CommandBuffer*> command_buffer_create(
+		const CommandBufferCreateInfo* info, uint32_t createCount, CommandPool* pool, Device* device);
+
 	void command_buffer_destroy(CommandBuffer* commandBuffer);
+	void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers);
+
+	VkCommandBuffer command_buffer_get_handle(CommandBuffer* commandBuffer);
 
 	// TODO: Perhaps we want to pack the details away and instead provide this interface:
 	bool command_buffer_reset(CommandBuffer* commandBuffer);
