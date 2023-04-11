@@ -23,6 +23,7 @@ namespace vtek
 struct vtek::CommandBuffer : public OpaqueHandle
 {
 	VkCommandBuffer vulkanHandle {VK_NULL_HANDLE};
+	VkCommandPool poolHandle {VK_NULL_HANDLE};
 	CBState state {CBState::invalid};
 
 	// If command buffer was created from a pool that was created with the
@@ -93,6 +94,7 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 	for (uint32_t i = 0; i < createCount; i++)
 	{
 		commandBuffers[i]->vulkanHandle = vulkanHandles[i];
+		commandBuffers[i]->poolHandle = vtek::command_pool_get_handle(pool);
 		commandBuffers[i]->supportsReset = reset;
 		commandBuffers[i]->secondary = secondary;
 	}
@@ -100,17 +102,35 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 	return commandBuffers;
 }
 
-void vtek::command_buffer_destroy(vtek::CommandBuffer* commandBuffer)
+void vtek::command_buffer_destroy(vtek::CommandBuffer* commandBuffer, vtek::Device* device)
 {
-
+	
 }
 
-void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers)
+void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers, vtek::Device* device)
 {
+	if (commandBuffers.size() == 0) { return; }
+
+	std::vector<VkCommandBuffer> handles;
+	for (auto buf : commandBuffers)
+	{
+		handles.push_back(buf->vulkanHandle);
+	}
+	vkFreeCommandBuffers(
+		vtek::device_get_handle(device), commandBuffers[0]->poolHandle,
+		handles.size(), handles.data());
+
+	for (auto buf : commandBuffers)
+	{
+		buf->vulkanHandle = VK_NULL_HANDLE;
+		buf->poolHandle = VK_NULL_HANDLE;
+		buf->state = CBState::not_allocated;
+	}
+
 	delete[] commandBuffers->data();
 	commandBuffers.reset();
 }
-
+ 
 bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
 {
 	// TODO: How do we measure this?

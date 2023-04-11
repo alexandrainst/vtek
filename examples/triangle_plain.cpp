@@ -137,7 +137,10 @@ int main()
 	// DONE: We use dynamic rendering
 
 	// Vulkan graphics pipeline
-	vtek::GraphicsPipeline graphicsPipeline = vtek::graphics_pipeline_create();
+	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	vtek::GraphicsPipeline graphicsPipeline = vtek::graphics_pipeline_create(
+		&graphicsPipelineInfo, device);
 	if (graphicsPipeline == nullptr)
 	{
 		log_error("Failed to create graphics pipeline!");
@@ -148,7 +151,8 @@ int main()
 
 	// Vulkan command buffers
 	vtek::CommandBufferCreateInfo commandBufferInfo{};
-	vtek::CommandBuffer commandBuffer = vtek::command_buffer_create(&commandBufferInfo);
+	vtek::CommandBuffer commandBuffer = vtek::command_buffer_create(
+		&commandBufferInfo, graphicsCommandPool, device);
 	if (commandBuffer == nullptr)
 	{
 		log_error("Failed to create command buffer!");
