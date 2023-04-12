@@ -71,6 +71,8 @@ namespace vtek
 
 	VkDevice device_get_handle(const Device* device);
 
+	const VulkanVersion* device_get_vulkan_version(const Device* device);
+
 	const DeviceExtensions* device_get_enabled_extensions(const Device* device);
 
 	const VkPhysicalDeviceFeatures* device_get_enabled_features(const Device* device);

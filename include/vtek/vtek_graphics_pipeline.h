@@ -4,11 +4,30 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include "vtek_device.h"
+#include "vtek_render_pass.h"
 
 
 namespace vtek
 {
-	enum class RenderPassType { renderpass, dynamic };
+	// ====================== //
+	// === Pipeline states == //
+	// ====================== //
+	enum class PrimitiveTopology
+	{
+		point_list, line_list, line_strip, triangle_list, triangle_strip
+	};
+
+	struct ViewportState
+	{
+		VkRect2D viewportRegion {};
+		// NOTE: good default values for min/max depth that need not be changed.
+		float minDepth {0.0f};
+		float maxDepth {1.0f};
+		// Scissor rectangle describes in which region pixels will be stored.
+		// Any pixels outside the scissor rectangle are discarded by the rasterizer.
+		bool useScissorRegion {false};
+		VkRect2D scissorRegion {};
+	};
 
 	// NOTE: cpp-enum-proposal for bitmasks!
 	enum class PipelineDynamicState : uint32_t
@@ -43,10 +62,21 @@ namespace vtek
 
 	typedef uint32_t PipelineDynamicStateFlags;
 
+	enum class RenderPassType { renderpass, dynamic };
+
+
+	// ============================== //
+	// === Pipeline creation info === //
+	// ============================== //
+
+	// NOTE: All fields must be filled out properly so the behaviour of the
+	// pipeline is well-defined.
 	struct GraphicsPipelineCreateInfo
 	{
+		// NOTE: If renderPassType == `RenderPassType::dynamic`, then
+		//  `renderPass` _should_ be NULL.
 		RenderPassType renderPassType {vtek::RenderPassType::renderpass};
-		VkRenderPass renderPass {}; // TODO: Use vtek type instead!
+		RenderPass* renderPass {nullptr};
 
 		// TODO: Parameters:
 		// GraphicsShader* shader;
@@ -60,8 +90,14 @@ namespace vtek
 		// vertex input
 
 		// input assembler
+		PrimitiveTopology primitiveTopology {PrimitiveTopology::triangle_list};
+		bool enablePrimitiveRestart {false};
 
 		// viewport state
+		// TODO: It is possible to use multiple viewports and scissor rectangles
+		// on some GPUs, which requires enabling a feature during device creation.
+		// How to handle that here? / Should we?
+		ViewportState* viewportState;
 
 		// rasterization
 
@@ -82,7 +118,7 @@ namespace vtek
 
 
 	GraphicsPipeline* graphics_pipeline_create(
-		const GraphicsPipelineCreateInfo& info, Device* device);
+		const GraphicsPipelineCreateInfo* info, Device* device);
 	void graphics_pipeline_destroy(GraphicsPipeline* pipeline);
 
 	VkPipeline graphics_pipeline_get_handle(GraphicsPipeline* pipeline);

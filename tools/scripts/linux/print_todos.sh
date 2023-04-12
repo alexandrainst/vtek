@@ -16,8 +16,6 @@ do
 done
 
 # output line numbers of all code files included in projects
-#files="$(find -type f | egrep -v 'bin/|obj/|vendor/|Makefile|premake5.lua|.gitignore'# | \
-#    egrep '.hpp$|.cpp$')"
 files="$(find include/ src/ -type f)"
 
 # go through all the sources files

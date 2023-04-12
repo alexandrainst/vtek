@@ -20,10 +20,10 @@ namespace vtek
 			  mMajor(major), mMinor(minor), mPatch(patch)
 		{}
 
-		inline uint32_t getVulkan() { return mVulkanApi; }
-		inline uint32_t getMajor() { return mMajor; }
-		inline uint32_t getMinor() { return mMinor; }
-		inline uint32_t getPatch() { return mPatch; }
+		inline uint32_t apiVersion() { return mVulkanApi; }
+		inline uint32_t major() { return mMajor; }
+		inline uint32_t minor() { return mMinor; }
+		inline uint32_t patch() { return mPatch; }
 
 	private:
 		uint32_t mVulkanApi;

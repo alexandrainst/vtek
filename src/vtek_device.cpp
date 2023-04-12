@@ -21,6 +21,7 @@ struct vtek::Device
 {
 	uint64_t id {VTEK_INVALID_ID};
 	VkDevice vulkanHandle {VK_NULL_HANDLE};
+	vtek::VulkanVersion vulkanVersion {1, 0, 0}; // TODO: Compiles?
 
 	VkPhysicalDeviceFeatures enabledFeatures {};
 	vtek::DeviceExtensions enabledExtensions {};
@@ -678,6 +679,11 @@ void vtek::device_destroy(Device* device)
 VkDevice vtek::device_get_handle(const vtek::Device* device)
 {
 	return device->vulkanHandle;
+}
+
+const vtek::VulkanVersion* vtek::device_get_vulkan_version(const vtek::Device* device)
+{
+	return &device->vulkanVersion;
 }
 
 const vtek::DeviceExtensions* vtek::device_get_enabled_extensions(const vtek::Device* device)
