@@ -255,6 +255,8 @@ static bool has_required_extension_support(
 		// - VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
 		// NOTE: This is also dependent upon available Vulkan instance version, so likely not needed!
 
+		// TODO: Check for dynamic rendering extension of Vulkan version < 1.3!
+
 		support->raytracing = true;
 	}
 

@@ -17,6 +17,21 @@ namespace vtek
 		point_list, line_list, line_strip, triangle_list, triangle_strip
 	};
 
+	enum class PolygonMode
+	{
+		fill, line, point
+	};
+
+	enum class CullMode
+	{
+		none, front, back, front_and_back
+	};
+
+	enum class FrontFace
+	{
+		clockwise, counter_clockwise
+	};
+
 	struct ViewportState
 	{
 		VkRect2D viewportRegion {};
@@ -27,6 +42,34 @@ namespace vtek
 		// Any pixels outside the scissor rectangle are discarded by the rasterizer.
 		bool useScissorRegion {false};
 		VkRect2D scissorRegion {};
+	};
+
+	struct RasterizationState
+	{
+		// If enabled, fragments outside the near and far view frustrum planes
+		// are clamped instead of being discarded. Useful e.g. for shadow mapping.
+		// Using this requires enabling a feature during device creation.
+		bool depthClampEnable {false};
+		// If enabled, geometry never passes through rasterization, which then
+		// entirely discards any output to the framebuffer.
+		bool rasterizerDiscardEnable {false};
+		// NOTE: Any other polygon mode than `fill` requires enabling a feature
+		// during device creation.
+		PolygonMode polygonMode;
+		// Line thickness in terms of number of fragments. Maximum supported value
+		// is hardware-dependent, and values larger than `1.0f` requires enabling
+		// the `wideLines` feature during device creation.
+		float lineWidth {1.0f};
+		// Backface culling (Travis Vroman: back and CCW is most common):
+		CullMode cullMode {CullMode::none};
+		FrontFace frontFace {FrontFace::counter_clockwise};
+		// The rasterizer can alter the depth values by adding a constant value
+		// or biasing them based on a fragment's slope. This is sometimes used
+		// for shadow mapping.
+		bool depthBiasEnable {false};
+		float depthBiasConstantFactor {0.0f};
+		float depthBiasClamp {0.0f};
+		float depthBiasSlopeFactor {0.0f};
 	};
 
 	// NOTE: cpp-enum-proposal for bitmasks!
@@ -100,6 +143,7 @@ namespace vtek
 		ViewportState* viewportState;
 
 		// rasterization
+		RasterizationState* rasterizationState;
 
 		// multisample state
 

@@ -104,7 +104,7 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 
 void vtek::command_buffer_destroy(vtek::CommandBuffer* commandBuffer, vtek::Device* device)
 {
-	
+	vtek_log_error("vtek::command_buffer_destroy(): Not implemented!");
 }
 
 void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers, vtek::Device* device)
@@ -130,7 +130,7 @@ void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers, vtek::D
 	delete[] commandBuffers->data();
 	commandBuffers.reset();
 }
- 
+
 bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
 {
 	// TODO: How do we measure this?

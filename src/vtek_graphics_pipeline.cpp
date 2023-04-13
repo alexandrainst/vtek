@@ -1,4 +1,5 @@
 #include "vtek_graphics_pipeline.h"
+#include "impl/vtek_vulkan_helpers.h"
 
 /* struct implementation */
 struct vtek::GraphicsPipeline
@@ -79,14 +80,51 @@ static void get_enabled_dynamic_states(
 #endif
 }
 
+static VkPolygonMode get_polygon_mode(vtek::PolygonMode mode)
+{
+	switch (polygonMode)
+	{
+	case vtek::PolygonMode::fill: return VK_POLYGON_MODE_FILL;
+	case vtek::PolygonMode::line: return VK_POLYGON_MODE_LINE;
+	case vtek::PolygonMode::point: return VK_POLYGON_MODE_POINT;
+	default:
+		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid polygon mode!");
+		return VK_POLYGON_MODE_FILL;
+	}
+}
+
+static VkCullModeFlags get_cull_mode_flags(vtek::CullMode mode)
+{
+	switch (mode)
+	{
+	case vtek::CullMode::none:           return VK_CULL_MODE_NONE;
+	case vtek::CullMode::front:          return VK_CULL_MODE_FRONT_BIT;
+	case vtek::CullMode::back:           return VK_CULL_MODE_BACK_BIT;
+	case vtek::CullMode::front_and_back: return VK_CULL_MODE_FRONT_AND_BACK;
+	default:
+		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid cull mode!");
+		return VK_CULL_MODE_NONE;
+	}
+}
+
+static get_front_face(vtek::FrontFace face)
+{
+	switch (face)
+	{
+	case vtek::FrontFace::clockwise:         return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	case vtek::FrontFace::counter_clockwise: return VK_FRONT_FACE_CLOCKWISE;
+	default:
+		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid front face!");
+		return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	}
+}
+
 
 /* interface */
 vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	const vtek::GraphicsPipelineCreateInfo* info, vtek::Device* device)
 {
-	VkGraphicsPipelineCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	createInfo.pNext = nullptr;
+	VkDevice dev = vtek::device_get_handle(device);
 
 	/* Neat and ordered: */
 
@@ -104,14 +142,42 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		vtek_log_error("No viewport state provided - cannot create graphics pipeline!");
 		return nullptr;
 	}
-	viewportState viewportState = *(info->viewportState); // copy-by-value
+	vtek::ViewportState viewportState = *(info->viewportState); // copy-by-value
 	VkViewport viewport{};
 	viewport.x = viewportState.viewportRegion.offset.x;
 	viewport.y = viewportState.viewportRegion.offset.y;
 	viewport.width = viewportState.viewportRegion.extent.width;
 	viewport.width = viewportState.viewportRegion.extent.width;
+	// TODO: Multiple viewport states?
+	createInfo.pViewportState = &viewport;
 
 	// rasterization
+	if (info->rasterizationState == nullptr)
+	{
+		vtek_log_error("No rasterization state provided - cannot create graphics pipeline!");
+		return nullptr;
+	}
+	vtek::RasterizationState rasterizationState = *(info->rasterizationState); // copy-by-value
+	VkPipelineRasterizationStateCreateInfo rasterizer{};
+	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer.pNext = nullptr;
+	rasterizer.flags = 0U; // reserved for future use (Vulkan 1.3)
+	rasterizer.depthClampEnable =
+		vtek::getVulkanBoolean(rasterizationState.depthClampEnable);
+	rasterizer.rasterizerDiscardEnable =
+		vtek::getVulkanBoolean(rasterizationState.rasterizerDiscardEnable);
+	rasterizer.polygonMode = get_polygon_mode(rasterizationState.polygonMode);
+	rasterizer.cullMode = get_cull_mode_flags(rasterizationState.cullMode);
+	rasterizer.frontFace = get_front_face(rasterizationState.frontFace);
+	rasterizer.depthBiasEnable =
+		vtek::getVulkanBoolean(rasterizationState.depthBiasEnable);
+	rasterizer.depthBiasConstantFactor = rasterizationState.depthBiasConstantFactor;
+	rasterizer.depthBiasClamp = rasterizationState.depthBiasClamp;
+	rasterizer.depthBiasSlopeFactor = rasterizationState.depthBiasSlopeFactor;
+	rasterizer.lineWidth = rasterizationState.lineWidth;
+		// TODO: Also check for enabled device features!
+	createInfo.pRasterizationState = &rasterizer;
+
 
 	// multisample state
 
@@ -134,6 +200,23 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	}
 
 	// pipeline layout
+	VkPipelineLayoutCreateInfo layoutInfo{};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	layoutInfo.pNext = nullptr;
+	layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
+	layoutInfo.setLayoutCount = 0; // ??
+	layoutInfo.pSetLayouts = nullptr; // ??
+	layoutInfo.pushConstantRangeCount = 0; // ??
+	layoutInfo.pPushConstantRanges = nullptr; // ??
+	// TODO: Library to extract descriptor layout from Spir-V ??
+
+	VkPipelineLayout layout {VK_NULL_HANDLE};
+	VkResult layoutResult = vkCreatePipelineLayout(dev, &layoutInfo, nullptr, &layout);
+	if (layoutResult != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create graphics pipeline layout!");
+		return nullptr;
+	}
 
 	// Dynamic state -- alternative to providing a render pass!
 	VkPipelineRenderingCreateInfo renderingCreateInfo{};
@@ -156,7 +239,11 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	/* create the graphics pipeline (finally!) */
 	// TODO: How to handle pipeline cache?
 	// TODO: How to handle multiple pipelines?
-	VkResult result = vkCreateGraphicsPipelines
+	VkGraphicsPipelineCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	createInfo.pNext = nullptr;
+
+	VkResult result = vkCreateGraphicsPipelines();
 
 
 	return nullptr;
