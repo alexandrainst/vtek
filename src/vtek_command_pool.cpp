@@ -17,6 +17,7 @@ struct vtek::CommandPool
 static vtek::HostAllocator<vtek::CommandPool> sAllocator("vtek_command_pool");
 
 
+/* interface */
 vtek::CommandPool* vtek::command_pool_create(
 	const vtek::CommandPoolCreateInfo* info, const vtek::Device* device, const vtek::Queue* queue)
 {
@@ -77,6 +78,11 @@ void vtek::command_pool_destroy(vtek::CommandPool* commandPool, const vtek::Devi
 
 	sAllocator.free(commandPool->id);
 	commandPool->id = VTEK_INVALID_ID;
+}
+
+VkCommandPool vtek::command_pool_get_handle(vtek::CommandPool* commandPool)
+{
+	return commandPool->vulkanHandle;
 }
 
 bool vtek::command_pool_allow_individual_reset(vtek::CommandPool* commandPool)

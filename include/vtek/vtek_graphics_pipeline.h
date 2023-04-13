@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.h>
 #include "vtek_device.h"
 #include "vtek_render_pass.h"
+#include "vtek_vertex_data.h"
 
 
 namespace vtek
@@ -14,7 +15,12 @@ namespace vtek
 	// ====================== //
 	enum class PrimitiveTopology
 	{
-		point_list, line_list, line_strip, triangle_list, triangle_strip
+		point_list,
+		line_list, line_strip,
+		triangle_list, triangle_strip, triangle_fan,
+		line_list_with_adjacency, line_strip_with_adjacency,
+		triangle_list_with_adjacency, triangle_strip_with_adjacency,
+		patch_list
 	};
 
 	enum class PolygonMode
@@ -41,6 +47,7 @@ namespace vtek
 		// Scissor rectangle describes in which region pixels will be stored.
 		// Any pixels outside the scissor rectangle are discarded by the rasterizer.
 		bool useScissorRegion {false};
+		// TODO: std::vector<VkRect2D> scissorRegions; ?
 		VkRect2D scissorRegion {};
 	};
 
@@ -75,31 +82,31 @@ namespace vtek
 	// NOTE: cpp-enum-proposal for bitmasks!
 	enum class PipelineDynamicState : uint32_t
 	{
-		viewport                    = 0x00000001,
-		scissor                     = 0x00000002,
-		line_width                  = 0x00000004,
-		depth_bias                  = 0x00000008,
-		blend_constants             = 0x00000010,
-		depth_bounds                = 0x00000020,
-		stencil_compare_mask        = 0x00000040,
-		stencil_write_mask          = 0x00000080,
-		stencil_reference           = 0x00000100,
+		viewport                    = 0x00000001U,
+		scissor                     = 0x00000002U,
+		line_width                  = 0x00000004U,
+		depth_bias                  = 0x00000008U,
+		blend_constants             = 0x00000010U,
+		depth_bounds                = 0x00000020U,
+		stencil_compare_mask        = 0x00000040U,
+		stencil_write_mask          = 0x00000080U,
+		stencil_reference           = 0x00000100U,
 #if defined(VK_API_VERSION_1_3)
-		cull_mode                   = 0x00000200,
-		front_face                  = 0x00000400,
-		primitive_topology          = 0x00000800,
-		viewport_with_count         = 0x00001000,
-		scissor_with_count          = 0x00002000,
-		vertex_input_binding_stride = 0x00004000,
-		depth_test_enable           = 0x00008000,
-		depth_write_enable          = 0x00010000,
-		depth_compare_op            = 0x00020000,
-		depth_bounds_test_enable    = 0x00040000,
-		stencil_test_enable         = 0x00080000,
-		stencil_op                  = 0x00100000,
-		rasterizer_discard_enable   = 0x00200000,
-		depth_bias_enable           = 0x00400000,
-		primitive_restart_enable    = 0x00800000,
+		cull_mode                   = 0x00000200U,
+		front_face                  = 0x00000400U,
+		primitive_topology          = 0x00000800U,
+		viewport_with_count         = 0x00001000U,
+		scissor_with_count          = 0x00002000U,
+		vertex_input_binding_stride = 0x00004000U,
+		depth_test_enable           = 0x00008000U,
+		depth_write_enable          = 0x00010000U,
+		depth_compare_op            = 0x00020000U,
+		depth_bounds_test_enable    = 0x00040000U,
+		stencil_test_enable         = 0x00080000U,
+		stencil_op                  = 0x00100000U,
+		rasterizer_discard_enable   = 0x00200000U,
+		depth_bias_enable           = 0x00400000U,
+		primitive_restart_enable    = 0x00800000U,
 #endif
 	};
 
@@ -131,6 +138,7 @@ namespace vtek
 		// shader stages
 
 		// vertex input
+		VertexType vertexType {vtek::VertexType::vec2};
 
 		// input assembler
 		PrimitiveTopology primitiveTopology {PrimitiveTopology::triangle_list};

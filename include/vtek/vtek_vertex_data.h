@@ -1,4 +1,4 @@
-#include <array>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 // TODO: Provide centralized GLM header?
@@ -21,23 +21,37 @@
 
 namespace vtek
 {
+	// =================== //
+	// === Vertex enum === //
+	// =================== //
 	// How format of a single vertex is described, as laid out in memory.
 	// p = point
 	// n = normal
 	// t = texcoord
-	enum class Vertex
+	enum class VertexType
 	{
 		vec2
 	};
 
-	// short-cut
-	template<int I>
-	using AttrDesc = std::array<VkVertexInputAttributeDescription, I>;
+
+	// ====================================== //
+	// === Binding/attribute descriptions === //
+	// ====================================== //
+	using BindingDescription = VkVertexInputBindingDescription;
+	using AttributeDescriptions = std::vector<VkVertexInputAttributeDescription>;
+
+	// TODO: Need other things such as `bool instanced` and binding description count!
+	const BindingDescription& vertex_binding_description(VertexType vt);
+	const AttributeDescriptions& vertex_attribute_descriptions(VertexType vt);
 
 
 	// ==================== //
 	// === Vertex types === //
 	// ==================== //
+	// short-cut
+	template<int I>
+	using AttrDesc = std::array<VkVertexInputAttributeDescription, I>;
+
 	struct Vertex_p2
 	{
 		// data
@@ -45,8 +59,22 @@ namespace vtek
 
 		// descriptions, only static access
 		// TODO: Does this work?
-		static constexpr Vertex = Vertex::vec2;
+		static constexpr VertexType kVertexType = VertexType::vec2;
 		static const VkVertexInputBindingDescription& bindingDescription();
-		static const AttrDesc<1>& attributeDescriptions();
+		static const AttributeDescriptions attributeDescriptions();
+	};
+}
+
+
+// Hashing, necessary for certain operations such as using vertex types as
+// keys in an std::unordered_map.
+namespace std
+{
+	template<> struct hash<vtek::Vertex_p2>
+	{
+		std::size_t operator()(const vtek::Vertex_p2& v) const
+		{
+			return hash<glm::vec2>()(v.pos);
+		}
 	};
 }

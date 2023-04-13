@@ -57,8 +57,10 @@ endif()
 set (src
   include/vtek/version.h
   include/vtek/vtek_application_window.h
+  include/vtek/vtek_command_buffer.h
   include/vtek/vtek_command_pool.h
   include/vtek/vtek_device.h
+  include/vtek/vtek_graphics_pipeline.h
   include/vtek/vtek_instance.h
   include/vtek/vtek_logging.h
   include/vtek/vtek_main.h
@@ -66,24 +68,27 @@ set (src
   include/vtek/vtek_queue.h
   include/vtek/vtek_render_pass.h
   include/vtek/vtek_swapchain.h
-  include/vtek/vtek_vulkan_helpers.h
+  include/vtek/vtek_vertex_data.h
   include/vtek/vtek_vulkan_version.h
 
   src/impl/vtek_glfw_backend.h
   src/impl/vtek_host_allocator.h
   src/impl/vtek_queue_struct.h
+  src/impl/vtek_vulkan_helpers.h
 
   src/vtek_application_window.cpp
+  src/vtek_command_buffer.cpp
   src/vtek_command_pool.cpp
   src/vtek_device.cpp
   src/vtek_host_allocator.cpp
+  src/vtek_graphics_pipeline.cpp
   src/vtek_instance.cpp
   src/vtek_logging.cpp
   src/vtek_main.cpp
   src/vtek_physical_device.cpp
   src/vtek_queue.cpp
   src/vtek_swapchain.cpp
-  src/vtek_vulkan_helpers.cpp
+  src/vtek_vertex_data.cpp
   )
 
 if(VTEK_SHARED_LIB)

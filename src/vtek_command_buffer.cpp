@@ -1,11 +1,11 @@
-#include "vtCommandBuffer.h"
+#include "vtek_command_buffer.h"
 #include "vtek_logging.h"
+#include "impl/vtek_host_allocator.h"
 
 using CBState = vtek::CommandBufferStateType;
 
 
 /* struct implementation */
-// TODO: Can we do this trick? Would be really awesome!
 namespace vtek
 {
 	struct OpaqueHandle
@@ -16,7 +16,7 @@ namespace vtek
 		inline OpaqueHandle() { id = global_id++; }
 		inline virtual ~OpaqueHandle() {}
 	private:
-		static uint64_t global_id = 0;
+		static inline uint64_t global_id = 0;
 	};
 }
 
@@ -34,6 +34,9 @@ struct vtek::CommandBuffer : public OpaqueHandle
 	bool isSecondary {false}; // TODO: What to use this for?
 };
 
+
+
+/* interface */
 vtek::CommandBuffer* vtek::command_buffer_create(
 	const vtek::CommandBufferCreateInfo* info, vtek::CommandPool* pool, vtek::Device* device)
 {
@@ -66,7 +69,11 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 	vtek::CommandPool* pool, vtek::Device* device)
 {
 	auto allocations = new vtek::CommandBuffer[createCount];
-	std::vector<vtek::CommandBuffer*> commandBuffers(allocations);
+	std::vector<vtek::CommandBuffer*> commandBuffers(createCount, VK_NULL_HANDLE);
+	for (uint32_t i = 0; i < createCount; i++)
+	{
+		commandBuffers[i] = &(allocations[i]);
+	}
 
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -84,8 +91,8 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 	if (allocResult != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to allocate command buffer!");
-		delete commandBuffer;
-		return nullptr;
+		delete allocations;
+		return {};
 	}
 
 	bool reset = vtek::command_pool_allow_individual_reset(pool);
@@ -96,7 +103,7 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 		commandBuffers[i]->vulkanHandle = vulkanHandles[i];
 		commandBuffers[i]->poolHandle = vtek::command_pool_get_handle(pool);
 		commandBuffers[i]->supportsReset = reset;
-		commandBuffers[i]->secondary = secondary;
+		commandBuffers[i]->isSecondary = secondary;
 	}
 
 	return commandBuffers;
@@ -107,7 +114,8 @@ void vtek::command_buffer_destroy(vtek::CommandBuffer* commandBuffer, vtek::Devi
 	vtek_log_error("vtek::command_buffer_destroy(): Not implemented!");
 }
 
-void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers, vtek::Device* device)
+void vtek::command_buffer_destroy(
+	std::vector<CommandBuffer*>& commandBuffers, vtek::Device* device)
 {
 	if (commandBuffers.size() == 0) { return; }
 
@@ -127,8 +135,8 @@ void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers, vtek::D
 		buf->state = CBState::not_allocated;
 	}
 
-	delete[] commandBuffers->data();
-	commandBuffers.reset();
+	delete[] commandBuffers.data();
+	commandBuffers.clear();
 }
 
 bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
@@ -229,9 +237,11 @@ bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
 		inheritanceInfo.occlusionQueryEnable = {}; // ??
 		inheritanceInfo.queryFlags = 0; // ??
 		inheritanceInfo.pipelineStatistics = {}; // ??
+
+		inheritanceInfo = inheritanceInfo; // TODO: Just to eliminate compiler warning!
 	}
 
-	VkResult result = vkBeginCommandBuffer(commandBuffer->vulkanHandle, info);
+	VkResult result = vkBeginCommandBuffer(commandBuffer->vulkanHandle, &info);
 	if (result != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to begin command buffer recording!");

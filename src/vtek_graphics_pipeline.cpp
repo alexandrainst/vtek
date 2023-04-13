@@ -1,4 +1,5 @@
 #include "vtek_graphics_pipeline.h"
+#include "vtek_logging.h"
 #include "impl/vtek_vulkan_helpers.h"
 
 /* struct implementation */
@@ -19,26 +20,26 @@ static void get_enabled_dynamic_states(
 	states.clear();
 
 	const vtek::VulkanVersion* apiVersion = vtek::device_get_vulkan_version(device);
-	dynamicStateFlags flags = info->dynamicStateFlags;
+	vtek::PipelineDynamicStateFlags flags = info->dynamicStateFlags;
 
 	// Provided by VK_VERSION_1_0
-	if (flags & PDState::viewport)
+	if (flags & static_cast<uint32_t>(PDState::viewport))
 		states.push_back(VK_DYNAMIC_STATE_VIEWPORT);
-	if (flags & PDState::scissor)
+	if (flags & static_cast<uint32_t>(PDState::scissor))
 		states.push_back(VK_DYNAMIC_STATE_SCISSOR);
-	if (flags & PDState::line_width)
+	if (flags & static_cast<uint32_t>(PDState::line_width))
 		states.push_back(VK_DYNAMIC_STATE_LINE_WIDTH);
-	if (flags & PDState::depth_bias)
+	if (flags & static_cast<uint32_t>(PDState::depth_bias))
 		states.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
-	if (flags & PDState::blend_constants)
+	if (flags & static_cast<uint32_t>(PDState::blend_constants))
 		states.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
-	if (flags & PDState::depth_bounds)
+	if (flags & static_cast<uint32_t>(PDState::depth_bounds))
 		states.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
-	if (flags & PDState::stencil_compare_mask)
+	if (flags & static_cast<uint32_t>(PDState::stencil_compare_mask))
 		states.push_back(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
-	if (flags & PDState::stencil_write_mask)
+	if (flags & static_cast<uint32_t>(PDState::stencil_write_mask))
 		states.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
-	if (flags & PDState::stencil_reference)
+	if (flags & static_cast<uint32_t>(PDState::stencil_reference))
 		states.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
 
 	// TODO: Error handling for when the device doesn't support >= Vulkan 1.3!
@@ -46,43 +47,75 @@ static void get_enabled_dynamic_states(
 #if defined(VK_API_VERSION_1_3)
 	if (apiVersion->major() >= 1 && apiVersion->minor() >= 3)
 	{
-		if (flags & PDState::cull_mode)
+		if (flags & static_cast<uint32_t>(PDState::cull_mode))
 			states.push_back(VK_DYNAMIC_STATE_CULL_MODE);
-		if (flags & PDState::front_face)
+		if (flags & static_cast<uint32_t>(PDState::front_face))
 			states.push_back(VK_DYNAMIC_STATE_FRONT_FACE);
-		if (flags & PDState::primitive_topology)
+		if (flags & static_cast<uint32_t>(PDState::primitive_topology))
 			states.push_back(VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY);
-		if (flags & PDState::viewport_with_count)
+		if (flags & static_cast<uint32_t>(PDState::viewport_with_count))
 			states.push_back(VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT);
-		if (flags & PDState::scissor_with_count)
+		if (flags & static_cast<uint32_t>(PDState::scissor_with_count))
 			states.push_back(VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT);
-		if (flags & PDState::vertex_input_binding_stride)
+		if (flags & static_cast<uint32_t>(PDState::vertex_input_binding_stride))
 			states.push_back(VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE);
-		if (flags & PDState::depth_test_enable)
+		if (flags & static_cast<uint32_t>(PDState::depth_test_enable))
 			states.push_back(VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE);
-		if (flags & PDState::depth_write_enable)
+		if (flags & static_cast<uint32_t>(PDState::depth_write_enable))
 			states.push_back(VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE);
-		if (flags & PDState::depth_compare_op)
+		if (flags & static_cast<uint32_t>(PDState::depth_compare_op))
 			states.push_back(VK_DYNAMIC_STATE_DEPTH_COMPARE_OP);
-		if (flags & PDState::depth_bounds_test_enable)
+		if (flags & static_cast<uint32_t>(PDState::depth_bounds_test_enable))
 			states.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE);
-		if (flags & PDState::stencil_test_enable)
+		if (flags & static_cast<uint32_t>(PDState::stencil_test_enable))
 			states.push_back(VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE);
-		if (flags & PDState::stencil_op)
+		if (flags & static_cast<uint32_t>(PDState::stencil_op))
 			states.push_back(VK_DYNAMIC_STATE_STENCIL_OP);
-		if (flags & PDState::rasterizer_discard_enable)
+		if (flags & static_cast<uint32_t>(PDState::rasterizer_discard_enable))
 			states.push_back(VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE);
-		if (flags & PDState::depth_bias_enable)
+		if (flags & static_cast<uint32_t>(PDState::depth_bias_enable))
 			states.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE);
-		if (flags & PDState::primitive_restart_enable)
+		if (flags & static_cast<uint32_t>(PDState::primitive_restart_enable))
 			states.push_back(VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE);
 	}
 #endif
 }
 
+static VkPrimitiveTopology get_primitive_topology(vtek::PrimitiveTopology topology)
+{
+	switch (topology)
+	{
+	case vtek::PrimitiveTopology::point_list:
+		return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+	case vtek::PrimitiveTopology::line_list:
+		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+	case vtek::PrimitiveTopology::line_strip:
+		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+	case vtek::PrimitiveTopology::triangle_list:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	case vtek::PrimitiveTopology::triangle_strip:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+	case vtek::PrimitiveTopology::triangle_fan:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+	case vtek::PrimitiveTopology::line_list_with_adjacency:
+		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY;
+	case vtek::PrimitiveTopology::line_strip_with_adjacency:
+		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY;
+	case vtek::PrimitiveTopology::triangle_list_with_adjacency:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY;
+	case vtek::PrimitiveTopology::triangle_strip_with_adjacency:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY;
+	case vtek::PrimitiveTopology::patch_list:
+		return VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+	default:
+		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid primitive topology!");
+		return VK_POLYGON_MODE_FILL;
+	}
+}
+
 static VkPolygonMode get_polygon_mode(vtek::PolygonMode mode)
 {
-	switch (polygonMode)
+	switch (mode)
 	{
 	case vtek::PolygonMode::fill: return VK_POLYGON_MODE_FILL;
 	case vtek::PolygonMode::line: return VK_POLYGON_MODE_LINE;
@@ -107,7 +140,7 @@ static VkCullModeFlags get_cull_mode_flags(vtek::CullMode mode)
 	}
 }
 
-static get_front_face(vtek::FrontFace face)
+static VkFrontFace get_front_face(vtek::FrontFace face)
 {
 	switch (face)
 	{
@@ -126,17 +159,37 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 {
 	VkDevice dev = vtek::device_get_handle(device);
 
+	// REVIEW: Could extract function for each state to prettify code.
+
 	/* Neat and ordered: */
 
 	// shader stages
 
-	// vertex input
+	// ==================== //
+	// === Vertex input === //
+	// ==================== //
+	auto& bindingDesc = vtek::vertex_binding_description(info->vertexType);
+	auto& attributeDesc = vtek::vertex_attribute_descriptions(info->vertexType);
 
-	// input assembler
-	PrimitiveTopology primitiveTopology {PrimitiveTopology::triangle_list};
-	bool enablePrimitiveRestart {false};
+	VkPipelineVertexInputStateCreateInfo vertexInfo{};
+	vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInfo.vertexBindingDescriptionCount = 1; // ??
+	vertexInfo.pVertexBindingDescriptions = nullptr; // ?? shading->bindingDesc ??
+	vertexInfo.vertexAttributeDescriptionCount = attributeDesc.size();
+	vertexInfo.pVertexAttributeDescriptions = attributeDesc.data();
 
-	// viewport state
+	// ====================== //
+	// === Input assembly === //
+	// ====================== //
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssembly.topology = get_primitive_topology(info->primitiveTopology);
+	inputAssembly.primitiveRestartEnable =
+		vtek::getVulkanBoolean(info->enablePrimitiveRestart);
+
+	// ====================== //
+	// === Viewport state === //
+	// ====================== //
 	if (info->viewportState == nullptr)
 	{
 		vtek_log_error("No viewport state provided - cannot create graphics pipeline!");
@@ -149,7 +202,14 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	viewport.width = viewportState.viewportRegion.extent.width;
 	viewport.width = viewportState.viewportRegion.extent.width;
 	// TODO: Multiple viewport states?
-	createInfo.pViewportState = &viewport;
+	// TODO: Using multiple viewports/scissors requires enabling a feature
+	// TODO: during device creation!
+	VkPipelineViewportStateCreateInfo viewportInfo{};
+	viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportInfo.viewportCount = 1; // ??
+	viewportInfo.pViewports = &viewport;
+	viewportInfo.scissorCount = (viewportState.useScissorRegion) ? 1 : 0; // ??
+	viewportInfo.pScissors = viewportState.scissorRegion;
 
 	// rasterization
 	if (info->rasterizationState == nullptr)
@@ -176,10 +236,13 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	rasterizer.depthBiasSlopeFactor = rasterizationState.depthBiasSlopeFactor;
 	rasterizer.lineWidth = rasterizationState.lineWidth;
 		// TODO: Also check for enabled device features!
-	createInfo.pRasterizationState = &rasterizer;
+
+	// ========================= //
+	// === Multisample state === //
+	// ========================= //
 
 
-	// multisample state
+
 
 	// depth and stencil testing
 
@@ -188,16 +251,9 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// dynamic states
 	std::vector<VkDynamicState> dynamicStates;
 	get_enabled_dynamic_states(info, device, dynamicStates);
-	if (dynamicStates.size() > 0)
-	{
-		createInfo.dynamicStateCount = dynamicStates.size();
-		createInfo.pDynamicStates = dynamicStates.data();
-	}
-	else
-	{
-		createInfo.dynamicStateCount = 0;
-		createInfo.pDynamicStates = nullptr;
-	}
+	bool dynState = dynamicStates.size() > 0;
+	const uint32_t dynamicStateCount = (dynState) ? dynamicStates.size() : 0U;
+	const VkDynamicState* pDynamicStates = (dynState) ? dynamicStates.data() : nullptr;
 
 	// pipeline layout
 	VkPipelineLayoutCreateInfo layoutInfo{};
@@ -242,6 +298,21 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	VkGraphicsPipelineCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	createInfo.pNext = nullptr;
+	createInfo.flags = 0U; // bitmask of VkPipelineCreateFlagBits...
+	createInfo.stateCount = 0; // ?? num shader stages ??
+	createInfo.pStages = nullptr; // ?? shader stages ??
+	createInfo.pVertexInputState = &vertexInfo;
+	createInfo.pInputAssemblyState = &inputAssembly;
+	createInfo.pTesselationState = nullptr; // ??
+	createInfo.pViewportState = &viewportInfo;
+	createInfo.pRasterizationState = &rasterizer;
+	createInfo.pMultisampleState =        
+
+
+
+
+	createInfo.dynamicStateCount = dynamicStateCount;
+	createInfo.pDynamicStates = pDynamicStates;
 
 	VkResult result = vkCreateGraphicsPipelines();
 

@@ -27,6 +27,8 @@ namespace vtek
 
 	void command_pool_destroy(CommandPool* commandPool, const Device* device);
 
+	VkCommandPool command_pool_get_handle(CommandPool* commandPool);
+
 	// The return value directly reflects the ´allowIndividualBufferReset´ flag
 	// passed to the `CommandPoolCreateInfo` when the pool was created.
 	// If it is false, command buffers allocated from this pool may still be
