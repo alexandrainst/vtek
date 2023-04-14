@@ -19,8 +19,10 @@
 
 #include "vtek_main.h"
 #include "vtek_application_window.h"
+#include "vtek_command_buffer.h"
 #include "vtek_command_pool.h"
 #include "vtek_device.h"
+#include "vtek_graphics_pipeline.h"
 #include "vtek_input.h"
 #include "vtek_instance.h"
 #include "vtek_logging.h"

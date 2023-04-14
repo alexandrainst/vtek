@@ -139,7 +139,7 @@ int main()
 	// Vulkan graphics pipeline
 	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
-	vtek::GraphicsPipeline graphicsPipeline = vtek::graphics_pipeline_create(
+	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
 	if (graphicsPipeline == nullptr)
 	{
@@ -151,7 +151,7 @@ int main()
 
 	// Vulkan command buffers
 	vtek::CommandBufferCreateInfo commandBufferInfo{};
-	vtek::CommandBuffer commandBuffer = vtek::command_buffer_create(
+	vtek::CommandBuffer* commandBuffer = vtek::command_buffer_create(
 		&commandBufferInfo, graphicsCommandPool, device);
 	if (commandBuffer == nullptr)
 	{
