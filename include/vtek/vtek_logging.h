@@ -1,5 +1,3 @@
-#pragma once
-
 //
 // Logging configuation for vtek.
 //
@@ -30,6 +28,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <spdlog/spdlog.h>
 
 #include "vtek_main.h"
@@ -68,38 +67,44 @@ template<typename... Args>
 inline void vtek_log_trace(const char* message, const Args &... args)
 {
 	//#if defined(YGG_DEBUG) && !defined(YGG_DISABLE_LOGGING)
-	vtek::LogContainer::sVtekLogger->trace(message, args...);
+	vtek::LogContainer::sVtekLogger->trace(
+		SPDLOG_FMT_RUNTIME(message), args...);
 	//#endif
 }
 
 template<typename... Args>
 inline void vtek_log_debug(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sVtekLogger->debug(message, args...);
+	vtek::LogContainer::sVtekLogger->debug(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
 inline void vtek_log_info(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sVtekLogger->info(message, args...);
+	vtek::LogContainer::sVtekLogger->info(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
 inline void vtek_log_warn(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sVtekLogger->warn(message, args...);
+	vtek::LogContainer::sVtekLogger->warn(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
 inline void vtek_log_error(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sVtekLogger->error(message, args...);
+	vtek::LogContainer::sVtekLogger->error(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
 inline void vtek_log_fatal(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sVtekLogger->critical(message, args...);
+	vtek::LogContainer::sVtekLogger->critical(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 

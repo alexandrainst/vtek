@@ -243,6 +243,7 @@ static void mouse_move_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	static const vtek::ApplicationWindow* appWindow =
 		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
+	appWindow = appWindow; // TODO: Removes compiler warning!
 	// ASSERT_MSG(context != nullptr,
 	//            "mouse_move_callback: error fetching GLFW user pointer!");
 
@@ -253,11 +254,13 @@ static void mouse_button_callback(GLFWwindow* window, int button, int action, in
 {
 	static const vtek::ApplicationWindow* appWindow =
 		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
+	appWindow = appWindow; // TODO: Removes compiler warning!
 	// ASSERT_MSG(context != nullptr,
 	//            "mouse_button_callback: error fetching GLFW user pointer!");
 
 	// vtek::MouseButtonType bt = graphics::get_glfw_mouse_button(button);
 	vtek::InputAction vAction = get_input_action_from_glfw(action);
+	vAction = vAction; // TODO: Removes compiler warning!
 
 	// context->windowInterface.fMouseButton(bt, at);
 }
@@ -266,6 +269,7 @@ static void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yof
 {
 	static const vtek::ApplicationWindow* appWindow =
 		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
+	appWindow = appWindow; // TODO: Removes compiler warning!
 	// ASSERT_MSG(context != nullptr,
 	//            "mouse_scroll_callback: error fetching GLFW user pointer!");
 

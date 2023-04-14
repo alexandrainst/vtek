@@ -101,7 +101,7 @@ endif()
 
 add_library(vtek::vtek ALIAS vtek)
 
-set_target_properties(vtek PROPERTIES CXX_STANDARD 17)
+set_target_properties(vtek PROPERTIES CXX_STANDARD 20)
 target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/include/vtek)
 target_include_directories(vtek PUBLIC
   external/spdlog/include ${PROJECT_SOURCE_DIR}/include ${Vulkan_INCLUDE_DIRS})
@@ -109,7 +109,7 @@ target_compile_definitions(vtek PRIVATE SPDLOG_COMPILED_LIB)
 
 if(VTEK_BUILD_WARNINGS)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-	target_compile_options(vtek PRIVATE -Wall -Wextra -Wno-unused-parameter -ggdb3) # -Werror
+	target_compile_options( vtek PRIVATE -Wall -Wextra -Wno-unused-parameter -ggdb3) # -Werror
   endif()
 endif()
 
@@ -127,7 +127,7 @@ if(VTEK_CREATE_EXAMPLES)
   foreach(expath ${examples})
 	cmake_path(GET expath STEM exname)
 	add_executable(${exname} ${expath})
-	set_target_properties(${exname} PROPERTIES CXX_STANDARD 17)
+	set_target_properties(${exname} PROPERTIES CXX_STANDARD 20)
 	target_link_libraries(${exname} LINK_PUBLIC vtek::vtek)
 	target_compile_definitions(${exname} PRIVATE SPDLOG_COMPILED_LIB)
 	# target_link_libraries(${exname} PUBLIC vtek::vtek spdlog::spdlog Vulkan::Vulkan)

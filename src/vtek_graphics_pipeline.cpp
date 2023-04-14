@@ -187,7 +187,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ===================== //
 	// === Shader stages === //
 	// ===================== //
-	// VkPipelineShaderStageCreateInfo shaderStages[vtek::kMaxShaderStages];
+	VkPipelineShaderStageCreateInfo shaderStages[vtek::kMaxShaderStages];
 	// uint32_t numShaderStages = vtek::graphics_shader_get_num_stages(info->shader);
 	// for (uint32_t i = 0; i < vtek::kMaxShaderStages; i++)
 	// {
@@ -218,14 +218,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// 	vtek::getVulkanBoolean(info->enablePrimitiveRestart);
 	// TODO: Using clever `VulkanBool` class we can write:
 	inputAssembly.primitiveRestartEnable = info->enablePrimitiveRestart.get();
-	if (info->enablePrimitiveRestart.get())
-	{
-		std::cout << "primitive restart enabled\n";
-	}
-	else
-	{
-		std::cout << "primitive restart NOT enabled\n";
-	}
+
+
 
 	// ====================== //
 	// === Viewport state === //
@@ -370,8 +364,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	createInfo.pNext = (useDynamicRendering) ? &renderingCreateInfo : nullptr;
 	createInfo.flags = 0U; // bitmask of VkPipelineCreateFlagBits...
-	createInfo.stageCount = 0; // ?? num shader stages ??
-	createInfo.pStages = nullptr; // ?? shader stages ??
+	createInfo.stageCount = 1; // ?? TODO: num shader stages ??
+	createInfo.pStages = nullptr; // ?? TODO: shader stages ??
 	createInfo.pVertexInputState = &vertexInfo;
 	createInfo.pInputAssemblyState = &inputAssembly;
 	createInfo.pTessellationState = nullptr; // ??

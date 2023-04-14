@@ -139,6 +139,21 @@ int main()
 	// Vulkan graphics pipeline
 	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+
+	uint32_t width = swapchainCreateInfo.framebufferWidth;
+	uint32_t height = swapchainCreateInfo.framebufferHeight;
+	vtek::ViewportState viewport{
+		.viewportRegion = {
+			.offset = {0U, 0U},
+			.extent = {width, height}
+		},
+	};
+	vtek::RasterizationState rasterizer{};
+	vtek::MultisampleState multisampling{};
+
+	graphicsPipelineInfo.viewportState = &viewport;
+	graphicsPipelineInfo.rasterizationState = &rasterizer;
+	graphicsPipelineInfo.multisampleState = &multisampling;
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
 	if (graphicsPipeline == nullptr)

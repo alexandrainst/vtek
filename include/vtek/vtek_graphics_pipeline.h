@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
 #include "vtek_device.h"
@@ -46,6 +47,11 @@ namespace vtek
 		none, msaa_x2, msaa_x4, msaa_x8, msaa_x16, msaa_x32, msaa_x64
 	};
 
+	enum class DepthCompareOp
+	{
+		never, less, equal, less_equal, greater, not_equal, greater_equal, always
+	};
+
 	struct ViewportState
 	{
 		VkRect2D viewportRegion {};
@@ -89,7 +95,7 @@ namespace vtek
 
 	struct MultisampleState
 	{
-		MultisampleType numSamples;
+		MultisampleType numSamples {MultisampleType::none};
 		// Sample rate shading causes multisampling to also affect interior
 		// filling of geometry. This improves image quality at an additional cost
 		// in performance. It requires enabling the `sampleRateShading` feature
@@ -112,10 +118,39 @@ namespace vtek
 		bool b;
 	};
 
+	class FloatRange
+	{
+	public:
+		FloatRange() : fmin(0.0f), fmax(0.0f) {}
+		FloatRange(float f1, float f2) {
+			fmin = (f1 < f2) ? f1 : f2;
+			fmax = (f1 > f2) ? f1 : f2;
+		}
+		float min() const { return fmin; }
+		float max() const { return fmax; }
+	private:
+		float fmin, fmax;
+	};
+
+	template<float Min, float Max>
+	class FloatClamp
+	{
+		FloatClamp(float _val) {
+			val = (_val < Min) ? Min : (_val > Max) ? Max : _val;
+		}
+		float get() const { return val; }
+	private:
+		float val;
+	};
+
 	struct DepthStencilState
 	{
-		bool depthTestEnable {false};
-		//bool
+		VulkanBool depthTestEnable {false};
+		VulkanBool depthWriteEnable {false};
+		DepthCompareOp depthCompareOp {DepthCompareOp::less};
+		VulkanBool depthBoundsTestEnable {false};
+		FloatRange depthBounds {0.0f, 1.0f};
+		VulkanBool stencilTestEnable {false};
 	};
 
 	// NOTE: cpp-enum-proposal for bitmasks!
@@ -160,6 +195,7 @@ namespace vtek
 
 	// NOTE: All fields must be filled out properly so the behaviour of the
 	// pipeline is well-defined.
+	// TODO: Fields to be values or pointers?
 	struct GraphicsPipelineCreateInfo
 	{
 		// NOTE: If renderPassType == `RenderPassType::dynamic`, then
@@ -196,6 +232,7 @@ namespace vtek
 		MultisampleState* multisampleState;
 
 		// depth and stencil testing
+		DepthStencilState depthStencilState;
 
 		// color blending
 
