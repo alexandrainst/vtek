@@ -1,6 +1,10 @@
 #include "vtek_graphics_pipeline.h"
 #include "vtek_logging.h"
+#include "vtek_shaders.h"
 #include "impl/vtek_vulkan_helpers.h"
+
+// TODO: Temporary
+#include <iostream>
 
 /* struct implementation */
 struct vtek::GraphicsPipeline
@@ -109,7 +113,7 @@ static VkPrimitiveTopology get_primitive_topology(vtek::PrimitiveTopology topolo
 		return VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
 	default:
 		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid primitive topology!");
-		return VK_POLYGON_MODE_FILL;
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	}
 }
 
@@ -152,6 +156,23 @@ static VkFrontFace get_front_face(vtek::FrontFace face)
 	}
 }
 
+static VkSampleCountFlagBits get_multisample_count(vtek::MultisampleType sample)
+{
+	switch (sample)
+	{
+	case vtek::MultisampleType::none:     return VK_SAMPLE_COUNT_1_BIT;
+	case vtek::MultisampleType::msaa_x2:  return VK_SAMPLE_COUNT_2_BIT;
+	case vtek::MultisampleType::msaa_x4:  return VK_SAMPLE_COUNT_4_BIT;
+	case vtek::MultisampleType::msaa_x8:  return VK_SAMPLE_COUNT_8_BIT;
+	case vtek::MultisampleType::msaa_x16: return VK_SAMPLE_COUNT_16_BIT;
+	case vtek::MultisampleType::msaa_x32: return VK_SAMPLE_COUNT_32_BIT;
+	case vtek::MultisampleType::msaa_x64: return VK_SAMPLE_COUNT_64_BIT;
+	default:
+		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid multisample count!");
+		return VK_SAMPLE_COUNT_1_BIT;
+	}
+}
+
 
 /* interface */
 vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
@@ -163,12 +184,21 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 
 	/* Neat and ordered: */
 
-	// shader stages
+	// ===================== //
+	// === Shader stages === //
+	// ===================== //
+	// VkPipelineShaderStageCreateInfo shaderStages[vtek::kMaxShaderStages];
+	// uint32_t numShaderStages = vtek::graphics_shader_get_num_stages(info->shader);
+	// for (uint32_t i = 0; i < vtek::kMaxShaderStages; i++)
+	// {
+	// 	//shaderStages[i] = ; // ?? shader pipeline info ??
+	// }
 
 	// ==================== //
 	// === Vertex input === //
 	// ==================== //
-	auto& bindingDesc = vtek::vertex_binding_description(info->vertexType);
+	// TODO: What to do here?
+	//auto& bindingDesc = vtek::vertex_binding_description(info->vertexType);
 	auto& attributeDesc = vtek::vertex_attribute_descriptions(info->vertexType);
 
 	VkPipelineVertexInputStateCreateInfo vertexInfo{};
@@ -184,8 +214,18 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	inputAssembly.topology = get_primitive_topology(info->primitiveTopology);
-	inputAssembly.primitiveRestartEnable =
-		vtek::getVulkanBoolean(info->enablePrimitiveRestart);
+	// inputAssembly.primitiveRestartEnable =
+	// 	vtek::getVulkanBoolean(info->enablePrimitiveRestart);
+	// TODO: Using clever `VulkanBool` class we can write:
+	inputAssembly.primitiveRestartEnable = info->enablePrimitiveRestart.get();
+	if (info->enablePrimitiveRestart.get())
+	{
+		std::cout << "primitive restart enabled\n";
+	}
+	else
+	{
+		std::cout << "primitive restart NOT enabled\n";
+	}
 
 	// ====================== //
 	// === Viewport state === //
@@ -209,9 +249,11 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	viewportInfo.viewportCount = 1; // ??
 	viewportInfo.pViewports = &viewport;
 	viewportInfo.scissorCount = (viewportState.useScissorRegion) ? 1 : 0; // ??
-	viewportInfo.pScissors = viewportState.scissorRegion;
+	viewportInfo.pScissors = &viewportState.scissorRegion;
 
-	// rasterization
+	// =========================== //
+	// === Rasterization state === //
+	// =========================== //
 	if (info->rasterizationState == nullptr)
 	{
 		vtek_log_error("No rasterization state provided - cannot create graphics pipeline!");
@@ -240,20 +282,48 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ========================= //
 	// === Multisample state === //
 	// ========================= //
+	if (info->multisampleState == nullptr)
+	{
+		vtek_log_error("No multisample state provided - cannot create graphics pipeline!");
+		return nullptr;
+	}
+	vtek::MultisampleState multisampleState = *(info->multisampleState); // copy-by-value
+	VkPipelineMultisampleStateCreateInfo multisample{};
+	multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisample.pNext = nullptr;
+	multisample.flags = 0U;
+	// TODO: Perhaps check that device supports number of samples provided?
+	multisample.rasterizationSamples = get_multisample_count(multisampleState.numSamples);
+	multisample.sampleShadingEnable =
+		vtek::getVulkanBoolean(multisampleState.enableSampleRateShading);
+	multisample.pSampleMask = nullptr; // ?? TODO: what is a sample mask ??
+	multisample.alphaToCoverageEnable =
+		vtek::getVulkanBoolean(multisampleState.enableAlphaToCoverage);
+	multisample.alphaToOneEnable =
+		vtek::getVulkanBoolean(multisampleState.enableAlphaToOne);
 
+	// =========================== //
+	// === Depth stencil state === //
+	// =========================== //
+	VkPipelineDepthStencilStateCreateInfo depthStencil{};
+	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	//depthStencil.depthTestEnable = ;
 
-
-
-	// depth and stencil testing
 
 	// color blending
 
-	// dynamic states
+	// ===================== //
+	// === Dynamic state === //
+	// ===================== //
+	// TODO: We need a data structure for dynamic states (and correctness check!)
 	std::vector<VkDynamicState> dynamicStates;
 	get_enabled_dynamic_states(info, device, dynamicStates);
 	bool dynState = dynamicStates.size() > 0;
-	const uint32_t dynamicStateCount = (dynState) ? dynamicStates.size() : 0U;
-	const VkDynamicState* pDynamicStates = (dynState) ? dynamicStates.data() : nullptr;
+	VkPipelineDynamicStateCreateInfo dynamic{};
+	dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamic.dynamicStateCount = (dynState) ? dynamicStates.size() : 0U;
+	dynamic.pDynamicStates = (dynState) ? dynamicStates.data() : nullptr;
+
 
 	// pipeline layout
 	VkPipelineLayoutCreateInfo layoutInfo{};
@@ -274,47 +344,56 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		return nullptr;
 	}
 
-	// Dynamic state -- alternative to providing a render pass!
+	// Dynamic rendering -- alternative to providing a render pass!
 	VkPipelineRenderingCreateInfo renderingCreateInfo{};
+	bool useDynamicRendering = (info->renderPassType == vtek::RenderPassType::dynamic);
+	if (!useDynamicRendering && (info->renderPass == nullptr))
+	{
+		vtek_log_error("No render pass provided for non-dynamic rendering.");
+		vtek_log_error("--> cannot create graphics pipeline!");
+		return nullptr;
+	}
 	renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO; // TODO: guess!
 	renderingCreateInfo.pNext = nullptr;
 	renderingCreateInfo.viewMask = 0; // TODO: uint32_t ?
 	renderingCreateInfo.colorAttachmentCount = 0; // TODO: uint32_t ?
 	renderingCreateInfo.pColorAttachmentFormats = nullptr; // TODO: VkFormat* ?
-	renderingCreateInfo.depthAttachmentFormat = VK_INVALID_FORMAT; // TODO: VkFormat ?
-	renderingCreateInfo.stencilAttachmentFormat = VK_INVALID_FORMAT; // TODO: VkFormat ?
-	if (info->renderPassType == vtek::RenderPassType::dynamic)
-	{
-		createInfo.pNext = &renderingCreateInfo;
-	}
-	else
-	{
-		createInfo.renderPass = vtek::render_pass_get_handle(info->renderPass);
-	}
+	renderingCreateInfo.depthAttachmentFormat = VK_FORMAT_UNDEFINED; // TODO: VkFormat ?
+	renderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED; // TODO: VkFormat ?
 
-	/* create the graphics pipeline (finally!) */
+	// ============================= //
+	// === Creating the pipeline === //
+	// ============================= //
 	// TODO: How to handle pipeline cache?
 	// TODO: How to handle multiple pipelines?
 	VkGraphicsPipelineCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	createInfo.pNext = nullptr;
+	createInfo.pNext = (useDynamicRendering) ? &renderingCreateInfo : nullptr;
 	createInfo.flags = 0U; // bitmask of VkPipelineCreateFlagBits...
-	createInfo.stateCount = 0; // ?? num shader stages ??
+	createInfo.stageCount = 0; // ?? num shader stages ??
 	createInfo.pStages = nullptr; // ?? shader stages ??
 	createInfo.pVertexInputState = &vertexInfo;
 	createInfo.pInputAssemblyState = &inputAssembly;
-	createInfo.pTesselationState = nullptr; // ??
+	createInfo.pTessellationState = nullptr; // ??
 	createInfo.pViewportState = &viewportInfo;
 	createInfo.pRasterizationState = &rasterizer;
-	createInfo.pMultisampleState =        
+	createInfo.pMultisampleState = &multisample;
+	createInfo.pDepthStencilState = &depthStencil;
 
 
 
+	createInfo.pDynamicState = &dynamic;
 
-	createInfo.dynamicStateCount = dynamicStateCount;
-	createInfo.pDynamicStates = pDynamicStates;
+	//createInfo.renderPass = vtek::render_pass_get_handle(info->renderPass);
 
-	VkResult result = vkCreateGraphicsPipelines();
+	VkPipeline outHandle = VK_NULL_HANDLE; // TODO: Temporary!
+	VkResult result = vkCreateGraphicsPipelines(
+		dev, VK_NULL_HANDLE, 1, &createInfo, nullptr, &outHandle);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create graphics pipeline!");
+		return nullptr;
+	}
 
 
 	return nullptr;

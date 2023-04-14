@@ -41,17 +41,14 @@ namespace vtek
 	using AttributeDescriptions = std::vector<VkVertexInputAttributeDescription>;
 
 	// TODO: Need other things such as `bool instanced` and binding description count!
-	const BindingDescription& vertex_binding_description(VertexType vt);
+	const BindingDescription& vertex_binding_description(
+		VertexType vt, bool instanced);
 	const AttributeDescriptions& vertex_attribute_descriptions(VertexType vt);
 
 
 	// ==================== //
 	// === Vertex types === //
 	// ==================== //
-	// short-cut
-	template<int I>
-	using AttrDesc = std::array<VkVertexInputAttributeDescription, I>;
-
 	struct Vertex_p2
 	{
 		// data
@@ -60,14 +57,13 @@ namespace vtek
 		// descriptions, only static access
 		// TODO: Does this work?
 		static constexpr VertexType kVertexType = VertexType::vec2;
-		static const VkVertexInputBindingDescription& bindingDescription();
-		static const AttributeDescriptions attributeDescriptions();
 	};
 }
 
 
 // Hashing, necessary for certain operations such as using vertex types as
-// keys in an std::unordered_map.
+// keys in an std::unordered_map, needed by model loading..
+// REVIEW: Place in model loading file instead?
 namespace std
 {
 	template<> struct hash<vtek::Vertex_p2>

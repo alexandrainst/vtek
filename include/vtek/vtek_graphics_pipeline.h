@@ -38,6 +38,14 @@ namespace vtek
 		clockwise, counter_clockwise
 	};
 
+	// Multisampling is one way to perform anti-aliasing, by sampling multiple
+	// fragments per-pixel, and then resolving those fragments. This smooths out
+	// polygon edges. Multisampling is not recommended for deferred rendering.
+	enum class MultisampleType
+	{
+		none, msaa_x2, msaa_x4, msaa_x8, msaa_x16, msaa_x32, msaa_x64
+	};
+
 	struct ViewportState
 	{
 		VkRect2D viewportRegion {};
@@ -62,7 +70,7 @@ namespace vtek
 		bool rasterizerDiscardEnable {false};
 		// NOTE: Any other polygon mode than `fill` requires enabling a feature
 		// during device creation.
-		PolygonMode polygonMode;
+		PolygonMode polygonMode {PolygonMode::fill};
 		// Line thickness in terms of number of fragments. Maximum supported value
 		// is hardware-dependent, and values larger than `1.0f` requires enabling
 		// the `wideLines` feature during device creation.
@@ -77,6 +85,37 @@ namespace vtek
 		float depthBiasConstantFactor {0.0f};
 		float depthBiasClamp {0.0f};
 		float depthBiasSlopeFactor {0.0f};
+	};
+
+	struct MultisampleState
+	{
+		MultisampleType numSamples;
+		// Sample rate shading causes multisampling to also affect interior
+		// filling of geometry. This improves image quality at an additional cost
+		// in performance. It requires enabling the `sampleRateShading` feature
+		// during device creation. TODO: ??
+		bool enableSampleRateShading {false};
+		float minSampleShading {0.0f}; // range [0, 1], closer to 1 is smoother
+		// TODO: Sample mask ?? (const VkSampleMask*, which is an array of ??)
+		bool enableAlphaToCoverage {false};
+		bool enableAlphaToOne {false};
+	};
+
+	// PROG: Example of something that could be useful
+	class VulkanBool
+	{
+	public:
+		inline VulkanBool(bool _b) : b(_b) {}
+		inline VulkanBool& operator=(bool _b) { b = _b; return *this; }
+		VkBool32 get() const { return static_cast<VkBool32>(b); }
+	private:
+		bool b;
+	};
+
+	struct DepthStencilState
+	{
+		bool depthTestEnable {false};
+		//bool
 	};
 
 	// NOTE: cpp-enum-proposal for bitmasks!
@@ -142,7 +181,7 @@ namespace vtek
 
 		// input assembler
 		PrimitiveTopology primitiveTopology {PrimitiveTopology::triangle_list};
-		bool enablePrimitiveRestart {false};
+		VulkanBool enablePrimitiveRestart {false};
 
 		// viewport state
 		// TODO: It is possible to use multiple viewports and scissor rectangles
@@ -154,6 +193,7 @@ namespace vtek
 		RasterizationState* rasterizationState;
 
 		// multisample state
+		MultisampleState* multisampleState;
 
 		// depth and stencil testing
 

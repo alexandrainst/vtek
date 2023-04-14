@@ -146,7 +146,7 @@ static uint32_t get_vtek_vulkan_version()
 		VTEK_VERSION_MINOR,
 		VTEK_VERSION_PATCH);
 
-	return v.getVulkan();
+	return v.apiVersion();
 }
 
 static VkResult createVulkanDebugMessenger(
@@ -249,7 +249,7 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = info->applicationName;
-	appInfo.applicationVersion = info->applicationVersion.getVulkan();
+	appInfo.applicationVersion = info->applicationVersion.apiVersion();
 	// NOTE: Here we extract version from vtek itself
 	appInfo.pEngineName = "vtek";
 	appInfo.engineVersion = get_vtek_vulkan_version();

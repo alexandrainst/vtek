@@ -550,9 +550,6 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 
 		switch (choice.properties.deviceType)
 		{
-		case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-			weight = 254;
-			break;
 		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
 			weight = 1;
 			break;
@@ -564,6 +561,11 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 			break;
 		case VK_PHYSICAL_DEVICE_TYPE_CPU:
 			weight = 3;
+			break;
+
+		case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+		default:
+			weight = 254;
 			break;
 		}
 
