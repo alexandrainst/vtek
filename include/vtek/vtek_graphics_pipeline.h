@@ -6,6 +6,7 @@
 #include <vulkan/vulkan.h>
 #include "vtek_device.h"
 #include "vtek_render_pass.h"
+#include "vtek_shaders.h"
 #include "vtek_vertex_data.h"
 
 
@@ -211,6 +212,7 @@ namespace vtek
 		/* Neat and ordered: */
 
 		// shader stages
+		GraphicsShader* shader {nullptr};
 
 		// vertex input
 		VertexType vertexType {vtek::VertexType::vec2};

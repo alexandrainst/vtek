@@ -187,32 +187,27 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ===================== //
 	// === Shader stages === //
 	// ===================== //
-	// VkPipelineShaderStageCreateInfo shaderStages[vtek::kMaxShaderStages];
-	// uint32_t numShaderStages = vtek::graphics_shader_get_num_stages(info->shader);
-	// for (uint32_t i = 0; i < vtek::kMaxShaderStages; i++)
-	// {
-	// 	//shaderStages[i] = ; // ?? shader pipeline info ??
-	// }
+	if (info->shader == nullptr)
+	{
+		vtek_log_error("No shader provided - cannot create graphics pipeline!");
+		return nullptr;
+	}
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-	const std::vector<blabla>& we = vtek::graphics_shader_get_stages(info->shader);
-	for (auto bla : we)
+	auto modules = vtek::graphics_shader_get_modules(info->shader);
+	for (const auto& module : modules)
 	{
 		VkPipelineShaderStageCreateInfo shaderInfo{};
 		shaderInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		shaderInfo.pNext = nullptr;
 		shaderInfo.flags = 0;
-		shaderInfo.stage = vtek::get_shader_stage_graphics(we.stage); // REVIEW: How to get this data?
-		shaderInfo.module = bla.module; // REVIEW: How to get this data?
-		shaderInfo.pName = bla.entryPoint; // REVIEW: How to set this properly?
-		pSpecializationInfo = nullptr; // VkSpecializationInfo*
+		shaderInfo.stage = vtek::get_shader_stage_graphics(module.stage);
+		shaderInfo.module = module.module;
+		shaderInfo.pName = "main"; // REVIEW: How to set this properly?
+		shaderInfo.pSpecializationInfo = nullptr; // VkSpecializationInfo*
 
 		shaderStages.emplace_back(shaderInfo);
 	}
 
-	// TODO: From VkGraphicsPipelineCreateInfo:
-	createInfo.stageCount = 1; // ?? TODO: num shader stages ??
-	createInfo.pStages = nullptr; // ?? TODO: shader stages ??
- 
 	// ==================== //
 	// === Vertex input === //
 	// ==================== //
@@ -383,8 +378,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	createInfo.pNext = (useDynamicRendering) ? &renderingCreateInfo : nullptr;
 	createInfo.flags = 0U; // bitmask of VkPipelineCreateFlagBits...
-	createInfo.stageCount = 1; // ?? TODO: num shader stages ??
-	createInfo.pStages = nullptr; // ?? TODO: shader stages ??
+	createInfo.stageCount = shaderStages.size();
+	createInfo.pStages = shaderStages.data();
 	createInfo.pVertexInputState = &vertexInfo;
 	createInfo.pInputAssemblyState = &inputAssembly;
 	createInfo.pTessellationState = nullptr; // ??

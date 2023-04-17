@@ -9,6 +9,7 @@
 // - vtek_transform_feedback_pipeline.h, vtek_raytrace_pipeline.h
 
 #include <cstdint>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 
@@ -33,16 +34,22 @@ namespace vtek
 		raygen, any_hit, closest_hit, miss, intersection, callable
 	};
 
-	// TODO: Or return VkShaderStageFlagBits ?
-	VkShaderStageFlags get_shader_stage(ShaderStage stage);
-	VkShaderStageFlags get_shader_stage_graphics(ShaderStageGraphics stage);
-	VkShaderStageFlags get_shader_stage_ray_tracing(ShaderStageRayTracing stage);
+	VkShaderStageFlagBits get_shader_stage(ShaderStage stage);
+	VkShaderStageFlagBits get_shader_stage_graphics(ShaderStageGraphics stage);
+	VkShaderStageFlagBits get_shader_stage_ray_tracing(ShaderStageRayTracing stage);
 
-	// constexpr uint32_t kMaxShaderStages = 4; // TODO: Get rid of this!
 
 	struct GraphicsShader; // opaque handle
 
-	graphics_shader_get_pipelin
+	GraphicsShader* graphics_shader_create();
+
+	struct GraphicsShaderModule
+	{
+		ShaderStageGraphics stage {ShaderStageGraphics::vertex};
+		VkShaderModule module {VK_NULL_HANDLE};
+	};
+
+	const std::vector<GraphicsShaderModule>& graphics_shader_get_modules(GraphicsShader* shader);
 
 
 	// TODO: ?

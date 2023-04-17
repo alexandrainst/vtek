@@ -4,12 +4,11 @@
 /* struct implementation */
 struct vtek::GraphicsShader
 {
-	uint32_t numShaders {0};
+	// TODO: Could have a bit flag telling which shader stages are used, like:
+	// VkShaderStageFlags flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	// REVIEW: If such a thing is useful.
 
-	// For each shader we probably would like some info (maybe?):
-	// - shader type
-	// - VkShaderModule
-	std::vector<VkShaderModule> m; // TODO: Or something more?
+	std::vector<vtek::GraphicsShaderModule> modules;
 };
 
 /* helper functions */
@@ -17,15 +16,15 @@ struct vtek::GraphicsShader
 
 
 /* interface */
-VkShaderStageFlags get_shader_stage(vtek::ShaderStage stage)
+VkShaderStageFlagBits get_shader_stage(vtek::ShaderStage stage)
 {
 	switch (stage)
 	{
 	case vtek::ShaderStage::vertex:
 		return VK_SHADER_STAGE_VERTEX_BIT;
-	case vtek::ShaderStage::tesselation_control:
+	case vtek::ShaderStage::tessellation_control:
 		return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-	case vtek::ShaderStage::tesselation_eval:
+	case vtek::ShaderStage::tessellation_eval:
 		return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
 	case vtek::ShaderStage::geometry:
 		return VK_SHADER_STAGE_GEOMETRY_BIT;
@@ -35,9 +34,9 @@ VkShaderStageFlags get_shader_stage(vtek::ShaderStage stage)
 		return VK_SHADER_STAGE_COMPUTE_BIT;
 
 	// NOTE: Making sure code compiles on platforms without these extensions.
+	// TODO: Check that these are accessible on platforms where extensions ARE present!
 	// Provided by VK_KHR_ray_tracing_pipeline
-#if device(VK_VERSION_1_1)
-#if VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME
+#if defined(VK_VERSION_1_1) && defined(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
 	case vtek::ShaderStage::raygen:
 		return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
 	case vtek::ShaderStage::any_hit:
@@ -51,11 +50,9 @@ VkShaderStageFlags get_shader_stage(vtek::ShaderStage stage)
 	case vtek::ShaderStage::callable:
 		return VK_SHADER_STAGE_CALLABLE_BIT_KHR;
 #endif
-#endif
 
 	// Provided by VK_EXT_mesh_shader
-#if device(VK_VERSION_1_1)
-#if VK_EXT_MESH_SHADER_EXTENSION_NAME
+#if defined(VK_VERSION_1_1) && defined(VK_EXT_MESH_SHADER_EXTENSION_NAME)
 	case vtek::ShaderStage::task:
 		return VK_SHADER_STAGE_TASK_BIT_EXT;
 	case vtek::ShaderStage::mesh:
@@ -66,13 +63,14 @@ VkShaderStageFlags get_shader_stage(vtek::ShaderStage stage)
 	case vtek::ShaderStage::all:
 		return VK_SHADER_STAGE_ALL;
 #endif
-#endif
 
 	default:
+		vtek_log_error("vtek::get_shader_stage: Invalid stage!");
+		return static_cast<VkShaderStageFlagBits>(0);
 	}
 }
 
-VkShaderStageFlags vtek::get_shader_stage_graphics(vtek::ShaderStageGraphics stage)
+VkShaderStageFlagBits vtek::get_shader_stage_graphics(vtek::ShaderStageGraphics stage)
 {
 	switch (stage)
 	{
@@ -89,10 +87,11 @@ VkShaderStageFlags vtek::get_shader_stage_graphics(vtek::ShaderStageGraphics sta
 
 	default:
 		vtek_log_error("vtek::get_shader_stage_graphics: Invalid stage!");
+		return static_cast<VkShaderStageFlagBits>(0);
 	}
 }
 
-VkShaderStageFlags vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTracing stage)
+VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTracing stage)
 {
 	switch (stage)
 	{
@@ -111,5 +110,12 @@ VkShaderStageFlags vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTracin
 
 	default:
 		vtek_log_error("vtek::get_shader_stage_ray_tracing: Invalid stage!");
+		return static_cast<VkShaderStageFlagBits>(0);
 	}
+}
+
+const std::vector<vtek::GraphicsShaderModule>& vtek::graphics_shader_get_modules(
+	vtek::GraphicsShader* shader)
+{
+	return shader->modules;
 }
