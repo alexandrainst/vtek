@@ -67,6 +67,7 @@ set (src
   include/vtek/vtek_physical_device.h
   include/vtek/vtek_queue.h
   include/vtek/vtek_render_pass.h
+  include/vtek/vtek_shaders.h
   include/vtek/vtek_swapchain.h
   include/vtek/vtek_vertex_data.h
   include/vtek/vtek_vulkan_version.h
@@ -87,6 +88,7 @@ set (src
   src/vtek_main.cpp
   src/vtek_physical_device.cpp
   src/vtek_queue.cpp
+  src/vtek_shaders.cpp
   src/vtek_swapchain.cpp
   src/vtek_vertex_data.cpp
   )

@@ -16,15 +16,33 @@ namespace vtek
 {
 	enum class ShaderStage
 	{
-		vertex, tesselation_control, tesselation_eval,
+		vertex, tessellation_control, tessellation_eval,
 		geometry, fragment, compute,
 		raygen, any_hit, closest_hit, miss, intersection, callable,
-		task, mesh
+		task, mesh,
+		all_graphics, all
 	};
 
-	constexpr uint32_t kMaxShaderStages = 4;
+	enum class ShaderStageGraphics
+	{
+		vertex, tessellation_control, tessellation_eval, geometry, fragment
+	};
+
+	enum class ShaderStageRayTracing
+	{
+		raygen, any_hit, closest_hit, miss, intersection, callable
+	};
+
+	// TODO: Or return VkShaderStageFlagBits ?
+	VkShaderStageFlags get_shader_stage(ShaderStage stage);
+	VkShaderStageFlags get_shader_stage_graphics(ShaderStageGraphics stage);
+	VkShaderStageFlags get_shader_stage_ray_tracing(ShaderStageRayTracing stage);
+
+	// constexpr uint32_t kMaxShaderStages = 4; // TODO: Get rid of this!
 
 	struct GraphicsShader; // opaque handle
+
+	graphics_shader_get_pipelin
 
 
 	// TODO: ?

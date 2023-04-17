@@ -187,13 +187,32 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ===================== //
 	// === Shader stages === //
 	// ===================== //
-	VkPipelineShaderStageCreateInfo shaderStages[vtek::kMaxShaderStages];
+	// VkPipelineShaderStageCreateInfo shaderStages[vtek::kMaxShaderStages];
 	// uint32_t numShaderStages = vtek::graphics_shader_get_num_stages(info->shader);
 	// for (uint32_t i = 0; i < vtek::kMaxShaderStages; i++)
 	// {
 	// 	//shaderStages[i] = ; // ?? shader pipeline info ??
 	// }
+	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+	const std::vector<blabla>& we = vtek::graphics_shader_get_stages(info->shader);
+	for (auto bla : we)
+	{
+		VkPipelineShaderStageCreateInfo shaderInfo{};
+		shaderInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		shaderInfo.pNext = nullptr;
+		shaderInfo.flags = 0;
+		shaderInfo.stage = vtek::get_shader_stage_graphics(we.stage); // REVIEW: How to get this data?
+		shaderInfo.module = bla.module; // REVIEW: How to get this data?
+		shaderInfo.pName = bla.entryPoint; // REVIEW: How to set this properly?
+		pSpecializationInfo = nullptr; // VkSpecializationInfo*
 
+		shaderStages.emplace_back(shaderInfo);
+	}
+
+	// TODO: From VkGraphicsPipelineCreateInfo:
+	createInfo.stageCount = 1; // ?? TODO: num shader stages ??
+	createInfo.pStages = nullptr; // ?? TODO: shader stages ??
+ 
 	// ==================== //
 	// === Vertex input === //
 	// ==================== //
