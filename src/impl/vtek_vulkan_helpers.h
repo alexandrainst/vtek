@@ -31,10 +31,4 @@ namespace vtek
 
 		return false;
 	}
-
-
-	inline VkBool32 getVulkanBoolean(bool b)
-	{
-		return (b) ? VK_TRUE : VK_FALSE;
-	}
 }

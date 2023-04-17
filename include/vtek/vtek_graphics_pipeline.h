@@ -7,6 +7,7 @@
 #include "vtek_device.h"
 #include "vtek_render_pass.h"
 #include "vtek_shaders.h"
+#include "vtek_types.h"
 #include "vtek_vertex_data.h"
 
 
@@ -53,6 +54,13 @@ namespace vtek
 		never, less, equal, less_equal, greater, not_equal, greater_equal, always
 	};
 
+	enum class LogicOp
+	{
+		clear, and_op, and_reverse, copy, and_inverted, no_op,
+		xor_op, or_op, nor, equivalent, invert, or_reverse, copy_inverted,
+		or_inverted, nand, set
+	};
+
 	struct ViewportState
 	{
 		VkRect2D viewportRegion {};
@@ -71,10 +79,10 @@ namespace vtek
 		// If enabled, fragments outside the near and far view frustrum planes
 		// are clamped instead of being discarded. Useful e.g. for shadow mapping.
 		// Using this requires enabling a feature during device creation.
-		bool depthClampEnable {false};
+		VulkanBool depthClampEnable {false};
 		// If enabled, geometry never passes through rasterization, which then
 		// entirely discards any output to the framebuffer.
-		bool rasterizerDiscardEnable {false};
+		VulkanBool rasterizerDiscardEnable {false};
 		// NOTE: Any other polygon mode than `fill` requires enabling a feature
 		// during device creation.
 		PolygonMode polygonMode {PolygonMode::fill};
@@ -88,7 +96,7 @@ namespace vtek
 		// The rasterizer can alter the depth values by adding a constant value
 		// or biasing them based on a fragment's slope. This is sometimes used
 		// for shadow mapping.
-		bool depthBiasEnable {false};
+		VulkanBool depthBiasEnable {false};
 		float depthBiasConstantFactor {0.0f};
 		float depthBiasClamp {0.0f};
 		float depthBiasSlopeFactor {0.0f};
@@ -101,47 +109,26 @@ namespace vtek
 		// filling of geometry. This improves image quality at an additional cost
 		// in performance. It requires enabling the `sampleRateShading` feature
 		// during device creation. TODO: ??
-		bool enableSampleRateShading {false};
+		VulkanBool enableSampleRateShading {false};
 		float minSampleShading {0.0f}; // range [0, 1], closer to 1 is smoother
 		// TODO: Sample mask ?? (const VkSampleMask*, which is an array of ??)
-		bool enableAlphaToCoverage {false};
-		bool enableAlphaToOne {false};
+		VulkanBool enableAlphaToCoverage {false};
+		VulkanBool enableAlphaToOne {false};
 	};
 
-	// PROG: Example of something that could be useful
-	class VulkanBool
+	// TODO: Do this? Essentally as a 1:1 wrapper around VkStencilOpState. Meh.
+	struct StencilOpState
 	{
-	public:
-		inline VulkanBool(bool _b) : b(_b) {}
-		inline VulkanBool& operator=(bool _b) { b = _b; return *this; }
-		VkBool32 get() const { return static_cast<VkBool32>(b); }
-	private:
-		bool b;
-	};
-
-	class FloatRange
-	{
-	public:
-		FloatRange() : fmin(0.0f), fmax(0.0f) {}
-		FloatRange(float f1, float f2) {
-			fmin = (f1 < f2) ? f1 : f2;
-			fmax = (f1 > f2) ? f1 : f2;
-		}
-		float min() const { return fmin; }
-		float max() const { return fmax; }
-	private:
-		float fmin, fmax;
-	};
-
-	template<float Min, float Max>
-	class FloatClamp
-	{
-		FloatClamp(float _val) {
-			val = (_val < Min) ? Min : (_val > Max) ? Max : _val;
-		}
-		float get() const { return val; }
-	private:
-		float val;
+		int dummyMember;
+		/*
+		VkStencilOp    failOp;
+		VkStencilOp    passOp;
+		VkStencilOp    depthFailOp;
+		VkCompareOp    compareOp;
+		uint32_t       compareMask;
+		uint32_t       writeMask;
+		uint32_t       reference;
+		*/
 	};
 
 	struct DepthStencilState
@@ -152,6 +139,71 @@ namespace vtek
 		VulkanBool depthBoundsTestEnable {false};
 		FloatRange depthBounds {0.0f, 1.0f};
 		VulkanBool stencilTestEnable {false};
+		VkStencilOpState stencilTestFront {};
+		VkStencilOpState stencilTestBack {};
+	};
+
+	struct ColorBlendOutput
+	{
+		// colorWriteMask; // TODO: ?
+		VulkanBool blendEnable {false};
+
+		// TODO: Define some good presets, so we can write 'alpha blending
+		// instead of specifying 6 different blend factors and operators.
+
+		/*
+		  VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+		  colorBlendAttachment.colorWriteMask
+		      = VK_COLOR_COMPONENT_R_BIT
+		      | VK_COLOR_COMPONENT_G_BIT
+		      | VK_COLOR_COMPONENT_B_BIT
+		      | VK_COLOR_COMPONENT_A_BIT;
+		  colorBlendAttachment.blendEnable = VK_FALSE;
+		  // Optional parameters:
+		  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		  colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+		  colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		  colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		  colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		  colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+		*/
+
+		/*
+		// The most common way to use color blending is to implement alpha
+		// blending, which should be computed as follows:
+		// final.rgb = new.a * new.rgb + (1 - new.a) * old.rgb;
+		// final.a = new.a;
+		//
+		// And in Vulkan code:
+		// .blendEnable = VK_TRUE;
+		// .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		// .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		// .colorBlendOp = VK_BLEND_OP_ADD;
+		// .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		// .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		// NOTE: Travis: .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA
+		// NOTE: Travis: .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
+		// .alphaBlendOp = VK_BLEND_OP_ADD;
+		//
+		// All possible operations can be found in the specification for
+		// `VkBlendFactor` and `VkBlendOp`.
+		*/
+	};
+
+	struct ColorBlendState
+	{
+		std::vector<ColorBlendOutput> outputs;
+
+		// If we want to use a bitwise operation as the blending method, we
+		// set the `logicOpEnable` field to `true`, and then specify the
+		// bitwise operation in the `logicOp` field. This will automatically
+		// disable the first blending method (described above) for all the
+		// framebuffers! This method also uses the color write mask to
+		// determine which color channels are affected.
+		// It is possible to disable both modes, as we are doing here, in which
+		// case the fragment colors are written to the framebuffer unmodified.
+		VulkanBool logicOpEnable {false};
+		LogicOp logicOp {LogicOp::copy};
 	};
 
 	// NOTE: cpp-enum-proposal for bitmasks!

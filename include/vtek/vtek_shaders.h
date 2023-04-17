@@ -12,6 +12,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "vtek_device.h"
+
 
 namespace vtek
 {
@@ -41,7 +43,9 @@ namespace vtek
 
 	struct GraphicsShader; // opaque handle
 
-	GraphicsShader* graphics_shader_create();
+	GraphicsShader* graphics_shader_create(Device* device);
+	void graphics_shader_destroy(GraphicsShader* shader, Device* device);
+
 
 	struct GraphicsShaderModule
 	{

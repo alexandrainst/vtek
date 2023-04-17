@@ -114,6 +114,23 @@ VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTra
 	}
 }
 
+vtek::GraphicsShader* vtek::graphics_shader_create(vtek::Device* device)
+{
+
+}
+
+void vtek::graphics_shader_destroy(vtek::GraphicsShader* shader, vtek::Device* device)
+{
+	if (shader == nullptr) { return; }
+
+	VkDevice dev = vtek::device_get_handle(device);
+
+	for (auto module : shader->modules)
+	{
+		vkDestroyShaderModule(dev, module.module, nullptr);
+	}
+}
+
 const std::vector<vtek::GraphicsShaderModule>& vtek::graphics_shader_get_modules(
 	vtek::GraphicsShader* shader)
 {
