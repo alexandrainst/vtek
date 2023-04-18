@@ -143,56 +143,54 @@ namespace vtek
 		VkStencilOpState stencilTestBack {};
 	};
 
-	struct ColorBlendOutput
+	struct ColorBlendAttachment
 	{
-		// colorWriteMask; // TODO: ?
 		VulkanBool blendEnable {false};
 
-		// TODO: Define some good presets, so we can write 'alpha blending
-		// instead of specifying 6 different blend factors and operators.
+		VkBlendFactor srcColorBlendFactor {VK_BLEND_FACTOR_ONE};
+		VkBlendFactor dstColorBlendFactor {VK_BLEND_FACTOR_ZERO};
+		VkBlendOp colorBlendOp {VK_BLEND_OP_ADD};
+		VkBlendFactor srcAlphaBlendFactor {VK_BLEND_FACTOR_ONE};
+		VkBlendFactor dstAlphaBlendFactor {VK_BLEND_FACTOR_ZERO};
+		VkBlendOp alphaBlendOp {VK_BLEND_OP_ADD};
+		VkColorComponentFlags colorWriteMask {0U};
 
-		/*
-		  VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-		  colorBlendAttachment.colorWriteMask
-		      = VK_COLOR_COMPONENT_R_BIT
-		      | VK_COLOR_COMPONENT_G_BIT
-		      | VK_COLOR_COMPONENT_B_BIT
-		      | VK_COLOR_COMPONENT_A_BIT;
-		  colorBlendAttachment.blendEnable = VK_FALSE;
-		  // Optional parameters:
-		  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-		  colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-		  colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-		  colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		  colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		  colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-		*/
+		static ColorBlendAttachment GetBlendingDisabled()
+		{
+			return ColorBlendAttachment {
+				.blendEnable = VK_FALSE
+			};
+		}
 
-		/*
-		// The most common way to use color blending is to implement alpha
-		// blending, which should be computed as follows:
-		// final.rgb = new.a * new.rgb + (1 - new.a) * old.rgb;
-		// final.a = new.a;
-		//
-		// And in Vulkan code:
-		// .blendEnable = VK_TRUE;
-		// .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		// .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		// .colorBlendOp = VK_BLEND_OP_ADD;
-		// .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		// .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		// NOTE: Travis: .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA
-		// NOTE: Travis: .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
-		// .alphaBlendOp = VK_BLEND_OP_ADD;
-		//
-		// All possible operations can be found in the specification for
-		// `VkBlendFactor` and `VkBlendOp`.
-		*/
+		static ColorBlendAttachment GetAlphaBlending()
+		{
+			// The most common way to use color blending is to implement alpha
+			// blending, which should be computed as follows:
+			// final.rgb = new.a * new.rgb + (1 - new.a) * old.rgb;
+			// final.a = new.a;
+			ColorBlendAttachment attachment;
+			attachment.blendEnable = VK_TRUE;
+			attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+			attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			attachment.colorBlendOp = VK_BLEND_OP_ADD;
+			// NOTE: Travis: .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA
+			// NOTE: Travis: .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
+			attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+			attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+			attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+			attachment.colorWriteMask
+				= VK_COLOR_COMPONENT_R_BIT
+				| VK_COLOR_COMPONENT_G_BIT
+				| VK_COLOR_COMPONENT_B_BIT
+				| VK_COLOR_COMPONENT_A_BIT;
+
+			return attachment; // C++ RVO probably
+		}
 	};
 
 	struct ColorBlendState
 	{
-		std::vector<ColorBlendOutput> outputs;
+		std::vector<ColorBlendAttachment> attachments;
 
 		// If we want to use a bitwise operation as the blending method, we
 		// set the `logicOpEnable` field to `true`, and then specify the
@@ -252,9 +250,11 @@ namespace vtek
 	struct GraphicsPipelineCreateInfo
 	{
 		// NOTE: If renderPassType == `RenderPassType::dynamic`, then
-		//  `renderPass` _should_ be NULL.
+		//  `renderPass` _should_ be NULL, and `pipelineRendering` *must*
+		// be a valid pointer to a `PipelineRendering` struct.
 		RenderPassType renderPassType {vtek::RenderPassType::renderpass};
 		RenderPass* renderPass {nullptr};
+		PipelineRendering* pipelineRendering {nullptr};
 
 		// TODO: Parameters:
 		// GraphicsShader* shader;
@@ -268,6 +268,7 @@ namespace vtek
 
 		// vertex input
 		VertexType vertexType {vtek::VertexType::vec2};
+		bool instancedRendering {false};
 
 		// input assembler
 		PrimitiveTopology primitiveTopology {PrimitiveTopology::triangle_list};
@@ -277,24 +278,26 @@ namespace vtek
 		// TODO: It is possible to use multiple viewports and scissor rectangles
 		// on some GPUs, which requires enabling a feature during device creation.
 		// How to handle that here? / Should we?
-		ViewportState* viewportState;
+		ViewportState* viewportState {nullptr};
 
 		// rasterization
-		RasterizationState* rasterizationState;
+		RasterizationState* rasterizationState {nullptr};
 
 		// multisample state
-		MultisampleState* multisampleState;
+		MultisampleState* multisampleState {nullptr};
 
 		// depth and stencil testing
-		DepthStencilState depthStencilState;
+		// TODO: Could be a pointer instead?
+		DepthStencilState* depthStencilState {nullptr};
 
 		// color blending
+		ColorBlendState* colorBlendState {nullptr};
 
 		// dynamic states
 		PipelineDynamicStateFlags dynamicStateFlags {0U};
 
 		// pipeline layout
-
+		// TODO: Get this from shader!
 	};
 
 	struct GraphicsPipeline; // opaque handle

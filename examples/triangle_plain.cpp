@@ -137,8 +137,7 @@ int main()
 	// DONE: We use dynamic rendering
 
 	// Vulkan graphics pipeline
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
-	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	vtek::GraphicsShader* shader = vtek::graphics_shader_load(...);
 
 	uint32_t width = swapchainCreateInfo.framebufferWidth;
 	uint32_t height = swapchainCreateInfo.framebufferHeight;
@@ -150,10 +149,25 @@ int main()
 	};
 	vtek::RasterizationState rasterizer{};
 	vtek::MultisampleState multisampling{};
+	vtek::DepthStencilState depthStencil{}; // No depth testing!
+	vtek::ColorBlendState colorBlending{};
+	colorBlending.attachments.emplace_back(
+		vtek::ColorBlendAttachment::GetBlendingDisabled());
 
+	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	graphicsPipelineInfo.renderPass = nullptr; // Nice!
+	graphicsPipelineInfo.shader = shader;
+	graphicsPipelineInfo.vertexType = vtek::VertexType::vec2;
+	graphicsPipelineInfo.instancedRendering = false;
+	graphicsPipelineInfo.primitiveTopology = vtek::PrimitiveTopology::triangle_list;
+	graphicsPipelineInfo.enablePrimitiveRestart = false;
 	graphicsPipelineInfo.viewportState = &viewport;
 	graphicsPipelineInfo.rasterizationState = &rasterizer;
 	graphicsPipelineInfo.multisampleState = &multisampling;
+	graphicsPipelineInfo.depthStencilState = &depthStencil;
+	graphicsPipelineInfo.colorBlendState = &colorBlending;
+	graphicsPipelineInfo.dynamicStateFlags = vtek::PipelineDynamicState::viewport;
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
 	if (graphicsPipeline == nullptr)

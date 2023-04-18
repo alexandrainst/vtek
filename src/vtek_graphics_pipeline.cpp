@@ -195,22 +195,22 @@ static VkLogicOp get_logic_op(vtek::LogicOp op)
 {
 	switch (op)
 	{
-	case vtek::LogicOp::clear:         return VK_LOGIC_OP_CLEAR = 0:
-	case vtek::LogicOp::and_op:        return VK_LOGIC_OP_AND = 1:
-	case vtek::LogicOp::and_reverse:   return VK_LOGIC_OP_AND_REVERSE = 2:
-	case vtek::LogicOp::copy:          return VK_LOGIC_OP_COPY = 3:
-	case vtek::LogicOp::and_inverted:  return VK_LOGIC_OP_AND_INVERTED = 4:
-	case vtek::LogicOp::no_op:         return VK_LOGIC_OP_NO_OP = 5:
-	case vtek::LogicOp::xor_op:        return VK_LOGIC_OP_XOR = 6:
-	case vtek::LogicOp::or_op:         return VK_LOGIC_OP_OR = 7:
-	case vtek::LogicOp::nor:           return VK_LOGIC_OP_NOR = 8:
-	case vtek::LogicOp::equivalent:    return VK_LOGIC_OP_EQUIVALENT = 9:
-	case vtek::LogicOp::invert:        return VK_LOGIC_OP_INVERT = 10:
-	case vtek::LogicOp::or_reverse:    return VK_LOGIC_OP_OR_REVERSE = 11:
-	case vtek::LogicOp::copy_inverted: return VK_LOGIC_OP_COPY_INVERTED = 12:
-	case vtek::LogicOp::or_inverted:   return VK_LOGIC_OP_OR_INVERTED = 13:
-	case vtek::LogicOp::nand:          return VK_LOGIC_OP_NAND = 14:
-	case vtek::LogicOp::set:           return VK_LOGIC_OP_SET = 15:
+	case vtek::LogicOp::clear:         return VK_LOGIC_OP_CLEAR;
+	case vtek::LogicOp::and_op:        return VK_LOGIC_OP_AND;
+	case vtek::LogicOp::and_reverse:   return VK_LOGIC_OP_AND_REVERSE;
+	case vtek::LogicOp::copy:          return VK_LOGIC_OP_COPY;
+	case vtek::LogicOp::and_inverted:  return VK_LOGIC_OP_AND_INVERTED;
+	case vtek::LogicOp::no_op:         return VK_LOGIC_OP_NO_OP;
+	case vtek::LogicOp::xor_op:        return VK_LOGIC_OP_XOR;
+	case vtek::LogicOp::or_op:         return VK_LOGIC_OP_OR;
+	case vtek::LogicOp::nor:           return VK_LOGIC_OP_NOR;
+	case vtek::LogicOp::equivalent:    return VK_LOGIC_OP_EQUIVALENT;
+	case vtek::LogicOp::invert:        return VK_LOGIC_OP_INVERT;
+	case vtek::LogicOp::or_reverse:    return VK_LOGIC_OP_OR_REVERSE;
+	case vtek::LogicOp::copy_inverted: return VK_LOGIC_OP_COPY_INVERTED;
+	case vtek::LogicOp::or_inverted:   return VK_LOGIC_OP_OR_INVERTED;
+	case vtek::LogicOp::nand:          return VK_LOGIC_OP_NAND;
+	case vtek::LogicOp::set:           return VK_LOGIC_OP_SET;
 	default:
 		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid logic compare op!");
 		return VK_LOGIC_OP_CLEAR;
@@ -274,8 +274,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	inputAssembly.topology = get_primitive_topology(info->primitiveTopology);
 	inputAssembly.primitiveRestartEnable = info->enablePrimitiveRestart.get();
 
-
-
 	// ====================== //
 	// === Viewport state === //
 	// ====================== //
@@ -305,7 +303,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// =========================== //
 	if (info->rasterizationState == nullptr)
 	{
-		vtek_log_error("No rasterization state provided - cannot create graphics pipeline!");
+		vtek_log_error(
+			"No rasterization state provided - cannot create graphics pipeline!");
 		return nullptr;
 	}
 	vtek::RasterizationState rasterizationState = *(info->rasterizationState); // copy-by-value
@@ -323,14 +322,16 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	rasterizer.depthBiasClamp = rasterizationState.depthBiasClamp;
 	rasterizer.depthBiasSlopeFactor = rasterizationState.depthBiasSlopeFactor;
 	rasterizer.lineWidth = rasterizationState.lineWidth;
-		// TODO: Also check for enabled device features!
+	// TODO: Also check for enabled device features! This include:
+	// depthClampEnable, polygonMode, lineWidth.
 
 	// ========================= //
 	// === Multisample state === //
 	// ========================= //
 	if (info->multisampleState == nullptr)
 	{
-		vtek_log_error("No multisample state provided - cannot create graphics pipeline!");
+		vtek_log_error(
+			"No multisample state provided - cannot create graphics pipeline!");
 		return nullptr;
 	}
 	vtek::MultisampleState multisampleState = *(info->multisampleState); // copy-by-value
@@ -348,7 +349,13 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// =========================== //
 	// === Depth stencil state === //
 	// =========================== //
-	vtek::DepthStencilState dsState = *(info->depthStencilState) // copy-by-value
+	if (info->multisampleState == nullptr)
+	{
+		vtek_log_error(
+			"No depth stencil state provided - cannot create graphics pipeline!");
+		return nullptr;
+	}
+	vtek::DepthStencilState dsState = *(info->depthStencilState); // copy-by-value
 	VkPipelineDepthStencilStateCreateInfo depthStencil{};
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencil.pNext = nullptr;
@@ -358,23 +365,52 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	depthStencil.depthCompareOp = get_depth_compare_op(dsState.depthCompareOp);
 	depthStencil.depthBoundsTestEnable = dsState.depthBoundsTestEnable.get();
 	depthStencil.stencilTestEnable = dsState.stencilTestEnable.get();
-	depthStencil.front = (depthStencil.stencilTestEnable) ? dsState.stencilTestFront : {};
-	depthStencil.back = (depthStencil.stencilTestEnable) ? dsState.stencilTestBack : {};
+	if (depthStencil.stencilTestEnable) {
+		depthStencil.front = dsState.stencilTestFront;
+		depthStencil.back = dsState.stencilTestBack;
+	} else {
+		depthStencil.front = {};
+		depthStencil.back = {};
+	}
 	depthStencil.minDepthBounds = dsState.depthBounds.min();
 	depthStencil.maxDepthBounds = dsState.depthBounds.max();
 
 	// ============================ //
 	// === color blending state === //
 	// ============================ //
+	if (info->colorBlendState == nullptr)
+	{
+		vtek_log_error(
+			"No color blending state provided - cannot create graphics pipeline!");
+		return nullptr;
+	}
+	if (info->colorBlendState->attachments.empty() == !rasterizer.rasterizerDiscardEnable)
+	{
+		vtek_log_error("No color attachments provided in the color blending state,");
+		vtek_log_error("and rasterizer discard is not enabled.");
+		vtek_log_error("Cannot create graphics pipeline!");
+		return nullptr;
+	}
+	std::vector<VkPipelineColorBlendAttachmentState> colorAttachments{};
+	for (auto attachment : info->colorBlendState->attachments)
+	{
+		VkPipelineColorBlendAttachmentState state{};
+
+		state.blendEnable = attachment.blendEnable.get();
+		state.srcColorBlendFactor = attachment.srcColorBlendFactor;
+		state.dstColorBlendFactor = attachment.dstColorBlendFactor;
+		state.colorBlendOp = attachment.colorBlendOp;
+		state.srcAlphaBlendFactor = attachment.srcAlphaBlendFactor;
+		state.dstAlphaBlendFactor = attachment.dstAlphaBlendFactor;
+		state.alphaBlendOp = attachment.alphaBlendOp;
+		state.colorWriteMask = attachment.colorWriteMask;
+
+		colorAttachments.emplace_back(state);
+	}
 	VkPipelineColorBlendStateCreateInfo colorBlend{};
 	colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-
-	colorBlend.colorWriteMask
-		= VK_COLOR_COMPONENT_R_BIT
-		| VK_COLOR_COMPONENT_G_BIT
-		| VK_COLOR_COMPONENT_B_BIT
-		| VK_COLOR_COMPONENT_A_BIT;
-	colorBlend.blendEnable = 
+	colorBlend.attachmentCount = colorAttachments.size();
+	colorBlend.pAttachments = colorAttachments.data();
 
 
 	// ===================== //
@@ -390,7 +426,10 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	dynamic.pDynamicStates = (dynState) ? dynamicStates.data() : nullptr;
 
 
-	// pipeline layout
+	// ======================= //
+	// === Pipeline layout === //
+	// ======================= //
+	// TODO: Get this from shader!
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layoutInfo.pNext = nullptr;
