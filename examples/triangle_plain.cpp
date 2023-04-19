@@ -138,7 +138,7 @@ int main()
 	// DONE: We use dynamic rendering
 
 	// Vulkan graphics pipeline
-	vtek::GraphicsShader* shader = vtek::graphics_shader_load(...);
+	vtek::GraphicsShader* shader = nullptr;// = vtek::graphics_shader_load(...);
 
 	const uint32_t width = swapchainCreateInfo.framebufferWidth;
 	const uint32_t height = swapchainCreateInfo.framebufferHeight;
@@ -159,20 +159,20 @@ int main()
 		vtek::swapchain_get_image_format(swapchain));
 
 	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{
-		.renderPassType = vtek::RenderPassType::dynamic;
-		.renderPass = nullptr; // Nice!
-		.pipelineRendering = &pipelineRendering;
-		.shader = shader;
-		.vertexType = vtek::VertexType::vec2;
-		.instancedRendering = false;
-		.primitiveTopology = vtek::PrimitiveTopology::triangle_list;
-		.enablePrimitiveRestart = false;
-		.viewportState = &viewport;
-		.rasterizationState = &rasterizer;
-		.multisampleState = &multisampling;
-		.depthStencilState = &depthStencil;
-		.colorBlendState = &colorBlending;
-		.dynamicStateFlags = 0U; //vtek::PipelineDynamicState::viewport;
+		.renderPassType = vtek::RenderPassType::dynamic,
+		.renderPass = nullptr, // Nice!
+		.pipelineRendering = &pipelineRendering,
+		.shader = shader,
+		.vertexType = vtek::VertexType::vec2,
+		.instancedRendering = false,
+		.primitiveTopology = vtek::PrimitiveTopology::triangle_list,
+		.enablePrimitiveRestart = false,
+		.viewportState = &viewport,
+		.rasterizationState = &rasterizer,
+		.multisampleState = &multisampling,
+		.depthStencilState = &depthStencil,
+		.colorBlendState = &colorBlending,
+		.dynamicStateFlags = 0U //vtek::PipelineDynamicState::viewport;
 	};
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
@@ -215,18 +215,19 @@ int main()
 		}
 
 		// Transition from whatever (probably present src) to color attachment
-		VkImageMemoryBarrier beginBarrier{};
-		beginBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		beginBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		beginBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		beginBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		beginBarrier.image = vtek::swapchain_get_image(swapchain, i);
-		beginBarrier.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1
+		VkImageMemoryBarrier beginBarrier{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.image = vtek::swapchain_get_image(swapchain, i),
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
 		};
 
 		vkCmdPipelineBarrier(
@@ -234,28 +235,44 @@ int main()
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
 			0, nullptr, 1, &beginBarrier);
 
+		struct arrays{
+			int x[3];
+			float y[3];
+			int z[3];
+		};
+
+		arrays vec_2 = {
+			{1,2,3}, //initializes x
+			{5.0f,6.0f,7.0f}, //initializes y
+			{7,8,9}, //initializes z
+		};
+
 		// Begin dynamic rendering
+		float clearFloat32[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+		VkClearValue clearValue;
+		// clearValue.color = {
+		// 	{ 1.0f, 0.0f, 0.0f, 1.0f},
+		// 	{ 0, 0, 0, 0},
+		// 	{ 0, 0, 0, 0},
+		// };
+
+		//clearValue.color.float32 = [4]{1.0f, 0.0f, 0.0f, 1.0f};
+
 		VkRenderingAttachmentInfo colorAttachmentInfo{
 			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
 			.imageView = vtek::swapchain_get_image_view(swapchain, i),
 			.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-			.clearValue = {
-				.color = {
-					.float32 = {1.0f, 0.0f, 0.0f, 1.0f}, // TODO: Arrays like this?
-					.int32 = {255, 0, 0, 255},
-					.uint32 = {255, 0, 0, 255}
-				},
-				.depthStencil = {}
-			}
+			.clearValue = { .color = { .float32 = {1.0f, 0.0f, 0.0f, 1.0f} } },
 		};
+
 		VkRenderingInfo renderingInfo{
-			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO; // _KHR ??
-			.renderArea = { .offset = {0U, 0U}, .extent = {width, height} };
-			.layerCount = 1;
-			.colorAttachmentCount = 1;
-			.pColorAttachments = &colorAttachmentInfo;
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO, // _KHR ??
+			.renderArea = { .offset = {0U, 0U}, .extent = {width, height} },
+			.layerCount = 1,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = &colorAttachmentInfo
 		};
 		vkCmdBeginRendering(cmdBuf, &renderingInfo);
 
@@ -281,7 +298,7 @@ int main()
 
 		vkCmdPipelineBarrier(
 			cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, 1, &endBarrier);
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &endBarrier);
 
 		if (!vtek::command_buffer_end(commandBuffer))
 		{
@@ -313,7 +330,7 @@ int main()
 		}
 
 		// 2) acquire swapchain image
-		int imageIndex = -1;
+		uint32_t imageIndex;
 		if (!swapchain_acquire_next_image_index(swapchain, &imageIndex))
 		{
 			// TODO: Perhaps the swapchain needs to be rebuilt!

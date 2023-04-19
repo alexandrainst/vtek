@@ -117,36 +117,42 @@ template<typename... Args>
 inline void log_trace(const char* message, const Args &... args)
 {
 	//#if defined(YGG_DEBUG) && !defined(YGG_DISABLE_LOGGING)
-	vtek::LogContainer::sClientLogger->trace(message, args...);
+	vtek::LogContainer::sClientLogger->trace(
+		SPDLOG_FMT_RUNTIME(message), args...);
 	//#endif
 }
 
 template<typename... Args>
 inline void log_debug(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sClientLogger->debug(message, args...);
+	vtek::LogContainer::sClientLogger->debug(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
 inline void log_info(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sClientLogger->info(message, args...);
+	vtek::LogContainer::sClientLogger->info(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
 inline void log_warn(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sClientLogger->warn(message, args...);
+	vtek::LogContainer::sClientLogger->warn(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
 inline void log_error(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sClientLogger->error(message, args...);
+	vtek::LogContainer::sClientLogger->error(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
 inline void log_fatal(const char* message, const Args &... args)
 {
-	vtek::LogContainer::sClientLogger->critical(message, args...);
+	vtek::LogContainer::sClientLogger->critical(
+		SPDLOG_FMT_RUNTIME(message), args...);
 }

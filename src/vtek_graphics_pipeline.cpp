@@ -409,7 +409,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	}
 	VkPipelineColorBlendStateCreateInfo colorBlend{};
 	colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlend.attachmentCount = colorAttachments.size();
+	colorBlend.attachmentCount = static_cast<uint32_t>(colorAttachments.size());
 	colorBlend.pAttachments = colorAttachments.data();
 
 
@@ -451,9 +451,13 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ========================= //
 	// === Dynamic rendering === // -- alternative to providing a render pass.
 	// ========================= //
+	VkPipelineRenderingCreateInfo renderingCreateInfo;
 	bool useDynamicRendering = (info->renderPassType == vtek::RenderPassType::dynamic);
 	if (useDynamicRendering)
 	{
+		auto pipRender = info->pipelineRendering;
+		const std::vector<VkFormat>& attachments = pipRender->colorAttachmentFormats;
+
 		// Error handling ensured..
 
 		if (info->pipelineRendering == nullptr)
@@ -463,8 +467,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
-		bool attachmentCountMatch =
-			info->pipelineRendering->attachments.size() == colorAttachments.size();
+		bool attachmentCountMatch = attachments.size() == colorAttachments.size();
 		if (useDynamicRendering && !attachmentCountMatch)
 		{
 			vtek_log_error(
@@ -474,8 +477,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
-		bool depthSpecified =
-			info->pipelineRendering->depthAttachmentFormat != VK_FORMAT_UNDEFINED;
+		bool depthSpecified = pipRender->depthAttachmentFormat != VK_FORMAT_UNDEFINED;
 		if (!depthSpecified && dsState.depthWriteEnable.get())
 		{
 			vtek_log_error("No depth attachment format provided for dynamic rendering.");
@@ -484,8 +486,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
-		bool stencilSpecified =
-			info->pipelineRendering->stencilAttachmentFormat != VK_FORMAT_UNDEFINED;
+		bool stencilSpecified = pipRender->stencilAttachmentFormat != VK_FORMAT_UNDEFINED;
 		if (!stencilSpecified && dsState.stencilTestEnable.get())
 		{
 			vtek_log_error("No stencil attachment format provided for dynamic rendering.");
@@ -493,6 +494,17 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			vtek_log_error("--> Cannot create graphics pipeline!");
 			return nullptr;
 		}
+
+		// Fill rendering info struct
+		renderingCreateInfo = {
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO, // TODO: guess!
+			.pNext = nullptr,
+			.viewMask = 0, // TODO: uint32_t ?
+			.colorAttachmentCount = static_cast<uint32_t>(attachments.size()),
+			.pColorAttachmentFormats = attachments.data(),
+			.depthAttachmentFormat = pipRender->depthAttachmentFormat,
+			.stencilAttachmentFormat = pipRender->stencilAttachmentFormat
+		};
 	}
 	else
 	{
@@ -502,22 +514,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			vtek_log_error("--> cannot create graphics pipeline!");
 			return nullptr;
 		}
-	}
-
-	VkPipelineRenderingCreateInfo renderingCreateInfo;
-	if (useDynamicRendering)
-	{
-		auto pipRender = info->pipelineRendering;
-
-		renderingCreateInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO; // TODO: guess!
-			.pNext = nullptr;
-			.viewMask = 0; // TODO: uint32_t ?
-			.colorAttachmentCount = pipRender->colorAttachmentFormats.size();
-			.pColorAttachmentFormats = pipRender->colorAttachmentFormats.data();
-			.depthAttachmentFormat = pipRender->depthAttachmentFormat;
-			.stencilAttachmentFormat = pipRender->stencilAttachmentFormat;
-		};
 	}
 
 

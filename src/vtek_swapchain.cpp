@@ -654,7 +654,7 @@ VkImageView vtek::swapchain_get_image_view(vtek::Swapchain* swapchain, uint32_t 
 	return swapchain->imageViews[index];
 }
 
-VkImage vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
+VkFormat vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
 {
 	return swapchain->imageFormat;
 }

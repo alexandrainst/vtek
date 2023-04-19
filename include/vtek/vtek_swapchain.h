@@ -40,7 +40,7 @@ namespace vtek
 
 	VkImage swapchain_get_image(Swapchain* swapchain, uint32_t index);
 	VkImageView swapchain_get_image_view(Swapchain* swapchain, uint32_t index);
-	VkImage swapchain_get_image_format(Swapchain* swapchain);
+	VkFormat swapchain_get_image_format(Swapchain* swapchain);
 
 	// Optionally returns an index which refers to a `VkImage` in the list
 	// of swapchain images array, which can be used to pick the right data
