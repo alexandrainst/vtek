@@ -36,6 +36,12 @@ namespace vtek
 	bool swapchain_recreate(Swapchain* swapchain);
 	void swapchain_destroy(Swapchain* swapchain, const Device* device);
 
+	uint32_t swapchain_get_length(Swapchain* swapchain);
+
+	VkImage swapchain_get_image(Swapchain* swapchain, uint32_t index);
+	VkImageView swapchain_get_image_view(Swapchain* swapchain, uint32_t index);
+	VkImage swapchain_get_image_format(Swapchain* swapchain);
+
 	// Optionally returns an index which refers to a `VkImage` in the list
 	// of swapchain images array, which can be used to pick the right data
 	// for the frame. This can include looking up into arrays of

@@ -51,6 +51,7 @@ namespace vtek
 	// TODO: Rename to `command_buffer_alloc` ?
 	CommandBuffer* command_buffer_create(
 		const CommandBufferCreateInfo* info, CommandPool* pool, Device* device);
+
 	std::vector<CommandBuffer*> command_buffer_create(
 		const CommandBufferCreateInfo* info, uint32_t createCount, CommandPool* pool, Device* device);
 

@@ -448,22 +448,78 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		return nullptr;
 	}
 
-	// Dynamic rendering -- alternative to providing a render pass!
-	VkPipelineRenderingCreateInfo renderingCreateInfo{};
+	// ========================= //
+	// === Dynamic rendering === // -- alternative to providing a render pass.
+	// ========================= //
 	bool useDynamicRendering = (info->renderPassType == vtek::RenderPassType::dynamic);
-	if (!useDynamicRendering && (info->renderPass == nullptr))
+	if (useDynamicRendering)
 	{
-		vtek_log_error("No render pass provided for non-dynamic rendering.");
-		vtek_log_error("--> cannot create graphics pipeline!");
-		return nullptr;
+		// Error handling ensured..
+
+		if (info->pipelineRendering == nullptr)
+		{
+			vtek_log_error("No pipeline rendering object provided for dynamic rendering.");
+			vtek_log_error("--> cannot create graphics pipeline!");
+			return nullptr;
+		}
+
+		bool attachmentCountMatch =
+			info->pipelineRendering->attachments.size() == colorAttachments.size();
+		if (useDynamicRendering && !attachmentCountMatch)
+		{
+			vtek_log_error(
+				"For dynamic rendering, number of attachments must match exactly for:");
+			vtek_log_error("--> color blending state and pipeline rendering state.");
+			vtek_log_error("--> cannot create graphics pipeline!");
+			return nullptr;
+		}
+
+		bool depthSpecified =
+			info->pipelineRendering->depthAttachmentFormat != VK_FORMAT_UNDEFINED;
+		if (!depthSpecified && dsState.depthWriteEnable.get())
+		{
+			vtek_log_error("No depth attachment format provided for dynamic rendering.");
+			vtek_log_error("--> But was specified for color blending state.");
+			vtek_log_error("--> Cannot create graphics pipeline!");
+			return nullptr;
+		}
+
+		bool stencilSpecified =
+			info->pipelineRendering->stencilAttachmentFormat != VK_FORMAT_UNDEFINED;
+		if (!stencilSpecified && dsState.stencilTestEnable.get())
+		{
+			vtek_log_error("No stencil attachment format provided for dynamic rendering.");
+			vtek_log_error("--> But was specified for color blending state.");
+			vtek_log_error("--> Cannot create graphics pipeline!");
+			return nullptr;
+		}
 	}
-	renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO; // TODO: guess!
-	renderingCreateInfo.pNext = nullptr;
-	renderingCreateInfo.viewMask = 0; // TODO: uint32_t ?
-	renderingCreateInfo.colorAttachmentCount = 0; // TODO: uint32_t ?
-	renderingCreateInfo.pColorAttachmentFormats = nullptr; // TODO: VkFormat* ?
-	renderingCreateInfo.depthAttachmentFormat = VK_FORMAT_UNDEFINED; // TODO: VkFormat ?
-	renderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED; // TODO: VkFormat ?
+	else
+	{
+		if (info->renderPass == nullptr)
+		{
+			vtek_log_error("No render pass provided for non-dynamic rendering.");
+			vtek_log_error("--> cannot create graphics pipeline!");
+			return nullptr;
+		}
+	}
+
+	VkPipelineRenderingCreateInfo renderingCreateInfo;
+	if (useDynamicRendering)
+	{
+		auto pipRender = info->pipelineRendering;
+
+		renderingCreateInfo = {
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO; // TODO: guess!
+			.pNext = nullptr;
+			.viewMask = 0; // TODO: uint32_t ?
+			.colorAttachmentCount = pipRender->colorAttachmentFormats.size();
+			.pColorAttachmentFormats = pipRender->colorAttachmentFormats.data();
+			.depthAttachmentFormat = pipRender->depthAttachmentFormat;
+			.stencilAttachmentFormat = pipRender->stencilAttachmentFormat;
+		};
+	}
+
 
 	// ============================= //
 	// === Creating the pipeline === //
@@ -474,6 +530,13 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	createInfo.pNext = (useDynamicRendering) ? &renderingCreateInfo : nullptr;
 	createInfo.flags = 0U; // bitmask of VkPipelineCreateFlagBits...
+	// TODO: Check usage for these flags:
+	/*
+	// Provided by VK_VERSION_1_3
+	VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT = 0x00000100,
+	// Provided by VK_VERSION_1_3
+	VK_PIPELINE_CREATE_EARLY_RETURN_ON_FAILURE_BIT = 0x00000200,
+	*/
 	createInfo.stageCount = shaderStages.size();
 	createInfo.pStages = shaderStages.data();
 	createInfo.pVertexInputState = &vertexInfo;

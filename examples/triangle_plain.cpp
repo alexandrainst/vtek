@@ -46,6 +46,7 @@ int main()
 	windowInfo.title = "triangle_plain";
 	windowInfo.width = 500;
 	windowInfo.height = 500;
+	// TODO: Set resizeable to false for now!
 	window = vtek::window_create(&windowInfo);
 	if (window == nullptr)
 	{
@@ -139,8 +140,8 @@ int main()
 	// Vulkan graphics pipeline
 	vtek::GraphicsShader* shader = vtek::graphics_shader_load(...);
 
-	uint32_t width = swapchainCreateInfo.framebufferWidth;
-	uint32_t height = swapchainCreateInfo.framebufferHeight;
+	const uint32_t width = swapchainCreateInfo.framebufferWidth;
+	const uint32_t height = swapchainCreateInfo.framebufferHeight;
 	vtek::ViewportState viewport{
 		.viewportRegion = {
 			.offset = {0U, 0U},
@@ -153,21 +154,26 @@ int main()
 	vtek::ColorBlendState colorBlending{};
 	colorBlending.attachments.emplace_back(
 		vtek::ColorBlendAttachment::GetBlendingDisabled());
+	vtek::PipelineRendering pipelineRendering{};
+	pipelineRendering.colorAttachmentFormats.push_back(
+		vtek::swapchain_get_image_format(swapchain));
 
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
-	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
-	graphicsPipelineInfo.renderPass = nullptr; // Nice!
-	graphicsPipelineInfo.shader = shader;
-	graphicsPipelineInfo.vertexType = vtek::VertexType::vec2;
-	graphicsPipelineInfo.instancedRendering = false;
-	graphicsPipelineInfo.primitiveTopology = vtek::PrimitiveTopology::triangle_list;
-	graphicsPipelineInfo.enablePrimitiveRestart = false;
-	graphicsPipelineInfo.viewportState = &viewport;
-	graphicsPipelineInfo.rasterizationState = &rasterizer;
-	graphicsPipelineInfo.multisampleState = &multisampling;
-	graphicsPipelineInfo.depthStencilState = &depthStencil;
-	graphicsPipelineInfo.colorBlendState = &colorBlending;
-	graphicsPipelineInfo.dynamicStateFlags = vtek::PipelineDynamicState::viewport;
+	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{
+		.renderPassType = vtek::RenderPassType::dynamic;
+		.renderPass = nullptr; // Nice!
+		.pipelineRendering = &pipelineRendering;
+		.shader = shader;
+		.vertexType = vtek::VertexType::vec2;
+		.instancedRendering = false;
+		.primitiveTopology = vtek::PrimitiveTopology::triangle_list;
+		.enablePrimitiveRestart = false;
+		.viewportState = &viewport;
+		.rasterizationState = &rasterizer;
+		.multisampleState = &multisampling;
+		.depthStencilState = &depthStencil;
+		.colorBlendState = &colorBlending;
+		.dynamicStateFlags = 0U; //vtek::PipelineDynamicState::viewport;
+	};
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
 	if (graphicsPipeline == nullptr)
@@ -178,25 +184,145 @@ int main()
 
 	// REVIEW: geometry ?
 
-	// Vulkan command buffers
+	// Vulkan command buffer (just 1 for this simple example)
+	// TODO: How to specify simultaneous use?
+	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
 	vtek::CommandBufferCreateInfo commandBufferInfo{};
-	vtek::CommandBuffer* commandBuffer = vtek::command_buffer_create(
-		&commandBufferInfo, graphicsCommandPool, device);
-	if (commandBuffer == nullptr)
+	commandBufferInfo.isSecondary = false;
+	std::vector<vtek::CommandBuffer*> commandBuffers = vtek::command_buffer_create(
+		&commandBufferInfo, commandBufferCount, graphicsCommandPool, device);
+	if (commandBuffers.empty())
 	{
 		log_error("Failed to create command buffer!");
 		return -1;
 	}
+	if (commandBufferCount != commandBuffers.size())
+	{
+		log_error("Number of command buffers created not same as number asked!");
+		return -1;
+	}
+
+	// Command buffer recording
+	for (uint32_t i = 0; i < commandBufferCount; i++)
+	{
+		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
+		VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+
+		if (!vtek::command_buffer_begin(commandBuffer))
+		{
+			log_error("Failed to begin command buffer {} recording!", i);
+			return -1;
+		}
+
+		// Transition from whatever (probably present src) to color attachment
+		VkImageMemoryBarrier beginBarrier{};
+		beginBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		beginBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		beginBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		beginBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		beginBarrier.image = vtek::swapchain_get_image(swapchain, i);
+		beginBarrier.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		};
+
+		vkCmdPipelineBarrier(
+			cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
+			0, nullptr, 1, &beginBarrier);
+
+		// Begin dynamic rendering
+		VkRenderingAttachmentInfo colorAttachmentInfo{
+			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
+			.imageView = vtek::swapchain_get_image_view(swapchain, i),
+			.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.clearValue = {
+				.color = {
+					.float32 = {1.0f, 0.0f, 0.0f, 1.0f}, // TODO: Arrays like this?
+					.int32 = {255, 0, 0, 255},
+					.uint32 = {255, 0, 0, 255}
+				},
+				.depthStencil = {}
+			}
+		};
+		VkRenderingInfo renderingInfo{
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO; // _KHR ??
+			.renderArea = { .offset = {0U, 0U}, .extent = {width, height} };
+			.layerCount = 1;
+			.colorAttachmentCount = 1;
+			.pColorAttachments = &colorAttachmentInfo;
+		};
+		vkCmdBeginRendering(cmdBuf, &renderingInfo);
+
+		// draw calls here
+
+		// End dynamic rendering
+		vkCmdEndRendering(cmdBuf);
+
+		// Transition from color attachment to present src
+		VkImageMemoryBarrier endBarrier{};
+		endBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		endBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		endBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		endBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		endBarrier.image = vtek::swapchain_get_image(swapchain, i);
+		endBarrier.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		};
+
+		vkCmdPipelineBarrier(
+			cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, 1, &endBarrier);
+
+		if (!vtek::command_buffer_end(commandBuffer))
+		{
+			log_error("Failed to end command buffer {} recording!", i);
+			return -1;
+		}
+	}
+
+
+
 
 	// Vulkan sync objects
+	vtek::SwapchainFrameSync* frameSync = vtek::frame_sync_create(device, swapchain);
 
 	// NOTE: Proper order can be fetched from VV/src Vulkan setup!
 
+	// Error tolerance
+	int errors = 10;
 
-
-	while (vtek::window_get_should_close(window))
+	while (vtek::window_get_should_close(window) && errors > 0)
 	{
 		vtek::window_poll_events();
+
+		// 1) wait for the in-flight fence
+		if (!vtek::frame_sync_wait_begin_frame())
+		{
+			log_error("Failed to wait on fence - cannot begin frame!");
+			errors--;
+		}
+
+		// 2) acquire swapchain image
+		int imageIndex = -1;
+		if (!swapchain_acquire_next_image_index(swapchain, &imageIndex))
+		{
+			// TODO: Perhaps the swapchain needs to be rebuilt!
+			log_error("Failed to obtain next swapchain image!");
+			errors--;
+		}
+
+
+
 	}
 
 

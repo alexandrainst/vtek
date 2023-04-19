@@ -13,9 +13,9 @@
 
 namespace vtek
 {
-	// ====================== //
-	// === Pipeline states == //
-	// ====================== //
+	// ============================== //
+	// === Pipeline configuration === //
+	// ============================== //
 	enum class PrimitiveTopology
 	{
 		point_list,
@@ -61,6 +61,44 @@ namespace vtek
 		or_inverted, nand, set
 	};
 
+	// NOTE: cpp-enum-proposal for bitmasks!
+	enum class PipelineDynamicState : uint32_t
+	{
+		viewport                    = 0x00000001U,
+		scissor                     = 0x00000002U,
+		line_width                  = 0x00000004U,
+		depth_bias                  = 0x00000008U,
+		blend_constants             = 0x00000010U,
+		depth_bounds                = 0x00000020U,
+		stencil_compare_mask        = 0x00000040U,
+		stencil_write_mask          = 0x00000080U,
+		stencil_reference           = 0x00000100U,
+#if defined(VK_API_VERSION_1_3)
+		cull_mode                   = 0x00000200U,
+		front_face                  = 0x00000400U,
+		primitive_topology          = 0x00000800U,
+		viewport_with_count         = 0x00001000U,
+		scissor_with_count          = 0x00002000U,
+		vertex_input_binding_stride = 0x00004000U,
+		depth_test_enable           = 0x00008000U,
+		depth_write_enable          = 0x00010000U,
+		depth_compare_op            = 0x00020000U,
+		depth_bounds_test_enable    = 0x00040000U,
+		stencil_test_enable         = 0x00080000U,
+		stencil_op                  = 0x00100000U,
+		rasterizer_discard_enable   = 0x00200000U,
+		depth_bias_enable           = 0x00400000U,
+		primitive_restart_enable    = 0x00800000U,
+#endif
+	};
+	typedef uint32_t PipelineDynamicStateFlags;
+
+	enum class RenderPassType { renderpass, dynamic };
+
+
+	// ====================== //
+	// === Pipeline states == //
+	// ====================== //
 	struct ViewportState
 	{
 		VkRect2D viewportRegion {};
@@ -198,46 +236,18 @@ namespace vtek
 		// disable the first blending method (described above) for all the
 		// framebuffers! This method also uses the color write mask to
 		// determine which color channels are affected.
-		// It is possible to disable both modes, as we are doing here, in which
-		// case the fragment colors are written to the framebuffer unmodified.
+		// It is possible to disable both modes, in which case the fragment
+		// colors are written to the framebuffer unmodified.
 		VulkanBool logicOpEnable {false};
 		LogicOp logicOp {LogicOp::copy};
 	};
 
-	// NOTE: cpp-enum-proposal for bitmasks!
-	enum class PipelineDynamicState : uint32_t
+	struct PipelineRendering
 	{
-		viewport                    = 0x00000001U,
-		scissor                     = 0x00000002U,
-		line_width                  = 0x00000004U,
-		depth_bias                  = 0x00000008U,
-		blend_constants             = 0x00000010U,
-		depth_bounds                = 0x00000020U,
-		stencil_compare_mask        = 0x00000040U,
-		stencil_write_mask          = 0x00000080U,
-		stencil_reference           = 0x00000100U,
-#if defined(VK_API_VERSION_1_3)
-		cull_mode                   = 0x00000200U,
-		front_face                  = 0x00000400U,
-		primitive_topology          = 0x00000800U,
-		viewport_with_count         = 0x00001000U,
-		scissor_with_count          = 0x00002000U,
-		vertex_input_binding_stride = 0x00004000U,
-		depth_test_enable           = 0x00008000U,
-		depth_write_enable          = 0x00010000U,
-		depth_compare_op            = 0x00020000U,
-		depth_bounds_test_enable    = 0x00040000U,
-		stencil_test_enable         = 0x00080000U,
-		stencil_op                  = 0x00100000U,
-		rasterizer_discard_enable   = 0x00200000U,
-		depth_bias_enable           = 0x00400000U,
-		primitive_restart_enable    = 0x00800000U,
-#endif
+		std::vector<VkFormat> colorAttachmentFormats;
+		VkFormat depthAttachmentFormat {VK_FORMAT_UNDEFINED};
+		VkFormat stencilAttachmentFormat {VK_FORMAT_UNDEFINED};
 	};
-
-	typedef uint32_t PipelineDynamicStateFlags;
-
-	enum class RenderPassType { renderpass, dynamic };
 
 
 	// ============================== //
@@ -291,6 +301,8 @@ namespace vtek
 		DepthStencilState* depthStencilState {nullptr};
 
 		// color blending
+		// TODO: Overlap between ColorBlendState and PipelineRendering!
+		//       Perhaps merge them somehow!!? ! YESSSHHSH
 		ColorBlendState* colorBlendState {nullptr};
 
 		// dynamic states

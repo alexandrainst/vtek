@@ -637,6 +637,28 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	swapchain->id = VTEK_INVALID_ID;
 }
 
+uint32_t vtek::swapchain_get_length(vtek::Swapchain* swapchain)
+{
+	return swapchain->length;
+}
+
+VkImage vtek::swapchain_get_image(vtek::Swapchain* swapchain, uint32_t index)
+{
+	// TODO: Index precondition check!?
+	return swapchain->images[index];
+}
+
+VkImageView vtek::swapchain_get_image_view(vtek::Swapchain* swapchain, uint32_t index)
+{
+	// TODO: Index precondition check!?
+	return swapchain->imageViews[index];
+}
+
+VkImage vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
+{
+	return swapchain->imageFormat;
+}
+
 bool vtek::swapchain_acquire_next_image_index(vtek::Swapchain* swapchain, uint32_t* outImageIndex)
 {
 	return false;
