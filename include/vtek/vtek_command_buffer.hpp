@@ -60,6 +60,7 @@ namespace vtek
 	void command_buffer_destroy(std::vector<CommandBuffer*>& commandBuffers, Device* device);
 
 	VkCommandBuffer command_buffer_get_handle(CommandBuffer* commandBuffer);
+	VkCommandPool command_buffer_get_pool_handle(CommandBuffer* commandBuffer);
 
 	// TODO: Perhaps we want to pack the details away and instead provide this interface:
 	bool command_buffer_reset(CommandBuffer* commandBuffer);

@@ -23,8 +23,11 @@ namespace vtek
 
 	struct FrameSync; // opaque handle
 
-	FrameSync* frame_sync_create(Swapchain* swapchain);
+	FrameSync* frame_sync_create(Device* device, Swapchain* swapchain);
 	void frame_sync_destroy(FrameSync* frameSync);
+
+	VkSemaphore frame_sync_get_current_signal_semaphore(FrameSync* frameSync);
+	VkSemaphore frame_sync_get_current_wait_semaphore(FrameSync* frameSync);
 
 	// Call this function before starting a new rendering frame. This
 	// handles internal synchronization to correctly limit the amount
@@ -38,4 +41,16 @@ namespace vtek
 	// Before using the image as framebuffer attachment, we need to make
 	// sure that no previous frame is still using this image.
 	bool frame_sync_wait_image_ready(FrameSync* frameSync, uint32_t imageIndex);
+
+	// TODO: Simplified interface? :
+	enum class BeginFrameStatus
+	{
+		ok,
+		fence_timeout,
+		swapchain_outofdate
+	};
+
+	void frame_sync_reset(FrameSync* frameSync);
+	BeginFrameStatus frame_sync_begin_frame(FrameSync* frameSync);
+	void frame_sync_end_frame(FrameSync* frameSync);
 }

@@ -8,6 +8,7 @@ using CBState = vtek::CommandBufferStateType;
 /* struct implementation */
 namespace vtek
 {
+	// TODO: If this works, implement it somewhere else, and rewrite all allocators and structs!
 	struct OpaqueHandle
 	{
 	public:
@@ -142,6 +143,11 @@ void vtek::command_buffer_destroy(
 VkCommandBuffer vtek::command_buffer_get_handle(vtek::CommandBuffer* commandBuffer)
 {
 	return commandBuffer->vulkanHandle;
+}
+
+VkCommandPool vtek::command_buffer_get_pool_handle(vtek::CommandBuffer* commandBuffer)
+{
+	return commandBuffer->poolHandle;
 }
 
 bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)

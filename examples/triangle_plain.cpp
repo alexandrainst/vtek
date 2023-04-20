@@ -314,6 +314,37 @@ int main()
 
 	while (vtek::window_get_should_close(window) && errors > 0)
 	{
+
+		// ============================ //
+		// === Simplified interface === //
+		// ============================ //
+
+		// React to incoming input events
+		vtek::window_poll_events();
+
+		// To avoid excessive GPU work we wait until we may begin the frame
+		vtek::swapchain_wait_begin_frame(swapchain);
+
+		// Acquire the next available image in the swapchain
+		uint32_t frameIndex;
+		vtek::swapchain_acquire_next_image(swapchain, &frameIndex);
+
+		// Wait until any previous operations are finished using this image, for either read or write.
+		// NOTE: We can do command buffer recording or other operations before calling this function.
+		vtek::swapchain_wait_image_ready(swapchain, &frameIndex); // TODO: if (...)
+
+		// Submit the current command buffer for execution on the graphics queue
+		vtek::SubmitInfo submitInfo{};
+		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
+		vtek::queue_submit(graphicsQueue, commandBuffers[frameIndex], &submitInfo);
+
+		vtek::swapchain_wait_end_frame(swapchain, frameIndex);
+
+
+
+		// ============================= //
+		// === Complicated interface === //
+		// ============================= //
 		vtek::window_poll_events();
 
 		// 1) check if the framebuffer has been resized
@@ -326,7 +357,7 @@ int main()
 		}
 
 		// 3) acquire swapchain image
-		uint32_t imageIndex;
+		uint32_t imageIndex; // == frontend->currentFrameIndex
 		if (!swapchain_acquire_next_image_index(swapchain, &imageIndex)) // <-- TODO: Not implemented!
 		{
 			// TODO: Perhaps the swapchain needs to be rebuilt!
@@ -346,10 +377,7 @@ int main()
 		}
 
 		// 5) submit command buffer to graphics queue
-		vtek::command_buffer_submit(commandBuffers[imageIndex], graphicsQueue, frameSync);
-		// -- or --
-		vtek::queue_submit(graphicsQueue, commandBuffers[imageIndex], frameSync);
-
+		vtek::queue_submit(graphicsQueue, commandBuffers[imageIndex], frameSync); // TODO: Also imageIndex ?
 	}
 
 

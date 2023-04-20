@@ -46,17 +46,18 @@ bool vtek::queue_submit(vtek::Queue* queue, const std::vector<VkSubmitInfo>& sub
 }
 
 bool vtek::queue_submit(
-	vtek::Queue* queue, vtek::CommandBuffer* commandBuffer, vtek::FrameSync* frameSync)
+	vtek::Queue* queue, vtek::CommandBuffer* commandBuffer,
+	const vtek::SubmitInfo* submitInfo)
 {
 	VkSubmitInfo submitInfo = {
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		.commandBufferCount = 1,
 		.pCommandBuffers = commandBuffer->vulkanHandle,
-		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = vtek::frame_sync_get_current_signal_semaphore(frameSync), // TODO: Create this function!
-		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = vtek::frame_sync_get_current_wait_semaphore(frameSync),
-		.pWaitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT // TODO: Function input?
+		.signalSemaphoreCount = submitInfo->NumSignalSemaphores(),
+		.pSignalSemaphores = submitInfo->SignalSemaphores(),
+		.waitSemaphoreCount = submitInfo->NumWaitSemaphores(),
+		.pWaitSemaphores = submitInfo->WaitSemaphores(),
+		.pWaitDstStageMask = submitInfo->WaitPipelineStages()
 	};
 }
 

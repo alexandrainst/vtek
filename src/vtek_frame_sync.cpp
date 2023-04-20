@@ -32,7 +32,7 @@ struct vtek::FrameSync
 
 
 /* interface */
-vtek::FrameSync* vtek::frame_sync_create(vtek::Swapchain* swapchain)
+vtek::FrameSync* vtek::frame_sync_create(vtek::Device* device, vtek::Swapchain* swapchain)
 {
 	vtek_log_error("vtek::frame_sync_create -> Not implemented!");
 	return nullptr;
@@ -41,6 +41,16 @@ vtek::FrameSync* vtek::frame_sync_create(vtek::Swapchain* swapchain)
 void vtek::frame_sync_destroy(vtek::FrameSync* frameSync)
 {
 	vtek_log_error("vtek::frame_sync_destroy -> Not implemented!");
+}
+
+VkSemaphore vtek::frame_sync_get_current_signal_semaphore(vtek::FrameSync* frameSync)
+{
+	return frameSync->renderFinishedSemaphores[];
+}
+
+VkSemaphore vtek::frame_sync_get_current_wait_semaphore(vtek::FrameSync* frameSync)
+{
+
 }
 
 bool vtek::frame_sync_wait_begin_frame(vtek::FrameSync* frameSync)
@@ -55,4 +65,24 @@ bool vtek::frame_sync_wait_image_ready(vtek::FrameSync* frameSync, uint32_t imag
 	return false;
 
 	// TODO: Also set image in use! (yggdrasil::graphics::vulkan_frame_sync_set_image_in_use)
+}
+
+
+// ============================ //
+// === Simplified interface === //
+// ============================ //
+void vtek::frame_sync_reset(vtek::FrameSync* frameSync)
+{
+
+}
+
+vtek::BeginFrameStatus vtek::frame_sync_begin_frame(vtek::FrameSync* frameSync)
+{
+
+}
+
+void vtek::frame_sync_end_frame(vtek::FrameSync* frameSync)
+{
+	uint32_t& curFrame = frameSync->currentFrameIndex;
+	curFrame = (curFrame + 1) % frameSync->numFramesInFlight;
 }
