@@ -314,11 +314,6 @@ int main()
 
 	while (vtek::window_get_should_close(window) && errors > 0)
 	{
-
-		// ============================ //
-		// === Simplified interface === //
-		// ============================ //
-
 		// React to incoming input events
 		vtek::window_poll_events();
 
@@ -338,46 +333,8 @@ int main()
 		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
 		vtek::queue_submit(graphicsQueue, commandBuffers[frameIndex], &submitInfo);
 
+		// Wait for command buffer to finish execution, and present frame to screen.
 		vtek::swapchain_wait_end_frame(swapchain, frameIndex);
-
-
-
-		// ============================= //
-		// === Complicated interface === //
-		// ============================= //
-		vtek::window_poll_events();
-
-		// 1) check if the framebuffer has been resized
-
-		// 2) wait for the in-flight fence
-		if (!vtek::frame_sync_wait_begin_frame(frameSync))
-		{
-			log_error("Failed to wait on fence - cannot begin frame!");
-			errors--;
-		}
-
-		// 3) acquire swapchain image
-		uint32_t imageIndex; // == frontend->currentFrameIndex
-		if (!swapchain_acquire_next_image_index(swapchain, &imageIndex)) // <-- TODO: Not implemented!
-		{
-			// TODO: Perhaps the swapchain needs to be rebuilt!
-			log_error("Failed to obtain next swapchain image!");
-			errors--;
-			// TODO: This is not actually an error when the framebuffer is resized!
-		}
-
-
-		// 4) make sure no previous frame is using this image
-		if (!vtek::frame_sync_wait_image_ready(frameSync, imageIndex))
-		{
-			// NOTE: Now THIS is an error.
-			log_error("Failed to wait for swapchain image to become ready!");
-			errors--;
-			continue;
-		}
-
-		// 5) submit command buffer to graphics queue
-		vtek::queue_submit(graphicsQueue, commandBuffers[imageIndex], frameSync); // TODO: Also imageIndex ?
 	}
 
 
