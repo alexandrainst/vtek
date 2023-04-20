@@ -139,6 +139,11 @@ void vtek::command_buffer_destroy(
 	commandBuffers.clear();
 }
 
+VkCommandBuffer vtek::command_buffer_get_handle(vtek::CommandBuffer* commandBuffer)
+{
+	return commandBuffer->vulkanHandle;
+}
+
 bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
 {
 	// TODO: How do we measure this?
@@ -249,4 +254,10 @@ bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
 	}
 
 	return true;
+}
+
+bool vtek::command_buffer_end(vtek::CommandBuffer* commandBuffer)
+{
+	vtek_log_error("vtek::command_buffer_end -> Not implemented!");
+	return false;
 }

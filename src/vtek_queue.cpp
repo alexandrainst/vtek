@@ -45,6 +45,21 @@ bool vtek::queue_submit(vtek::Queue* queue, const std::vector<VkSubmitInfo>& sub
 	return result == VK_SUCCESS;
 }
 
+bool vtek::queue_submit(
+	vtek::Queue* queue, vtek::CommandBuffer* commandBuffer, vtek::FrameSync* frameSync)
+{
+	VkSubmitInfo submitInfo = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = commandBuffer->vulkanHandle,
+		.signalSemaphoreCount = 1,
+		.pSignalSemaphores = vtek::frame_sync_get_current_signal_semaphore(frameSync), // TODO: Create this function!
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = vtek::frame_sync_get_current_wait_semaphore(frameSync),
+		.pWaitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT // TODO: Function input?
+	};
+}
+
 bool vtek::queue_supports_graphics(const vtek::Queue* queue)
 {
 	return queue->queueFlags & VK_QUEUE_GRAPHICS_BIT;

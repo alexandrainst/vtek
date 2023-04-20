@@ -28,6 +28,20 @@ void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 	}
 }
 
+// TODO: Provide function parameters (likely a _lot_) :
+// window, device, swapchain, frameSync, --renderPass--, --framebuffers--, commandBuffers
+// --> (window, device, swapchain, frameSync, commandBuffers) <---
+void recreateSwapchain()
+{
+	// 1) window minimization guard
+	// 2) device wait idle
+	// 3) recreate swapchain
+	// 4) reset frame sync
+	// 5) -- rebuild render pass --
+	// 6) -- recreate swapchain framebuffers --
+	// 7) re-record command buffers
+}
+
 
 int main()
 {
@@ -254,11 +268,14 @@ int main()
 		vkCmdBeginRendering(cmdBuf, &renderingInfo);
 
 		// draw calls here
+		// TODO: Can we do this without a bound vertex buffer?
+		// vkCmdDraw(cmdBuf, ...)
 
 		// End dynamic rendering
 		vkCmdEndRendering(cmdBuf);
 
 		// Transition from color attachment to present src
+		// PROG: We can extract function from this pipeline barrier (vtek::dynamic_rendering_insert_barrier(), etc.).
 		VkImageMemoryBarrier endBarrier{};
 		endBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		endBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -288,7 +305,7 @@ int main()
 
 
 	// Vulkan sync objects
-	vtek::SwapchainFrameSync* frameSync = vtek::frame_sync_create(device, swapchain);
+	vtek::FrameSync* frameSync = vtek::frame_sync_create(device, swapchain);
 
 	// NOTE: Proper order can be fetched from VV/src Vulkan setup!
 
@@ -299,23 +316,39 @@ int main()
 	{
 		vtek::window_poll_events();
 
-		// 1) wait for the in-flight fence
-		if (!vtek::frame_sync_wait_begin_frame())
+		// 1) check if the framebuffer has been resized
+
+		// 2) wait for the in-flight fence
+		if (!vtek::frame_sync_wait_begin_frame(frameSync))
 		{
 			log_error("Failed to wait on fence - cannot begin frame!");
 			errors--;
 		}
 
-		// 2) acquire swapchain image
+		// 3) acquire swapchain image
 		uint32_t imageIndex;
-		if (!swapchain_acquire_next_image_index(swapchain, &imageIndex))
+		if (!swapchain_acquire_next_image_index(swapchain, &imageIndex)) // <-- TODO: Not implemented!
 		{
 			// TODO: Perhaps the swapchain needs to be rebuilt!
 			log_error("Failed to obtain next swapchain image!");
 			errors--;
+			// TODO: This is not actually an error when the framebuffer is resized!
 		}
 
 
+		// 4) make sure no previous frame is using this image
+		if (!vtek::frame_sync_wait_image_ready(frameSync, imageIndex))
+		{
+			// NOTE: Now THIS is an error.
+			log_error("Failed to wait for swapchain image to become ready!");
+			errors--;
+			continue;
+		}
+
+		// 5) submit command buffer to graphics queue
+		vtek::command_buffer_submit(commandBuffers[imageIndex], graphicsQueue, frameSync);
+		// -- or --
+		vtek::queue_submit(graphicsQueue, commandBuffers[imageIndex], frameSync);
 
 	}
 

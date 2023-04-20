@@ -66,7 +66,6 @@ namespace vtek
 	bool command_buffer_free(CommandBuffer* commandBuffer, VkDevice device, VkCommandPool pool);
 	bool command_buffer_begin(CommandBuffer* commandBuffer);
 	bool command_buffer_end(CommandBuffer* commandBuffer);
-	bool command_buffer_submit(CommandBuffer* commandBuffer, VkQueue queue);
 
 	// TODO: Single-use command buffers! Considerations:
 	// - waiting for buffer to finish execution?

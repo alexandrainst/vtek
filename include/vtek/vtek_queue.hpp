@@ -4,6 +4,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "vtek_command_buffer.hpp"
+
 
 namespace vtek
 {
@@ -22,9 +24,12 @@ namespace vtek
 
 	void queue_wait_idle(const Queue* queue);
 
+	// TODO: We don't want these two functions, but let them be for now. Replacement is found below!
 	bool queue_submit(Queue* queue, const std::vector<VkSubmitInfo>& submitInfos);
-
 	bool queue_submit(Queue* queue, const std::vector<VkSubmitInfo>& submitInfos, VkFence postSignalFence);
+
+	// TODO: Requires that we can obtain the command pool handle from the command buffer interface!
+	bool queue_submit(Queue* queue, CommandBuffer* commandBuffer, FrameSync* frameSync);
 
 	// TODO: Is this desirable?
 	bool queue_supports_graphics(const Queue* queue);
