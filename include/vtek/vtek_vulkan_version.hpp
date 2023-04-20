@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <cstdint>
+#include <vulkan/vulkan.h>
 
 
 namespace vtek

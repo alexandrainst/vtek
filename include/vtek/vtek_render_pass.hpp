@@ -1,8 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <vector>
-#include "vtek_device.h"
+#include <vulkan/vulkan.h>
+
+#include "vtek_device.hpp"
 
 
 namespace vtek

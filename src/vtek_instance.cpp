@@ -4,12 +4,12 @@
 #include <vulkan/vk_enum_string_helper.h> // string_VkObjectType(VkObjectType input_value)
 
 // vtek
-#include "impl/vtek_glfw_backend.h"
-#include "impl/vtek_host_allocator.h"
-#include "version.h"
-#include "vtek_instance.h"
-#include "vtek_logging.h"
-#include "vtek_vulkan_version.h"
+#include "impl/vtek_glfw_backend.hpp"
+#include "impl/vtek_host_allocator.hpp"
+#include "version.hpp"
+#include "vtek_instance.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_vulkan_version.hpp"
 
 
 /* Validation layers, more can be added if desired */

@@ -3,8 +3,8 @@
 #include <vulkan/vulkan.h>
 #include <memory>
 
-#include "vtek_device.h"
-#include "vtek_queue.h"
+#include "vtek_device.hpp"
+#include "vtek_queue.hpp"
 
 
 namespace vtek

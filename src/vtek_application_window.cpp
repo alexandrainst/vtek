@@ -6,11 +6,11 @@
 #include <vector>
 
 // vtek
-#include "impl/vtek_host_allocator.h"
-#include "vtek_application_window.h"
-#include "vtek_input.h"
-#include "vtek_logging.h"
-#include "vtek_main.h"
+#include "impl/vtek_host_allocator.hpp"
+#include "vtek_application_window.hpp"
+#include "vtek_input.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_main.hpp"
 
 
 /* struct implementation */
@@ -33,7 +33,7 @@ static vtek::HostAllocator<vtek::ApplicationWindow> sAllocator("application_wind
 
 
 /* implementation of GLFW backend */
-#include "impl/vtek_glfw_backend.h"
+#include "impl/vtek_glfw_backend.hpp"
 
 static std::vector<std::string> sRequiredInstanceExtensions {};
 

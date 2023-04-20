@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "vtek_vulkan_version.h"
+#include "vtek_vulkan_version.hpp"
 
 
 namespace vtek

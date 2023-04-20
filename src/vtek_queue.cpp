@@ -1,8 +1,8 @@
-#include "vtek_queue.h"
+#include "vtek_queue.hpp"
 
 
 /* struct implementation */
-#include "impl/vtek_queue_struct.h"
+#include "impl/vtek_queue_struct.hpp"
 
 
 

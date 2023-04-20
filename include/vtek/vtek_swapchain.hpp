@@ -1,9 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <vulkan/vulkan.h>
 
-#include "vtek_physical_device.h"
-#include "vtek_device.h"
+#include "vtek_device.hpp"
+#include "vtek_physical_device.hpp"
 
 
 namespace vtek

@@ -2,9 +2,9 @@
 
 #include <vulkan/vulkan.h>
 
-#include "vtek_instance.h"
-#include "vtek_physical_device.h"
-#include "vtek_queue.h"
+#include "vtek_instance.hpp"
+#include "vtek_physical_device.hpp"
+#include "vtek_queue.hpp"
 
 
 namespace vtek

@@ -1,4 +1,4 @@
-#include <vtek/vtek.h>
+#include <vtek/vtek.hpp>
 #include <iostream>
 
 // global data
@@ -234,29 +234,6 @@ int main()
 			cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
 			0, nullptr, 1, &beginBarrier);
-
-		struct arrays{
-			int x[3];
-			float y[3];
-			int z[3];
-		};
-
-		arrays vec_2 = {
-			{1,2,3}, //initializes x
-			{5.0f,6.0f,7.0f}, //initializes y
-			{7,8,9}, //initializes z
-		};
-
-		// Begin dynamic rendering
-		float clearFloat32[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-		VkClearValue clearValue;
-		// clearValue.color = {
-		// 	{ 1.0f, 0.0f, 0.0f, 1.0f},
-		// 	{ 0, 0, 0, 0},
-		// 	{ 0, 0, 0, 0},
-		// };
-
-		//clearValue.color.float32 = [4]{1.0f, 0.0f, 0.0f, 1.0f};
 
 		VkRenderingAttachmentInfo colorAttachmentInfo{
 			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??

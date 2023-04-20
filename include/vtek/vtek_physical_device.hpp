@@ -1,10 +1,11 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include "vtek_instance.h"
-
 #include <cstdint>
 #include <vector>
+#include <vulkan/vulkan.h>
+
+#include "vtek_instance.hpp"
+
 
 namespace vtek
 {

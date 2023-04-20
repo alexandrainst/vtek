@@ -1,5 +1,5 @@
-#include "vtek_vertex_data.h"
-#include "vtek_logging.h"
+#include "vtek_vertex_data.hpp"
+#include "vtek_logging.hpp"
 
 // ================================ //
 // === Vertex type descriptions === //

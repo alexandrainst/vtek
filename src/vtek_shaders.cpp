@@ -1,5 +1,5 @@
-#include "vtek_shaders.h"
-#include "vtek_logging.h"
+#include "vtek_shaders.hpp"
+#include "vtek_logging.hpp"
 
 /* struct implementation */
 struct vtek::GraphicsShader

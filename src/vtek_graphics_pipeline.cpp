@@ -1,7 +1,7 @@
-#include "vtek_graphics_pipeline.h"
-#include "vtek_logging.h"
-#include "vtek_shaders.h"
-#include "impl/vtek_vulkan_helpers.h"
+#include "vtek_graphics_pipeline.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_shaders.hpp"
+#include "impl/vtek_vulkan_helpers.hpp"
 
 // TODO: Temporary
 #include <iostream>

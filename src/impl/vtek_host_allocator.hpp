@@ -5,7 +5,7 @@
 #include <utility>
 #include <map>
 
-#include "vtek_logging.h"
+#include "vtek_logging.hpp"
 
 #define VTEK_INVALID_ID (UINT64_MAX)
 

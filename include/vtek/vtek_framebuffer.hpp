@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include "vtek_device.h"
+#include "vtek_device.hpp"
 
 
 namespace vtek

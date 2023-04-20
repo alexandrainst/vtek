@@ -1,7 +1,7 @@
-#include "impl/vtek_glfw_backend.h"
-#include "impl/vtek_host_allocator.h"
-#include "vtek_main.h"
-#include "vtek_logging.h"
+#include "impl/vtek_glfw_backend.hpp"
+#include "impl/vtek_host_allocator.hpp"
+#include "vtek_main.hpp"
+#include "vtek_logging.hpp"
 
 #include <iostream>
 

@@ -4,11 +4,12 @@
 #include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
-#include "vtek_device.h"
-#include "vtek_render_pass.h"
-#include "vtek_shaders.h"
-#include "vtek_types.h"
-#include "vtek_vertex_data.h"
+
+#include "vtek_device.hpp"
+#include "vtek_render_pass.hpp"
+#include "vtek_shaders.hpp"
+#include "vtek_types.hpp"
+#include "vtek_vertex_data.hpp"
 
 
 namespace vtek

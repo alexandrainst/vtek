@@ -31,7 +31,7 @@
 #include <string_view>
 #include <spdlog/spdlog.h>
 
-#include "vtek_main.h"
+#include "vtek_main.hpp"
 
 
 /*

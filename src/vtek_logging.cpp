@@ -1,4 +1,4 @@
-#include "vtek_logging.h"
+#include "vtek_logging.hpp"
 
 #include <spdlog/sinks/daily_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h> // TODO: In source file?

@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "vtek_input.h"
-#include "vtek_instance.h"
+#include "vtek_input.hpp"
+#include "vtek_instance.hpp"
 
 
 namespace vtek

@@ -6,14 +6,14 @@
 #include <vector>
 
 // vtek
-#include "impl/vtek_host_allocator.h"
-#include "vtek_device.h"
-#include "vtek_logging.h"
-#include "vtek_physical_device.h"
+#include "impl/vtek_host_allocator.hpp"
+#include "vtek_device.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_physical_device.hpp"
 
 
 /* queue implementation */
-#include "impl/vtek_queue_struct.h"
+#include "impl/vtek_queue_struct.hpp"
 
 
 /* struct implementation */

@@ -55,27 +55,27 @@ endif()
 
 
 set (src
-  include/vtek/version.h
-  include/vtek/vtek_application_window.h
-  include/vtek/vtek_command_buffer.h
-  include/vtek/vtek_command_pool.h
-  include/vtek/vtek_device.h
-  include/vtek/vtek_graphics_pipeline.h
-  include/vtek/vtek_instance.h
-  include/vtek/vtek_logging.h
-  include/vtek/vtek_main.h
-  include/vtek/vtek_physical_device.h
-  include/vtek/vtek_queue.h
-  include/vtek/vtek_render_pass.h
-  include/vtek/vtek_shaders.h
-  include/vtek/vtek_swapchain.h
-  include/vtek/vtek_vertex_data.h
-  include/vtek/vtek_vulkan_version.h
+  include/vtek/version.hpp
+  include/vtek/vtek_application_window.hpp
+  include/vtek/vtek_command_buffer.hpp
+  include/vtek/vtek_command_pool.hpp
+  include/vtek/vtek_device.hpp
+  include/vtek/vtek_graphics_pipeline.hpp
+  include/vtek/vtek_instance.hpp
+  include/vtek/vtek_logging.hpp
+  include/vtek/vtek_main.hpp
+  include/vtek/vtek_physical_device.hpp
+  include/vtek/vtek_queue.hpp
+  include/vtek/vtek_render_pass.hpp
+  include/vtek/vtek_shaders.hpp
+  include/vtek/vtek_swapchain.hpp
+  include/vtek/vtek_vertex_data.hpp
+  include/vtek/vtek_vulkan_version.hpp
 
-  src/impl/vtek_glfw_backend.h
-  src/impl/vtek_host_allocator.h
-  src/impl/vtek_queue_struct.h
-  src/impl/vtek_vulkan_helpers.h
+  src/impl/vtek_glfw_backend.hpp
+  src/impl/vtek_host_allocator.hpp
+  src/impl/vtek_queue_struct.hpp
+  src/impl/vtek_vulkan_helpers.hpp
 
   src/vtek_application_window.cpp
   src/vtek_command_buffer.cpp

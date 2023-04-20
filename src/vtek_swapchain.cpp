@@ -4,12 +4,12 @@
 #include <vulkan/vulkan.h>
 
 // vtek
-#include "impl/vtek_host_allocator.h"
-#include "impl/vtek_vulkan_helpers.h"
-#include "vtek_device.h"
-#include "vtek_logging.h"
-#include "vtek_physical_device.h"
-#include "vtek_swapchain.h"
+#include "impl/vtek_host_allocator.hpp"
+#include "impl/vtek_vulkan_helpers.hpp"
+#include "vtek_device.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_physical_device.hpp"
+#include "vtek_swapchain.hpp"
 
 
 /* struct implementation */
