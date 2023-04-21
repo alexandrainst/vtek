@@ -5,10 +5,25 @@
 
 #include "vtek_device.hpp"
 #include "vtek_physical_device.hpp"
+#include "vtek_queue.hpp"
 
 
 namespace vtek
 {
+	// No more frames than this numbers shall be rendered on the GPU
+	// at any given time. The actual number of frames in flight depends
+	// on whether or not the swapchain was created for triple buffering.
+	// If triple buffering then swapchain length is 3, and else 2.
+	//
+	// The number of _actual_ frames in flight is then obtained by
+	// subtracting 1 from the swapchain length.
+	//
+	// NOTE: There is no performance gain in making a swapchain longer,
+	// since we allow for max 2 simultaneous frames in flight. And even
+	// if higher number of frames in flight were allowed, it would only
+	// reduce rendering latency and increase memory usage.
+	static constexpr uint32_t kMaxFramesInFlight = 2;
+
 	struct SwapchainCreateInfo
 	{
 		bool vsync {false};
@@ -50,4 +65,38 @@ namespace vtek
 	bool swapchain_acquire_next_image_index(Swapchain* swapchain, uint32_t* outImageIndex);
 
 	bool swapchain_present_image(Swapchain* swapchain, uint32_t presentImageIndex);
+
+
+	// ======================== //
+	// === Better interface === //
+	// ======================== //
+
+	// TODO: Simplified interface? :
+	enum class BeginFrameStatus
+	{
+		ok,
+		fence_timeout,
+		swapchain_outofdate
+	};
+
+	// Call this function before starting a new rendering frame. This
+	// handles internal synchronization to correctly limit the amount
+	// of frames that can be handled at the GPU at any time. Failure
+	// to call this function at the beginning of each frame may result
+	// in indefinite stalls or GPU memory corruption.
+	//
+	// Returns false if a new frame could not be started.
+	bool swapchain_wait_begin_frame(Swapchain* swapchain);
+
+	bool swapchain_acquire_next_image(Swapchain* swapchain, uint32_t* imageIndex);
+
+	// TODO: Special enum return status?
+	// Before using the image as framebuffer attachment, we need to make
+	// sure that no previous frame is still using this image.
+	bool swapchain_wait_image_ready(Swapchain* swapchain, uint32_t imageIndex);
+
+	void swapchain_fill_queue_submit_info(Swapchain* swapchain, SubmitInfo* submitInfo);
+
+	// TODO: Special enum return status?
+	bool swapchain_wait_end_frame(Swapchain* swapchain, uint32_t frameIndex);
 }

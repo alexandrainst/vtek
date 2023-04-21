@@ -56,11 +56,13 @@ endif()
 
 set (src
   include/vtek/version.hpp
+  include/vtek/vtek.hpp
   include/vtek/vtek_application_window.hpp
   include/vtek/vtek_command_buffer.hpp
   include/vtek/vtek_command_pool.hpp
   include/vtek/vtek_device.hpp
   include/vtek/vtek_graphics_pipeline.hpp
+  include/vtek/vtek_input.hpp
   include/vtek/vtek_instance.hpp
   include/vtek/vtek_logging.hpp
   include/vtek/vtek_main.hpp
@@ -69,6 +71,7 @@ set (src
   include/vtek/vtek_render_pass.hpp
   include/vtek/vtek_shaders.hpp
   include/vtek/vtek_swapchain.hpp
+  include/vtek/vtek_types.hpp
   include/vtek/vtek_vertex_data.hpp
   include/vtek/vtek_vulkan_version.hpp
 

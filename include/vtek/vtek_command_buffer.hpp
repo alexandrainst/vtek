@@ -2,7 +2,9 @@
 
 #include <vector>
 #include <vulkan/vulkan.h>
+
 #include "vtek_command_pool.hpp"
+#include "vtek_device.hpp"
 
 
 namespace vtek

@@ -198,8 +198,7 @@ int main()
 
 	// REVIEW: geometry ?
 
-	// Vulkan command buffer (just 1 for this simple example)
-	// TODO: How to specify simultaneous use?
+	// Command buffers
 	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
 	vtek::CommandBufferCreateInfo commandBufferInfo{};
 	commandBufferInfo.isSecondary = false;
@@ -301,14 +300,6 @@ int main()
 		}
 	}
 
-
-
-
-	// Vulkan sync objects
-	vtek::FrameSync* frameSync = vtek::frame_sync_create(device, swapchain);
-
-	// NOTE: Proper order can be fetched from VV/src Vulkan setup!
-
 	// Error tolerance
 	int errors = 10;
 
@@ -326,7 +317,7 @@ int main()
 
 		// Wait until any previous operations are finished using this image, for either read or write.
 		// NOTE: We can do command buffer recording or other operations before calling this function.
-		vtek::swapchain_wait_image_ready(swapchain, &frameIndex); // TODO: if (...)
+		vtek::swapchain_wait_image_ready(swapchain, frameIndex); // TODO: if (...)
 
 		// Submit the current command buffer for execution on the graphics queue
 		vtek::SubmitInfo submitInfo{};
