@@ -5,14 +5,12 @@
 #include <utility>
 #include <vulkan/vulkan.h>
 
-#include "vtek_command_buffer.hpp"
+#include "vtek_submit_info.hpp"
+#include "vtek_types.hpp"
 
 
 namespace vtek
 {
-	struct Queue; // opaque handle
-
-
 	VkQueue queue_get_handle(const Queue* queue);
 
 	// REVIEW: It could make sense to create an enum wrapper around the return value
@@ -30,11 +28,6 @@ namespace vtek
 	bool queue_supports_present(const Queue* queue);
 	bool queue_supports_compute(const Queue* queue);
 	bool queue_supports_sparse_binding(const Queue* queue);
-
-
-	// TODO: We don't want these two functions, but let them be for now. Replacement is found below!
-	bool queue_submit(Queue* queue, const std::vector<VkSubmitInfo>& submitInfos);
-	bool queue_submit(Queue* queue, const std::vector<VkSubmitInfo>& submitInfos, VkFence postSignalFence);
 
 	bool queue_submit(Queue* queue, CommandBuffer* commandBuffer, const SubmitInfo* submitInfo);
 }

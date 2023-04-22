@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "vtek_input.hpp"
-#include "vtek_instance.hpp"
+#include "vtek_types.hpp"
 
 
 namespace vtek
@@ -21,8 +21,6 @@ namespace vtek
 
 		bool cursorDisabled {false};
 	};
-
-	struct ApplicationWindow; // opaque handle
 
 
 	ApplicationWindow* window_create(const WindowCreateInfo* info);

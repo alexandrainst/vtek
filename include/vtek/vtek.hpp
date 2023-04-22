@@ -18,6 +18,8 @@
  */
 
 #include "vtek_main.hpp"
+#include "vtek_types.hpp"
+
 #include "vtek_application_window.hpp"
 #include "vtek_command_buffer.hpp"
 #include "vtek_command_pool.hpp"
@@ -26,6 +28,8 @@
 #include "vtek_input.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_queue.hpp"
 #include "vtek_render_pass.hpp"
 #include "vtek_physical_device.hpp"
+#include "vtek_submit_info.hpp"
 #include "vtek_swapchain.hpp"

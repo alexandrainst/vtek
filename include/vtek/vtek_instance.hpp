@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "vtek_types.hpp"
 #include "vtek_vulkan_version.hpp"
 
 
@@ -36,8 +37,6 @@ namespace vtek
 		InstanceValidationSettings validationSettings {};
 	};
 
-
-	struct Instance; // opaque handle
 
 	Instance* instance_create(InstanceCreateInfo* info);
 	void instance_destroy(Instance* instance);

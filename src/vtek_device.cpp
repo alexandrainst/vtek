@@ -6,8 +6,10 @@
 #include <vector>
 
 // vtek
-#include "impl/vtek_host_allocator.hpp"
 #include "vtek_device.hpp"
+
+#include "impl/vtek_host_allocator.hpp"
+#include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_physical_device.hpp"
 

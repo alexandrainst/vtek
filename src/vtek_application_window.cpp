@@ -6,11 +6,12 @@
 #include <vector>
 
 // vtek
-#include "impl/vtek_host_allocator.hpp"
 #include "vtek_application_window.hpp"
+
+#include "impl/vtek_host_allocator.hpp"
 #include "vtek_input.hpp"
+#include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
-#include "vtek_main.hpp"
 
 
 /* struct implementation */

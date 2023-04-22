@@ -70,6 +70,7 @@ set (src
   include/vtek/vtek_queue.hpp
   include/vtek/vtek_render_pass.hpp
   include/vtek/vtek_shaders.hpp
+  include/vtek/vtek_submit_info.hpp
   include/vtek/vtek_swapchain.hpp
   include/vtek/vtek_types.hpp
   include/vtek/vtek_vertex_data.hpp

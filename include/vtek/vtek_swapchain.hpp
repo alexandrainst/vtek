@@ -3,9 +3,8 @@
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
-#include "vtek_device.hpp"
-#include "vtek_physical_device.hpp"
-#include "vtek_queue.hpp"
+#include "vtek_submit_info.hpp"
+#include "vtek_types.hpp"
 
 
 namespace vtek
@@ -43,8 +42,6 @@ namespace vtek
 		//bool recreateOnWindowResize {false};
 	};
 
-
-	struct Swapchain; // opaque handle
 
 	Swapchain* swapchain_create(
 		const SwapchainCreateInfo* info, VkSurfaceKHR surface,
@@ -86,7 +83,7 @@ namespace vtek
 	// in indefinite stalls or GPU memory corruption.
 	//
 	// Returns false if a new frame could not be started.
-	bool swapchain_wait_begin_frame(Swapchain* swapchain);
+	bool swapchain_wait_begin_frame(Swapchain* swapchain, Device* device);
 
 	bool swapchain_acquire_next_image(Swapchain* swapchain, uint32_t* imageIndex);
 

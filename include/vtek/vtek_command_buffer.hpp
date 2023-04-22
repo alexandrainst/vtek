@@ -3,8 +3,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vtek_command_pool.hpp"
-#include "vtek_device.hpp"
+#include "vtek_types.hpp"
 
 
 namespace vtek
@@ -46,8 +45,6 @@ namespace vtek
 	{
 		bool isSecondary {false};
 	};
-
-	struct CommandBuffer; // opaque handle
 
 
 	// TODO: Rename to `command_buffer_alloc` ?

@@ -5,7 +5,6 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vtek_device.hpp"
 #include "vtek_render_pass.hpp"
 #include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
@@ -312,8 +311,6 @@ namespace vtek
 		// pipeline layout
 		// TODO: Get this from shader!
 	};
-
-	struct GraphicsPipeline; // opaque handle
 
 
 	GraphicsPipeline* graphics_pipeline_create(

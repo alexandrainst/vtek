@@ -1,7 +1,9 @@
-// vtek
-#include "impl/vtek_host_allocator.hpp"
 #include "vtek_command_pool.hpp"
+
+#include "impl/vtek_host_allocator.hpp"
+#include "vtek_device.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_queue.hpp"
 
 
 /* struct implementation */

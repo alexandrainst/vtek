@@ -5,6 +5,25 @@
 
 namespace vtek
 {
+	// ============================= //
+	// === Opaque vulkan handles === //
+	// ============================= //
+	struct ApplicationWindow;
+	struct CommandBuffer;
+	struct CommandPool;
+	struct Device;
+	struct GraphicsPipeline;
+	struct Instance;
+	struct PhysicalDevice;
+	struct Queue;
+	// TODO: struct RenderPass;
+	struct Swapchain;
+
+
+
+	// ========================= //
+	// === Useful data types === //
+	// ========================= //
 	class FloatRange
 	{
 	public:
@@ -18,6 +37,7 @@ namespace vtek
 	private:
 		float fmin, fmax;
 	};
+
 
 	template<float Min, float Max>
 	class FloatClamp

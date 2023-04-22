@@ -308,8 +308,10 @@ int main()
 		// React to incoming input events
 		vtek::window_poll_events();
 
+		// TODO: Check if framebuffer has been resized.
+
 		// To avoid excessive GPU work we wait until we may begin the frame
-		vtek::swapchain_wait_begin_frame(swapchain);
+		if (!vtek::swapchain_wait_begin_frame(swapchain, device)) { errors--; continue; }
 
 		// Acquire the next available image in the swapchain
 		uint32_t frameIndex;

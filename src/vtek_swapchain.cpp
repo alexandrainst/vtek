@@ -4,12 +4,16 @@
 #include <vulkan/vulkan.h>
 
 // vtek
+#include "vtek_swapchain.hpp"
+
 #include "impl/vtek_host_allocator.hpp"
 #include "impl/vtek_vulkan_helpers.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_physical_device.hpp"
-#include "vtek_swapchain.hpp"
+#include "vtek_queue.hpp"
+#include "vtek_submit_info.hpp"
+
 
 
 /* struct implementation */
@@ -461,9 +465,9 @@ static std::vector<VkPresentModeKHR> get_supported_present_modes(
 	return modes;
 }
 
-static bool create_frame_sync_objects(Swapchain* swapchain, VkDevice dev)
+static bool create_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 {
-	const uint32_t numFrames = std::clamp(swapchain->length - 1, 1, vtek::kMaxFramesInFlight);
+	const uint32_t numFrames = std::clamp(swapchain->length - 1, 1U, vtek::kMaxFramesInFlight);
 	swapchain->numFramesInFlight = numFrames;
 	swapchain->currentFrameIndex = 0U;
 	swapchain->imagesInFlight.resize(swapchain->length, VK_NULL_HANDLE);
@@ -491,26 +495,16 @@ static bool create_frame_sync_objects(Swapchain* swapchain, VkDevice dev)
 	return true;
 }
 
-static void destroy_frame_sync_objects(Swapchain* swapchain, VkDevice dev)
+static void destroy_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 {
-	// TODO: If swapchain can't change length, then we can loop for numFramesInFlight!
 	for (uint32_t i = 0; i < vtek::kMaxFramesInFlight; i++)
 	{
-		if (swapchain->imageAvailableSemaphores[i] != VK_NULL_HANDLE)
-		{
-			vkDestroySemaphore(dev, swapchain->imageAvailableSemaphores[i], nullptr);
-		}
-		if (swapchain->renderFinishedSemaphores[i] != VK_NULL_HANDLE)
-		{
-			vkDestroySemaphore(dev, swapchain->renderFinishedSemaphores[i], nullptr);
-		}
-		if (swapchain->inFlightFences[i] != VK_NULL_HANDLE)
-		{
-			vkDestroyFence(dev, swapchain->inFlightFences[i], nullptr);
-		}
+		vkDestroySemaphore(dev, swapchain->imageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(dev, swapchain->renderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(dev, swapchain->inFlightFences[i], nullptr);
 	}
 
-	for (auto fence : swapchain->imagesInFlight)
+	for (auto& fence : swapchain->imagesInFlight)
 	{
 		fence = VK_NULL_HANDLE;
 	}
@@ -520,12 +514,17 @@ static void destroy_frame_sync_objects(Swapchain* swapchain, VkDevice dev)
 	swapchain->currentFrameIndex = 0U;
 }
 
-static void reset_frame_sync_objects(Swapchain* swapchain, VkDevice dev)
+static void reset_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 {
-	// TODO: Can swapchain change length??
-	vkResetFences(dev, swapchain->numFramesInFlight, swapchain->inFlightFences);
-	swapchain->imagesInFlight.resize(swapchain.length);
+	vkResetFences(dev, vtek::kMaxFramesInFlight, swapchain->inFlightFences);
+
+	const uint32_t numFrames = std::clamp(swapchain->length - 1, 1U, vtek::kMaxFramesInFlight);
+	swapchain->numFramesInFlight = numFrames;
+	swapchain->imagesInFlight.resize(numFrames, VK_NULL_HANDLE);
+
 	swapchain->currentFrameIndex = 0U;
+
+	// TODO: Should we signal the semaphores?
 }
 
 
@@ -788,9 +787,26 @@ VkFormat vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
 	return swapchain->imageFormat;
 }
 
-bool vtek::swapchain_wait_begin_frame(vtek::Swapchain* swapchain)
+bool vtek::swapchain_wait_begin_frame(vtek::Swapchain* swapchain, vtek::Device* device)
 {
+	// In here, we wait for the fence guarding the current frame index to be in
+	// signaled state, after which the frame may commence.
 
+	VkDevice dev = vtek::device_get_handle(device);
+	uint32_t index = swapchain->currentFrameIndex;
+	VkFence fence = swapchain->inFlightFences[index];
+	uint64_t timeout = UINT64_MAX;
+
+	// Quoting the spec:
+	// If timeout is zero, then vkWaitForFences does not wait, but simply returns
+	// the current state of the fences. VK_TIMEOUT will be returned in this case
+	// if the condition is not satisfied, even though no actual wait was performed.
+	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
+	if (test == VK_SUCCESS) { return true; }
+
+	// TODO: Define better wait time!
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
+	return result == VK_SUCCESS;
 }
 
 bool vtek::swapchain_acquire_next_image(vtek::Swapchain* swapchain, uint32_t* imageIndex)

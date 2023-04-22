@@ -1,4 +1,7 @@
 #include "vtek_command_buffer.hpp"
+
+#include "vtek_command_pool.hpp"
+#include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 #include "impl/vtek_host_allocator.hpp"
 

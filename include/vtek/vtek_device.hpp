@@ -2,9 +2,8 @@
 
 #include <vulkan/vulkan.h>
 
-#include "vtek_instance.hpp"
-#include "vtek_physical_device.hpp"
-#include "vtek_queue.hpp"
+#include "vtek_types.hpp"
+#include "vtek_vulkan_version.hpp"
 
 
 namespace vtek
@@ -59,9 +58,6 @@ namespace vtek
 		bool raytracing {false};
 	};
 
-	struct Device; // opaque handle
-
-
 
 	Device* device_create(
 		const LogicalDeviceCreateInfo* info, const Instance* instance,
@@ -76,6 +72,9 @@ namespace vtek
 	const DeviceExtensions* device_get_enabled_extensions(const Device* device);
 
 	const VkPhysicalDeviceFeatures* device_get_enabled_features(const Device* device);
+
+	// NOTE: Forward declaration, to prevent circular header dependencies. :/
+	struct Queue;
 
 	// If any of these functions return `nullptr`, then no corresponding queues were created.
 	Queue* device_get_graphics_queue(Device* device);

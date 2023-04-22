@@ -25,19 +25,29 @@ namespace vtek
 		}
 
 		// GET
-		VkFence PostSignalFence() { return postSignalFence; }
-		uint32_t NumSignalSemaphores() { return static_cast<uint32_t>(numSignal); }
-		const VkSemaphore* SignalSemaphores()
+		VkFence PostSignalFence() const
+		{
+			return postSignalFence;
+		}
+
+		uint32_t NumSignalSemaphores() const
+		{
+			return static_cast<uint32_t>(numSignal);
+		}
+		const VkSemaphore* SignalSemaphores() const
 		{
 			return (numSignal > 0) ? signalSemaphores : nullptr;
 		}
 
-		uint32_t NumWaitSemaphores() { return static_cast<uint32_t>(numWait); }
-		const VkSemaphore* WaitSemaphores()
+		uint32_t NumWaitSemaphores() const
+		{
+			return static_cast<uint32_t>(numWait);
+		}
+		const VkSemaphore* WaitSemaphores() const
 		{
 			return (numWait > 0) ? waitSemaphores : nullptr;
 		}
-		const VkPipelineStageFlags* WaitPipelineStages()
+		const VkPipelineStageFlags* WaitPipelineStages() const
 		{
 			return (numWait > 0) ? waitPipelineStages : nullptr;
 		}

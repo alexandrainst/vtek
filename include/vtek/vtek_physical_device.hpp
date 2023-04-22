@@ -4,7 +4,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vtek_instance.hpp"
+#include "vtek_types.hpp"
 
 
 namespace vtek
@@ -71,15 +71,14 @@ namespace vtek
 	};
 
 
-	struct PhysicalDevice; // opaque handle
-
 	// For non-graphical Vulkan applications we can omit providing a surface handle,
 	// and skip the steps checking for presentation queue and swapchain support.
 	// NOTE: Even with "compute-only" apps it might still be desirable to run graphics commands.
 	// NOTE: The choice of `info->requireGraphicsSupport` will determine whether any graphics
 	//       queues are created later during device creation, so this choice will have no
 	//       performance indications regardless of hardware.
-	PhysicalDevice* physical_device_pick(const PhysicalDeviceInfo* info, const Instance* instance);
+	PhysicalDevice* physical_device_pick(
+		const PhysicalDeviceInfo* info, const Instance* instance);
 
 	PhysicalDevice* physical_device_pick(
 		const PhysicalDeviceInfo* info, const Instance* instance, VkSurfaceKHR surface);
@@ -88,17 +87,20 @@ namespace vtek
 
 	VkPhysicalDevice physical_device_get_handle(const PhysicalDevice* physicalDevice);
 
-	const VkPhysicalDeviceProperties* physical_device_get_properties(const PhysicalDevice* physicalDevice);
+	const VkPhysicalDeviceProperties* physical_device_get_properties(
+		const PhysicalDevice* physicalDevice);
 
 	const VkPhysicalDeviceMemoryProperties* physical_device_get_memory_properties(
 		const PhysicalDevice* physicalDevice);
 
-	const VkPhysicalDeviceFeatures* physical_device_get_required_features(const PhysicalDevice* physicalDevice);
+	const VkPhysicalDeviceFeatures* physical_device_get_required_features(
+		const PhysicalDevice* physicalDevice);
 
 	const std::vector<const char*>& physical_device_get_required_extensions(
 		const PhysicalDevice* physicalDevice);
 
-	const PhysicalDeviceQueueSupport* physical_device_get_queue_support(const PhysicalDevice* physicalDevice);
+	const PhysicalDeviceQueueSupport* physical_device_get_queue_support(
+		const PhysicalDevice* physicalDevice);
 
 	const PhysicalDeviceExtensionSupport* physical_device_get_extension_support(
 		const PhysicalDevice* physicalDevice);
