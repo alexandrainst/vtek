@@ -8,6 +8,7 @@
 
 namespace vtek
 {
+	// TODO: Do we _really_ need this? Can't Vulkan check it for us, and rid us of this overhead?!
 	// State for a command buffer. See:
 	// https://registry.khronos.org/vulkan/specs/1.2-extensions/html/vkspec.html#commandbuffers-lifecycle
 	enum class CommandBufferStateType

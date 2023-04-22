@@ -311,23 +311,61 @@ int main()
 		// TODO: Check if framebuffer has been resized.
 
 		// To avoid excessive GPU work we wait until we may begin the frame
-		if (!vtek::swapchain_wait_begin_frame(swapchain, device)) { errors--; continue; }
+		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
+		if (beginStatus == vtek::SwapchainStatus::timeout)
+		{
+			// TODO: Probably log an error and then run the loop again.
+			errors--; continue;
+		}
+		else if (beginStatus == vtek::SwapchainStatus::error)
+		{
+			// NEXT: Terminate application.
+		}
 
 		// Acquire the next available image in the swapchain
 		uint32_t frameIndex;
-		vtek::swapchain_acquire_next_image(swapchain, &frameIndex);
+		auto acquireStatus = vtek::swapchain_acquire_next_image(swapchain, device, &frameIndex);
+		if (acquireStatus == vtek::SwapchainStatus::outofdate)
+		{
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (acquireStatus == vtek::SwapchainStatus::error)
+		{
+			// NEXT: Terminate application.
+		}
 
 		// Wait until any previous operations are finished using this image, for either read or write.
 		// NOTE: We can do command buffer recording or other operations before calling this function.
-		vtek::swapchain_wait_image_ready(swapchain, frameIndex); // TODO: if (...)
+		auto readyStatus = vtek::swapchain_wait_image_ready(swapchain, device, frameIndex);
+		if (readyStatus == vtek::SwapchainStatus::timeout)
+		{
+			// TODO: Probably log an error and then run the loop again.
+		}
+		else if (readyStatus == vtek::SwapchainStatus::error)
+		{
+			// NEXT: Terminate application.
+		}
 
 		// Submit the current command buffer for execution on the graphics queue
 		vtek::SubmitInfo submitInfo{};
 		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
-		vtek::queue_submit(graphicsQueue, commandBuffers[frameIndex], &submitInfo);
+		if (vtek::queue_submit(graphicsQueue, commandBuffers[frameIndex], &submitInfo))
+		{
+			// TODO: This is an error.
+		}
 
 		// Wait for command buffer to finish execution, and present frame to screen.
-		vtek::swapchain_wait_end_frame(swapchain, frameIndex);
+		auto presentStatus = vtek::swapchain_present_frame(swapchain, frameIndex);
+		if (presentStatus == vtek::SwapchainStatus::outofdate)
+		{
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (presentStatus == vtek::SwapchainStatus::error)
+		{
+			// NEXT: Terminate application.
+		}
 	}
 
 

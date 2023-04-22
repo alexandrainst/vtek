@@ -35,6 +35,8 @@ struct vtek::Swapchain
 
 	bool isInvalidated {false};
 
+	VkQueue presentQueue {VK_NULL_HANDLE};
+
 	// ============================ //
 	// === Frame syncronization === //
 	// ============================ //
@@ -527,6 +529,19 @@ static void reset_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 	// TODO: Should we signal the semaphores?
 }
 
+static void set_image_in_use(
+	vtek::Swapchain* swapchain, VkDevice dev, uint32_t frameIndex)
+{
+	// Mark the image fence as in-use by this frame
+	uint32_t currentFrame = swapchain->currentFrameIndex;
+	VkFence targetFence = swapchain->inFlightFences[currentFrame];
+
+	swapchain->imagesInFlight[frameIndex] = targetFence;
+
+	// Reset the fence for use on the next frame
+	vkResetFences(dev, 1, &targetFence);
+}
+
 
 
 /* swapchain interface */
@@ -536,6 +551,18 @@ vtek::Swapchain* vtek::swapchain_create(
 {
 	VkDevice dev = vtek::device_get_handle(device);
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
+
+
+	// ========================= //
+	// === Swapchain support === //
+	// ========================= //
+	auto extensions = vtek::device_get_enabled_extensions(device);
+	if (!extensions->swapchain)
+	{
+		vtek_log_error("Swapchain extension not enabled during device creation.");
+		vtek_log_error("--> Cannot create swapchain!");
+		return nullptr;
+	}
 
 
 	// =============================== //
@@ -617,7 +644,18 @@ vtek::Swapchain* vtek::swapchain_create(
 	//     explicit transferring of ownership.
 	// TODO: What to do if we don't use graphics but instead present from compute queue?? baaaaah
 	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
+	if (graphicsQueue == nullptr)
+	{
+		vtek_log_error("Failed to retrieve graphics queue, cannot create swapchain!");
+		return nullptr;
+	}
 	vtek::Queue* presentQueue = vtek::device_get_present_queue(device);
+	if (presentQueue == nullptr)
+	{
+		vtek_log_error("Failed to retrieve present queue, cannot create swapchain!");
+		return nullptr;
+	}
+
 	uint32_t qf_indices[2] = {
 		vtek::queue_get_family_index(graphicsQueue),
 		vtek::queue_get_family_index(presentQueue)
@@ -694,6 +732,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	swapchain->imageExtent = imageExtent;
 	swapchain->length = swapchainLength;
 	swapchain->isInvalidated = false;
+	swapchain->presentQueue = vtek::queue_get_handle(presentQueue);
 
 
 	// ========================== //
@@ -787,7 +826,8 @@ VkFormat vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
 	return swapchain->imageFormat;
 }
 
-bool vtek::swapchain_wait_begin_frame(vtek::Swapchain* swapchain, vtek::Device* device)
+vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
+	vtek::Swapchain* swapchain, vtek::Device* device)
 {
 	// In here, we wait for the fence guarding the current frame index to be in
 	// signaled state, after which the frame may commence.
@@ -795,6 +835,7 @@ bool vtek::swapchain_wait_begin_frame(vtek::Swapchain* swapchain, vtek::Device* 
 	VkDevice dev = vtek::device_get_handle(device);
 	uint32_t index = swapchain->currentFrameIndex;
 	VkFence fence = swapchain->inFlightFences[index];
+	// TODO: Define better wait time!
 	uint64_t timeout = UINT64_MAX;
 
 	// Quoting the spec:
@@ -802,38 +843,127 @@ bool vtek::swapchain_wait_begin_frame(vtek::Swapchain* swapchain, vtek::Device* 
 	// the current state of the fences. VK_TIMEOUT will be returned in this case
 	// if the condition is not satisfied, even though no actual wait was performed.
 	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
-	if (test == VK_SUCCESS) { return true; }
+	if (test == VK_SUCCESS) { return vtek::SwapchainStatus::ok; }
 
-	// TODO: Define better wait time!
 	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
-	return result == VK_SUCCESS;
+	switch (result)
+	{
+	case VK_SUCCESS: return vtek::SwapchainStatus::ok;
+	case VK_TIMEOUT: return vtek::SwapchainStatus::timeout;
+	default:
+		return vtek::SwapchainStatus::error;
+	}
 }
 
-bool vtek::swapchain_acquire_next_image(vtek::Swapchain* swapchain, uint32_t* imageIndex)
+vtek::SwapchainStatus vtek::swapchain_acquire_next_image(
+	vtek::Swapchain* swapchain, vtek::Device* device, uint32_t* frameIndex)
 {
+	VkDevice dev = vtek::device_get_handle(device);
+	uint32_t currentFrame = swapchain->currentFrameIndex;
+	VkSemaphore semaphore = swapchain->imageAvailableSemaphores[currentFrame];
+	// TODO: Define better wait time!
+	uint64_t timeout = UINT64_MAX;
 
+	VkResult result = vkAcquireNextImageKHR(
+		dev, swapchain->vulkanHandle, timeout, semaphore, VK_NULL_HANDLE, frameIndex);
+
+	switch (result)
+	{
+	case VK_SUCCESS:
+	case VK_SUBOPTIMAL_KHR:
+		return vtek::SwapchainStatus::ok;
+
+	case VK_ERROR_OUT_OF_DATE_KHR:
+		return vtek::SwapchainStatus::outofdate;
+
+	default:
+		return vtek::SwapchainStatus::error;
+	}
 }
 
-// TODO: Special enum return status?
-bool vtek::swapchain_wait_image_ready(vtek::Swapchain* swapchain, uint32_t imageIndex)
+vtek::SwapchainStatus vtek::swapchain_wait_image_ready(
+	vtek::Swapchain* swapchain, vtek::Device* device, uint32_t frameIndex)
 {
+	VkDevice dev = vtek::device_get_handle(device);
+	VkFence fence = swapchain->imagesInFlight[frameIndex];
+	// TODO: Define better wait time!
+	uint64_t timeout = UINT64_MAX;
 
+	// Check if a previous frame is using this image, ie. if there is a fence
+	// to wait on.
+	if (fence == VK_NULL_HANDLE)
+	{
+		set_image_in_use(swapchain, dev, frameIndex);
+		return vtek::SwapchainStatus::ok;
+	}
+
+	// Is the fence already signaled, then return immediately without waiting:
+	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
+	if (test == VK_SUCCESS)
+	{
+		set_image_in_use(swapchain, dev, frameIndex);
+		return vtek::SwapchainStatus::ok;
+	}
+
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
+	switch (result)
+	{
+	case VK_SUCCESS:
+		set_image_in_use(swapchain, dev, frameIndex);
+		return vtek::SwapchainStatus::ok;
+	case VK_TIMEOUT:
+		return vtek::SwapchainStatus::timeout;
+	default:
+		return vtek::SwapchainStatus::error;
+	}
 }
 
 void vtek::swapchain_fill_queue_submit_info(
 	vtek::Swapchain* swapchain, vtek::SubmitInfo* submitInfo)
 {
+	uint32_t currentIndex = swapchain->currentFrameIndex;
 
+	submitInfo->AddSignalSemaphore(
+		swapchain->renderFinishedSemaphores[currentIndex]);
+	submitInfo->AddWaitSemaphore(
+		swapchain->imageAvailableSemaphores[currentIndex],
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submitInfo->SetPostSignalFence(swapchain->inFlightFences[currentIndex]);
 }
 
-// TODO: Special enum return status?
-bool vtek::swapchain_wait_end_frame(vtek::Swapchain* swapchain, uint32_t frameIndex)
+vtek::SwapchainStatus vtek::swapchain_present_frame(
+	vtek::Swapchain* swapchain, uint32_t frameIndex)
 {
+	uint32_t currentFrame = swapchain->currentFrameIndex;
 
+	const VkPresentInfoKHR info{
+		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+		.pNext = nullptr,
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &swapchain->renderFinishedSemaphores[currentFrame],
+		.swapchainCount = 1,
+		.pSwapchains = &swapchain->vulkanHandle,
+		.pImageIndices = &frameIndex,
+		.pResults = nullptr
+	};
 
+	// Submit frame to present queue
+	VkResult result = vkQueuePresentKHR(swapchain->presentQueue, &info);
+	switch (result)
+	{
+	case VK_SUCCESS:
+		{
+			// Advance to next frame
+			uint32_t& curFrame = swapchain->currentFrameIndex;
+			curFrame = (curFrame + 1) % swapchain->numFramesInFlight;
+		}
+		return vtek::SwapchainStatus::ok;
 
+	case VK_ERROR_OUT_OF_DATE_KHR:
+	case VK_SUBOPTIMAL_KHR:
+		return vtek::SwapchainStatus::outofdate;
 
-
-	uint32_t& curFrame = swapchain->currentFrameIndex;
-	curFrame = (curFrame + 1) % swapchain->numFramesInFlight;
+	default:
+		return vtek::SwapchainStatus::error;
+	}
 }

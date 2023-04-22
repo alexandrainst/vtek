@@ -55,10 +55,7 @@ namespace vtek
 	VkImageView swapchain_get_image_view(Swapchain* swapchain, uint32_t index);
 	VkFormat swapchain_get_image_format(Swapchain* swapchain);
 
-	// Optionally returns an index which refers to a `VkImage` in the list
-	// of swapchain images array, which can be used to pick the right data
-	// for the frame. This can include looking up into arrays of
-	// command buffers, uniform buffers, etc.
+
 	bool swapchain_acquire_next_image_index(Swapchain* swapchain, uint32_t* outImageIndex);
 
 	bool swapchain_present_image(Swapchain* swapchain, uint32_t presentImageIndex);
@@ -69,11 +66,12 @@ namespace vtek
 	// ======================== //
 
 	// TODO: Simplified interface? :
-	enum class BeginFrameStatus
+	enum class SwapchainStatus
 	{
 		ok,
-		fence_timeout,
-		swapchain_outofdate
+		error,
+		timeout,
+		outofdate
 	};
 
 	// Call this function before starting a new rendering frame. This
@@ -81,19 +79,21 @@ namespace vtek
 	// of frames that can be handled at the GPU at any time. Failure
 	// to call this function at the beginning of each frame may result
 	// in indefinite stalls or GPU memory corruption.
-	//
-	// Returns false if a new frame could not be started.
-	bool swapchain_wait_begin_frame(Swapchain* swapchain, Device* device);
+	SwapchainStatus swapchain_wait_begin_frame(Swapchain* swapchain, Device* device);
 
-	bool swapchain_acquire_next_image(Swapchain* swapchain, uint32_t* imageIndex);
+	// Optionally returns an index which refers to a `VkImage` in the list
+	// of swapchain images array, which can be used to pick the right data
+	// for the frame. This can include looking up into arrays of
+	// command buffers, uniform buffers, etc.
+	SwapchainStatus swapchain_acquire_next_image(
+		Swapchain* swapchain, Device* device, uint32_t* imageIndex);
 
-	// TODO: Special enum return status?
 	// Before using the image as framebuffer attachment, we need to make
 	// sure that no previous frame is still using this image.
-	bool swapchain_wait_image_ready(Swapchain* swapchain, uint32_t imageIndex);
+	SwapchainStatus swapchain_wait_image_ready(
+		Swapchain* swapchain, Device* device, uint32_t imageIndex);
 
 	void swapchain_fill_queue_submit_info(Swapchain* swapchain, SubmitInfo* submitInfo);
 
-	// TODO: Special enum return status?
-	bool swapchain_wait_end_frame(Swapchain* swapchain, uint32_t frameIndex);
+	SwapchainStatus swapchain_present_frame(Swapchain* swapchain, uint32_t frameIndex);
 }
