@@ -142,6 +142,15 @@ void vtek::command_buffer_destroy(
 {
 	if (commandBuffers.size() == 0) { return; }
 
+	for (auto buf : commandBuffers)
+	{
+		if (buf->state == CBState::pending)
+		{
+			vtek_log_error("Command buffer(s) cannot be freed from pending state!");
+			return;
+		}
+	}
+
 	std::vector<VkCommandBuffer> handles;
 	for (auto buf : commandBuffers)
 	{

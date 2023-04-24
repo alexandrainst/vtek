@@ -1,4 +1,5 @@
 // glfw
+// NOTE: GLFW must be included before the Vulkan header, so we place it first.
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -277,14 +278,68 @@ static void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yof
 	// context->windowInterface.fMouseScroll(xoffset, yoffset);
 }
 
+static void set_window_hints(const vtek::WindowCreateInfo* info)
+{
+	// TODO: Warning because not yet implemented
+	if (info->fullscreen)
+	{
+		vtek_log_warn("Fullscreen windows is not implemented in vtek yet!");
+	}
+
+	// Always disable API with Vulkan
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+	// The swap interval indicates how many frames to wait until swapping the
+	// buffers, commonly known as vsync. By default, the swap interval is zero,
+	// meaning buffer swapping will occur immediately. On fast machines, many
+	// of those frames will never be seen, as the screen is still only updated
+	// typically 60-75 times per second, so this wastes a lot of CPU and GPU
+	// cycles. Also, because the buffers will be swapped in the middle the
+	// screen update, leading to screen tearing. For these reasons, applications
+	// will typically want to set the swap interval to one. It can be set to
+	// higher values, but this is usually not recommended, because of the input
+	// latency it leads to.
+	glfwSwapInterval(1);
+
+	if (info->fullscreen)
+	{
+		// RESIZE: Always disabled for fullscreen windows
+		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+	}
+	else
+	{
+		// DECORATE: Default is GLFW_TRUE
+		glfwWindowHint(GLFW_DECORATED, (info->decorated) ? GLFW_TRUE : GLFW_FALSE);
+
+		// RESIZE: Ignored for undecorated or fullscreen windows
+		if (info->decorated)
+		{
+			glfwWindowHint(GLFW_RESIZABLE, (info->resizeable) ? GL_TRUE : GL_FALSE);
+		}
+
+		// MAXIMIZED: Default is GLFW_FALSE
+		glfwWindowHint(GLFW_MAXIMIZED, (info->maximized) ? GLFW_TRUE : GLFW_FALSE);
+	}
+}
+
+static void configure_window(GLFWwindow* window, const vtek::WindowCreateInfo* info)
+{
+	if (info->cursorDisabled)
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		if (glfwRawMouseMotionSupported())
+		{
+			vtek_log_debug("Enabling raw mouse motion.");
+			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+		}
+	}
+}
+
 
 
 /* interface */
 vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 {
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwSwapInterval(1);
-
 	// Allocate window
 	auto [id, appWindow] = sAllocator.alloc();
 	if (appWindow == nullptr)
@@ -294,13 +349,20 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	}
 	appWindow->id = id;
 
+	// Set hints for how GLFW should create the window
+	set_window_hints(info);
+
 	appWindow->glfwHandle = glfwCreateWindow(
 		info->width, info->height, info->title, NULL, NULL);
 	if (appWindow->glfwHandle == nullptr)
 	{
 		vtek_log_error("Failed to create GLFW window!");
+		// TODO: Free allocated window
 		return nullptr;
 	}
+
+	// Configure the window after it has been created
+	configure_window(appWindow->glfwHandle, info);
 
 	// Get framebuffer size, needed when creating a swapchain. Description below:
 	//

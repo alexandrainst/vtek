@@ -60,7 +60,10 @@ int main()
 	windowInfo.title = "triangle_plain";
 	windowInfo.width = 500;
 	windowInfo.height = 500;
-	// TODO: Set resizeable to false for now!
+	windowInfo.maximized = false;
+	windowInfo.resizeable = false;
+	windowInfo.decorated = true;
+	windowInfo.cursorDisabled = false;
 	window = vtek::window_create(&windowInfo);
 	if (window == nullptr)
 	{

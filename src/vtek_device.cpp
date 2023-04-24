@@ -327,7 +327,6 @@ static void create_device_queues(
 	vtek::Device* device, const vtek::DeviceCreateInfo* info,
 	const QueueFamilySelections* selections)
 {
-	// const vtek::PhysicalDeviceQueueSupport* support = vtek::physical_device_get_queue_support(physicalDevice);
 	VkDevice handle = device->vulkanHandle;
 
 	if (selections->graphics.has_value())
@@ -459,7 +458,8 @@ static void create_device_queues(
 
 		for (uint32_t i = 0; i < description.queueCount; i++)
 		{
-			if (i >= description.familyMaxCount) // error, this should never happen, but better be safe!
+			// Error. This should never happen, but better be safe.
+			if (i >= description.familyMaxCount)
 			{
 				vtek_log_error("i >= description.familyMaxCount, cannot create enough separate transfer queues!");
 				break;
@@ -506,7 +506,8 @@ static void create_device_queues(
 		else if (num == 2)
 		{
 			// 1 queue dedicated for transfers, 1 for compute(+present?). Just a design choice!
-			// NOTE: We could alternatively decide {compute/present, transfer}, but that's more application specific
+			// NOTE: We could alternatively decide {compute/present, transfer},
+			//       but that's more application specific.
 			vtek::Queue tQueue{};
 			vkGetDeviceQueue(handle, familyIndex, 0, &tQueue.vulkanHandle);
 			tQueue.familyIndex = familyIndex;
@@ -578,7 +579,6 @@ vtek::Device* vtek::device_create(
 	const vtek::DeviceCreateInfo* info, const vtek::Instance* instance,
 	const vtek::PhysicalDevice* physicalDevice)
 {
-	vtek_log_trace("device_create()");
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
 
 	// Allocate device
@@ -608,10 +608,6 @@ vtek::Device* vtek::device_create(
 	// Now we just enable them!
 	const std::vector<const char*>& requiredExtensions =
 		vtek::physical_device_get_required_extensions(physicalDevice);
-	for (auto ext : requiredExtensions)
-	{
-		vtek_log_debug("--> {}", ext);
-	}
 	createInfo.enabledExtensionCount = requiredExtensions.size();
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 

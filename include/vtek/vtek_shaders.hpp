@@ -14,6 +14,17 @@
 
 #include "vtek_device.hpp"
 
+//
+// NOTE: By Travis: Requirements for a shader system:
+// - Loads from configuration
+//     - In files or code
+// - Is generic
+//     - Little to nothing hard-coded
+// - Is extensible
+//     - Easy to modify, extend, and maintain.
+
+
+
 
 namespace vtek
 {

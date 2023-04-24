@@ -549,7 +549,6 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 vtek::PhysicalDevice* vtek::physical_device_pick(
 	const PhysicalDeviceInfo* info, const vtek::Instance* instance, VkSurfaceKHR surface)
 {
-	vtek_log_trace("physical_device_pick()");
 	VkInstance inst = vtek::instance_get_handle(instance);
 
 	// Enumerate physical devices

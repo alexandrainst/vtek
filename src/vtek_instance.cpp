@@ -231,7 +231,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
 /* instance functions */
 vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 {
-	vtek_log_trace("instance_create()");
 	if (info->enableValidationLayers && !checkValidationLayerSupport())
 	{
 		vtek_log_error("Unsupported validation layer(s)");

@@ -18,8 +18,11 @@ namespace vtek
 		uint32_t width {512};
 		uint32_t height {512};
 		bool fullscreen {false};
+		bool maximized {false};
 
 		bool cursorDisabled {false};
+		bool resizeable {false};
+		bool decorated {true};
 	};
 
 
