@@ -8,11 +8,10 @@
 
 namespace vtek
 {
-	struct LogicalDeviceCreateInfo
+	struct DeviceCreateInfo
 	{
 		// TODO: Since these were specified during physical device pick, they should probably be removed from here!
 		// === Extensions ===
-		bool enableSwapchainExtension {false};
 		// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_maintenance1.html
 		// Promoted to Vulkan 1.1 Core
 		bool enableMaintenance1Extension {false}; // TODO: Core since Vulkan 1.1, so probably not needed
@@ -60,7 +59,7 @@ namespace vtek
 
 
 	Device* device_create(
-		const LogicalDeviceCreateInfo* info, const Instance* instance,
+		const DeviceCreateInfo* info, const Instance* instance,
 		const PhysicalDevice* physicalDevice);
 
 	void device_destroy(Device* device);
@@ -72,9 +71,6 @@ namespace vtek
 	const DeviceExtensions* device_get_enabled_extensions(const Device* device);
 
 	const VkPhysicalDeviceFeatures* device_get_enabled_features(const Device* device);
-
-	// NOTE: Forward declaration, to prevent circular header dependencies. :/
-	struct Queue;
 
 	// If any of these functions return `nullptr`, then no corresponding queues were created.
 	Queue* device_get_graphics_queue(Device* device);

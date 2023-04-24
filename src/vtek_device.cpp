@@ -43,6 +43,7 @@ struct vtek::Device
 /* host allocator */
 // TODO: Because of the high memory requirement, perhaps this particular allocator
 //       should store a pointer to a vtek::Device instead, as an optimization.
+// OKAY: This should be done!
 static vtek::HostAllocator<vtek::Device> sAllocator("vtek_device");
 
 
@@ -94,7 +95,7 @@ struct QueueFamilySelections
 
 
 static bool create_queue_infos(
-	const vtek::LogicalDeviceCreateInfo* info,
+	const vtek::DeviceCreateInfo* info,
 	const vtek::PhysicalDevice* physicalDevice,
 	std::vector<VkDeviceQueueCreateInfo>& createInfos,
 	QueueFamilySelections* queueSelections)
@@ -323,7 +324,7 @@ static bool create_queue_infos(
 
 // Call this function _after_ device creation to create the queues
 static void create_device_queues(
-	vtek::Device* device, const vtek::LogicalDeviceCreateInfo* info,
+	vtek::Device* device, const vtek::DeviceCreateInfo* info,
 	const QueueFamilySelections* selections)
 {
 	// const vtek::PhysicalDeviceQueueSupport* support = vtek::physical_device_get_queue_support(physicalDevice);
@@ -562,11 +563,18 @@ static void create_device_queues(
 	} // compute family
 }
 
+static void set_extensions_enabled(
+	vtek::Device* device, const vtek::PhysicalDevice* physicalDevice)
+{
+	auto support = vtek::physical_device_get_extension_support(physicalDevice);
+	device->enabledExtensions.swapchain = support->swapchain;
+}
+
 
 
 /* device interface */
 vtek::Device* vtek::device_create(
-	const vtek::LogicalDeviceCreateInfo* info, const vtek::Instance* instance,
+	const vtek::DeviceCreateInfo* info, const vtek::Instance* instance,
 	const vtek::PhysicalDevice* physicalDevice)
 {
 	vtek_log_trace("device_create()");
@@ -598,8 +606,22 @@ vtek::Device* vtek::device_create(
 	// Device extensions - support queried for during physical device pick, now we just enable them!
 	const std::vector<const char*>& requiredExtensions =
 		vtek::physical_device_get_required_extensions(physicalDevice);
+	for (auto ext : requiredExtensions)
+	{
+		vtek_log_debug("--> {}", ext);
+	}
 	createInfo.enabledExtensionCount = requiredExtensions.size();
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+
+	// Add dynamic rendering
+	// TODO: Should we check if that is supported by physical device?!
+	VkPhysicalDeviceDynamicRenderingFeatures dynRenderInfo{
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
+		.pNext = nullptr,
+		.dynamicRendering = VK_TRUE
+	};
+	createInfo.pNext = &dynRenderInfo;
+
 
 	// REVIEW: This should be done when picking physical device, IF at all!
 	// TODO: How best to approach this?
@@ -645,6 +667,9 @@ vtek::Device* vtek::device_create(
 	// Retrieve device queues
 	device->queueAllocator = new vtek::HostAllocator<vtek::Queue>("vtek_device_queues");
 	create_device_queues(device, info, &queueSelections);
+
+	// Set extensions as enabled
+	set_extensions_enabled(device, physicalDevice);
 
 	// TODO: Optional info logging that a (logical) device was created.
 	return device;

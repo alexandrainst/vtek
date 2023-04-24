@@ -94,7 +94,8 @@ int main()
 	physicalDeviceInfo.requireGraphicsQueue = true;
 	physicalDeviceInfo.requirePresentQueue = true;
 	physicalDeviceInfo.requireSwapchainSupport = true;
-	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(&physicalDeviceInfo, instance, surface);
+	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
+		&physicalDeviceInfo, instance, surface);
 	if (physicalDevice == nullptr)
 	{
 		log_error("Failed to pick physical device!");
@@ -102,9 +103,9 @@ int main()
 	}
 
 	// Device
-	vtek::LogicalDeviceCreateInfo deviceCreateInfo{};
-	deviceCreateInfo.enableSwapchainExtension = true; // TODO: We probably don't want to do this here!
-	vtek::Device* device = vtek::device_create(&deviceCreateInfo, instance, physicalDevice);
+	vtek::DeviceCreateInfo deviceCreateInfo{};
+	vtek::Device* device = vtek::device_create(
+		&deviceCreateInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");
@@ -151,9 +152,12 @@ int main()
 	// Vulkan framebuffers
 	// DONE: We use dynamic rendering
 
-	// Vulkan graphics pipeline
+	// Shader
+	const char* vert = "../examples/triangle_plain_vertex.glsl";
+	const char* frag = "../examples/triangle_plain_fragment.glsl";
 	vtek::GraphicsShader* shader = nullptr;// = vtek::graphics_shader_load(...);
 
+	// Vulkan graphics pipeline
 	const uint32_t width = swapchainCreateInfo.framebufferWidth;
 	const uint32_t height = swapchainCreateInfo.framebufferHeight;
 	vtek::ViewportState viewport{
@@ -188,13 +192,13 @@ int main()
 		.colorBlendState = &colorBlending,
 		.dynamicStateFlags = 0U //vtek::PipelineDynamicState::viewport;
 	};
-	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
-		&graphicsPipelineInfo, device);
-	if (graphicsPipeline == nullptr)
-	{
-		log_error("Failed to create graphics pipeline!");
-		return -1;
-	}
+	// vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
+	// 	&graphicsPipelineInfo, device);
+	// if (graphicsPipeline == nullptr)
+	// {
+	// 	log_error("Failed to create graphics pipeline!");
+	// 	return -1;
+	// }
 
 	// REVIEW: geometry ?
 

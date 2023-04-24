@@ -65,6 +65,7 @@ vtek::CommandBuffer* vtek::command_buffer_create(
 	}
 
 	commandBuffer->isSecondary = info->isSecondary;
+	commandBuffer->state = CBState::initial;
 	return commandBuffer;
 }
 
@@ -108,6 +109,7 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 		commandBuffers[i]->poolHandle = vtek::command_pool_get_handle(pool);
 		commandBuffers[i]->supportsReset = reset;
 		commandBuffers[i]->isSecondary = secondary;
+		commandBuffers[i]->state = CBState::initial;
 	}
 
 	return commandBuffers;
@@ -115,7 +117,7 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 
 void vtek::command_buffer_destroy(vtek::CommandBuffer* commandBuffer, vtek::Device* device)
 {
-	vtek_log_error("vtek::command_buffer_destroy(): Not implemented!");
+	vtek_log_error("vtek::command_buffer_destroy(CommandBuffer*, Device*): Not implemented!");
 }
 
 void vtek::command_buffer_destroy(
@@ -186,7 +188,8 @@ bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
 	return true;
 }
 
-bool vtek::command_buffer_free(vtek::CommandBuffer* commandBuffer, VkDevice device, VkCommandPool pool)
+bool vtek::command_buffer_free(
+	vtek::CommandBuffer* commandBuffer, VkDevice device, VkCommandPool pool)
 {
 	if (commandBuffer->state == CBState::pending) // TODO: How do we measure this?
 	{
@@ -209,12 +212,14 @@ bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
 	}
 	if (commandBuffer->state == CBState::invalid) // TODO: How do we measure this?
 	{
-		vtek_log_error("Command buffer is in invalid state and must be reset before recording can begin!");
+		vtek_log_error(
+			"Command buffer is in invalid state and must be reset before recording can begin!");
 		return false;
 	}
 	if (commandBuffer->state == CBState::recording) // TODO: How do we measure this?
 	{
-		vtek_log_warn("Command buffer is already in recording state, so recorded commands may be lost!");
+		vtek_log_warn(
+			"Command buffer is already in recording state, so recorded commands may be lost!");
 	}
 
 	VkCommandBufferBeginInfo info{};
@@ -240,7 +245,8 @@ bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
 	VkCommandBufferInheritanceInfo inheritanceInfo{};
 	if (commandBuffer->isSecondary)
 	{
-		vtek_log_fatal("Secondary command buffer inheritance info is not implemented! Cannot begin recording.");
+		vtek_log_fatal(
+			"Secondary command buffer inheritance info is not implemented! Cannot begin recording.");
 		return false;
 
 		inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -262,11 +268,26 @@ bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
 		return false;
 	}
 
+	commandBuffer->state = CBState::recording;
 	return true;
 }
 
 bool vtek::command_buffer_end(vtek::CommandBuffer* commandBuffer)
 {
-	vtek_log_error("vtek::command_buffer_end -> Not implemented!");
-	return false;
+	if (commandBuffer->state != CBState::recording)
+	{
+		vtek_log_error(
+			"Command buffer is not in recording state, so recording cannot end!");
+		return false;
+	}
+
+	VkResult result = vkEndCommandBuffer(commandBuffer->vulkanHandle);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to end command buffer recording!");
+		return false;
+	}
+
+	commandBuffer->state = CBState::executable;
+	return true;
 }

@@ -263,6 +263,29 @@ static bool has_required_extension_support(
 		support->raytracing = true;
 	}
 
+	// dynamic rendering
+	// TODO: This is all very crude, do proper error handling.
+	bool dynamicRendering = true;
+	if (dynamicRendering)
+	{
+		vtek_log_debug("Checking for dynamic rendering...");
+		bool hasDynRender = my_find_if(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+		if (!hasDynRender)
+		{
+			vtek_log_error("Dynamic rendering extension not supported!");
+			return false;
+		}
+		requiredExtRef.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+
+		// TODO: Do this as well:
+		// support->dynamicRendering = true;
+	}
+
+	for (auto ext : requiredExtRef)
+	{
+		vtek_log_debug("required ext --> {}", ext);
+	}
+
 	// NEXT: More extension checks may be added here..
 
 	return true;
