@@ -568,6 +568,7 @@ static void set_extensions_enabled(
 {
 	auto support = vtek::physical_device_get_extension_support(physicalDevice);
 	device->enabledExtensions.swapchain = support->swapchain;
+	device->enabledExtensions.dynamicRendering = support->dynamicRendering;
 }
 
 
@@ -603,7 +604,8 @@ vtek::Device* vtek::device_create(
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.pEnabledFeatures = vtek::physical_device_get_required_features(physicalDevice);
 
-	// Device extensions - support queried for during physical device pick, now we just enable them!
+	// Device extensions - support queried for during physical device pick.
+	// Now we just enable them!
 	const std::vector<const char*>& requiredExtensions =
 		vtek::physical_device_get_required_extensions(physicalDevice);
 	for (auto ext : requiredExtensions)
@@ -613,15 +615,19 @@ vtek::Device* vtek::device_create(
 	createInfo.enabledExtensionCount = requiredExtensions.size();
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
-	// Add dynamic rendering
-	// TODO: Should we check if that is supported by physical device?!
-	VkPhysicalDeviceDynamicRenderingFeatures dynRenderInfo{
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
-		.pNext = nullptr,
-		.dynamicRendering = VK_TRUE
-	};
-	createInfo.pNext = &dynRenderInfo;
+	// Fetch supported extensions (different from those _required_)
+	auto supportedExtensions = vtek::physical_device_get_extension_support(physicalDevice);
 
+	// Add dynamic rendering
+	VkPhysicalDeviceDynamicRenderingFeatures dynRenderInfo{};
+	if (supportedExtensions->dynamicRendering)
+	{
+		dynRenderInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+		dynRenderInfo.pNext = nullptr;
+		dynRenderInfo.dynamicRendering = VK_TRUE;
+
+		createInfo.pNext = &dynRenderInfo;
+	};
 
 	// REVIEW: This should be done when picking physical device, IF at all!
 	// TODO: How best to approach this?

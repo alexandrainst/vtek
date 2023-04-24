@@ -258,32 +258,30 @@ static bool has_required_extension_support(
 		// - VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
 		// NOTE: This is also dependent upon available Vulkan instance version, so likely not needed!
 
-		// TODO: Check for dynamic rendering extension of Vulkan version < 1.3!
-
 		support->raytracing = true;
 	}
 
 	// dynamic rendering
-	// TODO: This is all very crude, do proper error handling.
+	// TODO: We probably ALWAYS want to be supporting this!
 	bool dynamicRendering = true;
 	if (dynamicRendering)
 	{
-		vtek_log_debug("Checking for dynamic rendering...");
-		bool hasDynRender = my_find_if(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+		// NOTE: Dynamic rendering is core in >= Vulkan 1.3, before that KHR extension.
+#if defined(VK_API_VERSION_1_3)
+		const char* extName = VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME;
+#else
+		const char* extName = VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME_KHR;
+#endif
+
+		bool hasDynRender = my_find_if(extName);
 		if (!hasDynRender)
 		{
 			vtek_log_error("Dynamic rendering extension not supported!");
 			return false;
 		}
-		requiredExtRef.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+		requiredExtRef.push_back(extName);
 
-		// TODO: Do this as well:
-		// support->dynamicRendering = true;
-	}
-
-	for (auto ext : requiredExtRef)
-	{
-		vtek_log_debug("required ext --> {}", ext);
+		support->dynamicRendering = true;
 	}
 
 	// NEXT: More extension checks may be added here..

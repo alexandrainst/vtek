@@ -66,6 +66,7 @@ namespace vtek
 	struct PhysicalDeviceExtensionSupport
 	{
 		// extension support
+		bool dynamicRendering {false};
 		bool raytracing {false};
 		bool swapchain {false};
 	};

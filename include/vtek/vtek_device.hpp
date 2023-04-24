@@ -47,11 +47,10 @@ namespace vtek
 
 	struct DeviceExtensions
 	{
+		bool dynamicRendering {false};
 		bool swapchain {false};
-
 		bool getMemoryRequirements2 {false};
 		bool rayTracingNV {false}; // TODO: This is only NVidia specific!
-
 		// NEXT: Better!
 		// NOTE: NV extension is aliased to KHR, so better just use the KHR!
 		bool raytracing {false};
