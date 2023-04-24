@@ -747,3 +747,8 @@ bool vtek::device_get_graphics_present_same_family(const vtek::Device* device)
 {
 	return device->graphicsQueue.familyIndex == device->presentQueue.familyIndex;
 }
+
+void vtek::device_wait_idle(vtek::Device* device)
+{
+	vkDeviceWaitIdle(device->vulkanHandle);
+}

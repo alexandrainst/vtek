@@ -39,6 +39,13 @@ struct vtek::CommandBuffer : public OpaqueHandle
 };
 
 
+/* host allocator */
+// TODO: Because of the high memory requirement, perhaps this particular allocator
+//       should store a pointer to a vtek::Device instead, as an optimization.
+// OKAY: This should be done!
+static vtek::HostAllocator<vtek::CommandBuffer> sAllocator("command_buffer");
+
+
 
 /* interface */
 vtek::CommandBuffer* vtek::command_buffer_create(
@@ -117,7 +124,17 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 
 void vtek::command_buffer_destroy(vtek::CommandBuffer* commandBuffer, vtek::Device* device)
 {
-	vtek_log_error("vtek::command_buffer_destroy(CommandBuffer*, Device*): Not implemented!");
+	if (commandBuffer->state == CBState::pending) // TODO: How do we measure this?
+	{
+		vtek_log_error("Command buffer cannot be freed from pending state!");
+		return;
+	}
+
+	VkDevice dev = vtek::device_get_handle(device);
+	VkCommandPool pool = commandBuffer->poolHandle;
+	const VkCommandBuffer buffers[] = { commandBuffer->vulkanHandle };
+
+	vkFreeCommandBuffers(dev, pool, 1, buffers);
 }
 
 void vtek::command_buffer_destroy(
@@ -153,54 +170,6 @@ VkCommandBuffer vtek::command_buffer_get_handle(vtek::CommandBuffer* commandBuff
 VkCommandPool vtek::command_buffer_get_pool_handle(vtek::CommandBuffer* commandBuffer)
 {
 	return commandBuffer->poolHandle;
-}
-
-bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
-{
-	// TODO: How do we measure this?
-	// TODO: Perhaps require use of a semaphore - is it worth it?
-	if (commandBuffer->state == CBState::pending)
-	{
-		vtek_log_error("Command buffer cannot be reset from pending state!");
-		return false;
-	}
-	if (commandBuffer->state == CBState::initial)
-	{
-		return true;
-	}
-	if (!commandBuffer->supportsReset)
-	{
-		vtek_log_error("Command buffer cannot be reset from a pool not supporting buffer reset!");
-		return false;
-	}
-
-	// NOTE: `flags` may be the VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT flag, which
-	// specifies that memory resources owned by the command buffer should be returned to the
-	// parent command pool.
-	VkCommandBufferResetFlags flags = 0;
-	VkResult result = vkResetCommandBuffer(commandBuffer->vulkanHandle, flags);
-	if (result != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to reset command buffer!");
-		return false;
-	}
-
-	return true;
-}
-
-bool vtek::command_buffer_free(
-	vtek::CommandBuffer* commandBuffer, VkDevice device, VkCommandPool pool)
-{
-	if (commandBuffer->state == CBState::pending) // TODO: How do we measure this?
-	{
-		vtek_log_error("Command buffer cannot be freed from pending state!");
-		return false;
-	}
-
-	const VkCommandBuffer buffers[] = { commandBuffer->vulkanHandle };
-	vkFreeCommandBuffers(device, pool, 1, buffers);
-
-	return true;
 }
 
 bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
@@ -289,5 +258,38 @@ bool vtek::command_buffer_end(vtek::CommandBuffer* commandBuffer)
 	}
 
 	commandBuffer->state = CBState::executable;
+	return true;
+}
+
+bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
+{
+	// TODO: How do we measure this?
+	// TODO: Perhaps require use of a semaphore - is it worth it?
+	if (commandBuffer->state == CBState::pending)
+	{
+		vtek_log_error("Command buffer cannot be reset from pending state!");
+		return false;
+	}
+	if (commandBuffer->state == CBState::initial)
+	{
+		return true;
+	}
+	if (!commandBuffer->supportsReset)
+	{
+		vtek_log_error("Command buffer cannot be reset from a pool not supporting buffer reset!");
+		return false;
+	}
+
+	// NOTE: `flags` may be the VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT flag, which
+	// specifies that memory resources owned by the command buffer should be returned to the
+	// parent command pool.
+	VkCommandBufferResetFlags flags = 0;
+	VkResult result = vkResetCommandBuffer(commandBuffer->vulkanHandle, flags);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to reset command buffer!");
+		return false;
+	}
+
 	return true;
 }

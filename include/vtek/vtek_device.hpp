@@ -65,11 +65,8 @@ namespace vtek
 	void device_destroy(Device* device);
 
 	VkDevice device_get_handle(const Device* device);
-
 	const VulkanVersion* device_get_vulkan_version(const Device* device);
-
 	const DeviceExtensions* device_get_enabled_extensions(const Device* device);
-
 	const VkPhysicalDeviceFeatures* device_get_enabled_features(const Device* device);
 
 	// If any of these functions return `nullptr`, then no corresponding queues were created.
@@ -78,6 +75,7 @@ namespace vtek
 	// TODO: Return std::vector<>&&, or is that too advanced?
 	std::vector<Queue*> device_get_transfer_queues(Device* device);
 	std::vector<Queue*> device_get_compute_queues(Device* device);
-
 	bool device_get_graphics_present_same_family(const Device* device);
+
+	void device_wait_idle(Device* device);
 }

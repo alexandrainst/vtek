@@ -375,6 +375,8 @@ int main()
 
 
 	// Cleanup
+	vtek::device_wait_idle(device);
+
 	vtek::swapchain_destroy(swapchain, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);
 	vtek::device_destroy(device);
