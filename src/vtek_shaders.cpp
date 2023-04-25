@@ -1,6 +1,11 @@
 #include "vtek_shaders.hpp"
 #include "vtek_logging.hpp"
 
+// External dependency: Spirv-reflect, to extract descriptor bindings from SPIR-V bytecode.
+#include <spirv_reflect.h>
+
+// TODO: Also glslang?
+
 /* struct implementation */
 struct vtek::GraphicsShader
 {

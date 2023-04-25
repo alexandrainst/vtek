@@ -55,6 +55,9 @@ endif()
 
 
 set (src
+  external/spirv_reflect/spirv_reflect.h
+  external/spirv_reflect/spirv_reflect.cpp
+
   include/vtek/version.hpp
   include/vtek/vtek.hpp
   include/vtek/vtek_application_window.hpp
@@ -109,6 +112,7 @@ add_library(vtek::vtek ALIAS vtek)
 
 set_target_properties(vtek PROPERTIES CXX_STANDARD 20)
 target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/include/vtek)
+target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/external/spirv_reflect)
 target_include_directories(vtek PUBLIC
   external/spdlog/include ${PROJECT_SOURCE_DIR}/include ${Vulkan_INCLUDE_DIRS})
 target_compile_definitions(vtek PRIVATE SPDLOG_COMPILED_LIB)
