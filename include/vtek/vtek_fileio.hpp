@@ -83,4 +83,9 @@ namespace vtek
 	File* file_open(
 		const Directory* dir, const char* filename, FileModeFlags flags);
 
+	// Closes the file and releases all resources acquired when opening it.
+	// This function may flush the file or finish any previously given writes
+	// in a manner specified by the platform.
+	void file_close(File* file);
+
 }
