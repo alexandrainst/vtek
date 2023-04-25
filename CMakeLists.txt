@@ -64,6 +64,7 @@ set (src
   include/vtek/vtek_command_buffer.hpp
   include/vtek/vtek_command_pool.hpp
   include/vtek/vtek_device.hpp
+  include/vtek/vtek_fileio.hpp
   include/vtek/vtek_graphics_pipeline.hpp
   include/vtek/vtek_input.hpp
   include/vtek/vtek_instance.hpp
@@ -81,6 +82,7 @@ set (src
 
   src/impl/vtek_glfw_backend.hpp
   src/impl/vtek_host_allocator.hpp
+  src/impl/vtek_init.hpp
   src/impl/vtek_queue_struct.hpp
   src/impl/vtek_vulkan_helpers.hpp
 
@@ -88,8 +90,9 @@ set (src
   src/vtek_command_buffer.cpp
   src/vtek_command_pool.cpp
   src/vtek_device.cpp
-  src/vtek_host_allocator.cpp
+  src/vtek_fileio.cpp
   src/vtek_graphics_pipeline.cpp
+  src/vtek_host_allocator.cpp
   src/vtek_instance.cpp
   src/vtek_logging.cpp
   src/vtek_main.cpp

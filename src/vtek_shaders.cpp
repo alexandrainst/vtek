@@ -17,11 +17,18 @@ struct vtek::GraphicsShader
 };
 
 /* helper functions */
-
+static bool is_file_source_spirv()
+{
+	return false;
+}
+static bool is_file_source_glsl()
+{
+	return false;
+}
 
 
 /* interface */
-VkShaderStageFlagBits get_shader_stage(vtek::ShaderStage stage)
+VkShaderStageFlagBits vtek::get_shader_stage(vtek::ShaderStage stage)
 {
 	switch (stage)
 	{

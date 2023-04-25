@@ -13,17 +13,20 @@ namespace vtek
 	struct CommandPool;
 	struct Device;
 	struct GraphicsPipeline;
+	struct GraphicsShader;
 	struct Instance;
 	struct PhysicalDevice;
 	struct Queue;
 	// TODO: struct RenderPass;
 	struct Swapchain;
+	// TODO: struct SwapchainFramebuffers;
 
 
 
 	// ========================= //
 	// === Useful data types === //
 	// ========================= //
+	// TODO: For increased compilation speed place these somewhere else.
 	class FloatRange
 	{
 	public:
