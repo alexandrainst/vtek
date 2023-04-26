@@ -130,48 +130,76 @@ VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTra
 }
 
 
-enum GraphicsStageFlags : uint32_t {
-	graphics_vertex       = 0x01U,
-	graphics_tess_control = 0x02U,
-	graphics_tess_eval    = 0x04U,
-	graphics_geometry     = 0x08U,
-	graphics_fragment     = 0x10U
-};
 
-static uint32_t find_graphics_shader_files(vtek::Directory* shaderdir)
+static bool check_shader_files_exist(
+	const vtek::GraphicsShaderInfo* info, vtek::Directory* shaderdir)
 {
-	uint32_t flags = 0U;
+	bool exist = true;
 
-	if (vtek::file_exists(shaderdir, "vertex.spv")) {
-		flags |= graphics_vertex;
-	}
-	if (vtek::file_exists(shaderdir, "tess_control.spv")) {
-		flags |= graphics_tess_control;
-	}
-	if (vtek::file_exists(shaderdir, "tess_eval.spv")) {
-		flags |= graphics_tess_eval;
-	}
-	if (vtek::file_exists(shaderdir, "geometry.spv")) {
-		flags |= graphics_geometry;
-	}
-	if (vtek::file_exists(shaderdir, "fragment.spv")) {
-		flags |= graphics_fragment;
-	}
-
-	return flags;
-}
-
-vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
-	vtek::Directory* shaderdir, vtek::Device* device)
-{
-	uint32_t flags = find_graphics_shader_files(shaderdir);
-	if (!(flags & graphics_vertex))
+	if (info->vertex && (!vtek::file_exists(shaderdir, "vertex.spv")))
 	{
 		vtek_log_error(
 			"Failed to find vertex shader file \"{}{}vertex.spv\".",
 			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+	if (info->tess_control && (!vtek::file_exists(shaderdir, "tess_control.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}tess_control.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+	if (info->tess_eval && (!vtek::file_exists(shaderdir, "tess_eval.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}tess_eval.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+	if (info->geometry && (!vtek::file_exists(shaderdir, "geometry.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}geometry.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+	if (info->fragment && (!vtek::file_exists(shaderdir, "fragment.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}fragment.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+
+	return exist;
+}
+
+static void load_vertex_shader_spirv(vtek::Directory* shaderdir)
+{
+	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::write;
+	vtek::File* file = vtek::file_open(shaderdir, "vertex.spv", flags);
+	if (file == nullptr)
+	{
+		vtek_log_error("Failed to open vertex shader file!");
+	}
+}
+
+vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
+	const vtek::GraphicsShaderInfo* info,
+	vtek::Directory* shaderdir, vtek::Device* device)
+{
+	bool exist = check_shader_files_exist(info, shaderdir);
+	if (!exist)
+	{
 		vtek_log_error("--> cannot create graphics shader!");
 		return nullptr;
+	}
+
+	if (info->vertex)
+	{
+		// auto vert = ...
+		load_vertex_shader_spirv(shaderdir);
 	}
 
 	return nullptr;

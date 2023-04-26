@@ -48,6 +48,7 @@ namespace vtek
 	// when opening it.
 	void directory_close(Directory* dir);
 
+	// Get the full directory name, as was provided when opening the directory.
 	std::string_view directory_get_name(const Directory* dir);
 
 
@@ -98,11 +99,16 @@ namespace vtek
 	// to read/write the file, or if the flags are not allowed by the underlying
 	// platform's file system - ie. opening a file that does not exist.
 	File* file_open(
-		const Directory* dir, const char* filename, FileModeFlags flags);
+		const Directory* dir, std::string_view filename, FileModeFlags flags);
 
 	// Closes the file and releases all resources acquired when opening it.
 	// This function may flush the file or finish any previously given writes
 	// in a manner specified by the platform.
 	void file_close(File* file);
+
+	// Read the entire contents of the file, and copy it into `buffer`.
+	// This function does not reset the underlying file pointer, so make sure
+	// not to preceed this function with any reads from the file.
+	bool file_read_into_buffer(File* file, std::vector<char>& buffer);
 
 }

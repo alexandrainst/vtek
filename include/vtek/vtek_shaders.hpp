@@ -47,8 +47,19 @@ namespace vtek
 
 
 	// TODO: Wew
-	GraphicsShader* graphics_shader_load_glsl(Directory* shaderdir, Device* device);
-	GraphicsShader* graphics_shader_load_spirv(Directory* shaderdir, Device* device);
+	struct GraphicsShaderInfo
+	{
+		bool vertex {false};
+		bool tess_control {false};
+		bool tess_eval {false};
+		bool geometry {false};
+		bool fragment {false};
+	};
+
+	GraphicsShader* graphics_shader_load_glsl(
+		const GraphicsShaderInfo* info, Directory* shaderdir, Device* device);
+	GraphicsShader* graphics_shader_load_spirv(
+		const GraphicsShaderInfo* info, Directory* shaderdir, Device* device);
 
 
 	GraphicsShader* graphics_shader_create(Device* device);

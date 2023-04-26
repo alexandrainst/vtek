@@ -158,8 +158,17 @@ int main()
 	// Shader
 	const char* shaderdirstr = "../shaders/simple_triangle";
 	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
+	if (shaderdir == nullptr)
+	{
+		log_error("Failed to open shader directory!");
+		return -1;
+	}
+
+	vtek::GraphicsShaderInfo shaderInfo{};
+	shaderInfo.vertex = true;
+	shaderInfo.fragment = true;
 	vtek::GraphicsShader* shader =
-		vtek::graphics_shader_load_spirv(shaderdir, device);
+		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
 	if (shader == nullptr)
 	{
 		log_error("Failed to load graphics shader!");
