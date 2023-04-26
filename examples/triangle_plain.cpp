@@ -156,9 +156,15 @@ int main()
 	// DONE: We use dynamic rendering
 
 	// Shader
-	const char* vert = "../examples/triangle_plain_vertex.glsl";
-	const char* frag = "../examples/triangle_plain_fragment.glsl";
-	vtek::GraphicsShader* shader = nullptr;// = vtek::graphics_shader_load(...);
+	const char* shaderdirstr = "../shaders/simple_triangle";
+	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
+	vtek::GraphicsShader* shader =
+		vtek::graphics_shader_load_spirv(shaderdir, device);
+	if (shader == nullptr)
+	{
+		log_error("Failed to load graphics shader!");
+		return -1;
+	}
 
 	// Vulkan graphics pipeline
 	const uint32_t width = swapchainCreateInfo.framebufferWidth;

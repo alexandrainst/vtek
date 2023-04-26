@@ -14,6 +14,7 @@ namespace vtek
 	// === Utility functions === //
 	// ========================= //
 	std::string_view get_filename_suffix(std::string_view filename);
+	char get_path_separator();
 
 
 	// =========================== //
@@ -32,7 +33,7 @@ namespace vtek
 	// The sub-directory must be closed when no longer needed by calling
 	// `directory_close` - this will free all memory resources acquired
 	// by this function.
-	Directory* subdirectory_open(std::string_view dir, std::string_view subdir);
+	Directory* subdirectory_open(const Directory* dir, std::string_view subdir);
 
 	// Attempts to open the canonical path "dir/subdir1/subdir2", where
 	// `dir` is a valid directory already opened. Returns `nullptr` if one
@@ -41,11 +42,13 @@ namespace vtek
 	// `directory_close` - this will free all memory resources acquired
 	// by this function.
 	Directory* subdirectory_open(
-		std::string_view dir, std::string_view subdir1, std::string_view subdir2);
+		const Directory* dir, std::string_view subdir1, std::string_view subdir2);
 
 	// Will close the directory and free all memory that was allocated
 	// when opening it.
 	void directory_close(Directory* dir);
+
+	std::string_view directory_get_name(const Directory* dir);
 
 
 	// ====================== //

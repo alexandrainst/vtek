@@ -1,4 +1,6 @@
 #include "vtek_shaders.hpp"
+
+#include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 
 // External dependency: Spirv-reflect, to extract descriptor bindings from SPIR-V bytecode.
@@ -136,13 +138,7 @@ enum GraphicsStageFlags : uint32_t {
 	graphics_fragment     = 0x10U
 };
 
-static uint32_t find_shader_files()
-{
-
-}
-
-vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
-	vtek::Directory* shaderdir, vtek::Device* device)
+static uint32_t find_graphics_shader_files(vtek::Directory* shaderdir)
 {
 	uint32_t flags = 0U;
 
@@ -162,6 +158,23 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 		flags |= graphics_fragment;
 	}
 
+	return flags;
+}
+
+vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
+	vtek::Directory* shaderdir, vtek::Device* device)
+{
+	uint32_t flags = find_graphics_shader_files(shaderdir);
+	if (!(flags & graphics_vertex))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}vertex.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		vtek_log_error("--> cannot create graphics shader!");
+		return nullptr;
+	}
+
+	return nullptr;
 }
 
 
