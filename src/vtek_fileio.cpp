@@ -15,8 +15,6 @@ namespace fs = std::filesystem;
 /* struct implementations */
 struct vtek::Directory
 {
-	// NOTE: This must be present, otherwise problems occur!
-	// TODO: Is this error also present in vtek?
 	uint64_t id;
 	fs::path handle;
 };
@@ -50,7 +48,7 @@ struct MemoryPool
 	// TODO: This is really unoptimal! Can we use std::map or something else?
 	//std::vector<vtek::Directory> directories;
 	std::unordered_map<uint64_t, vtek::Directory> directories;
-	std::vector<vtek::File> files;
+	std::unordered_map<uint64_t, vtek::File> files;
 
 	// Id for indexing into the pools
 	uint64_t dir_id {0};
@@ -82,16 +80,16 @@ void vtek::terminate_fileio()
 
 
 /* helper functions */
-static auto read_file_mode_flags(vtek::FileModeFlags flags)
+static std::ios_base::openmode read_file_mode_flags(vtek::FileModeFlags flags)
 {
-	auto openmode = 0;
+	std::ios_base::openmode openmode = static_cast<std::ios_base::openmode>(0);
 
 	if (flags & vtek::FileModeFlag::read)
 	{
 		if (flags & vtek::FileModeFlag::write)
 		{
 			vtek_log_error("FileModeFlags cannot be both read and write!");
-			return 0;
+			return static_cast<std::ios_base::openmode>(0);
 		}
 
 		openmode |= std::ios::in;
@@ -101,7 +99,7 @@ static auto read_file_mode_flags(vtek::FileModeFlags flags)
 		if ((flags & vtek::FileModeFlag::trunc) && (flags & vtek::FileModeFlag::append))
 		{
 			vtek_log_error("FileModeFlags cannot be both trunc and append!");
-			return 0;
+			return static_cast<std::ios_base::openmode>(0);
 		}
 		else if (flags & vtek::FileModeFlag::trunc)
 		{
@@ -119,9 +117,6 @@ static auto read_file_mode_flags(vtek::FileModeFlags flags)
 	{
 		openmode |= std::ios::binary;
 	}
-
-	// Always seek to end, so we can efficiently obtain the size of the file
-	openmode |= std::ios::ate;
 
 	return openmode;
 }
@@ -142,7 +137,7 @@ vtek::Directory* vtek::directory_open(std::string_view path)
 	std::lock_guard<std::mutex> lock(sMemoryPool->m);
 	const uint64_t id = sMemoryPool->dir_id++;
 
-	auto [it, insert] = sMemoryPool->directories.insert({ id, /*vtek::Directory*/{0, p} });
+	auto [it, insert] = sMemoryPool->directories.insert({ id, {id, p} });
 	if (!insert)
 	{
 		vtek_log_debug("Failed to insert new Directory into std::unordered_map!");
@@ -189,8 +184,8 @@ bool vtek::file_exists(const vtek::Directory* dir, std::string_view filename)
 vtek::File* vtek::file_open(
 	const vtek::Directory* dir, std::string_view filename, vtek::FileModeFlags flags)
 {
-	auto openmode = read_file_mode_flags(flags);
-	if (openmode == 0)
+	std::ios_base::openmode openmode = read_file_mode_flags(flags);
+	if (openmode == static_cast<std::ios_base::openmode>(0))
 	{
 		vtek_log_error(
 			"--> cannot open file \"{}{}{}\"", dir->handle.c_str(),
@@ -211,7 +206,52 @@ vtek::File* vtek::file_open(
 	auto entry = fs::directory_entry(path, ec);
 	if (!entry.is_regular_file(ec)) return nullptr;
 
-	
+	// Allocate the file
+	const uint64_t id = sMemoryPool->file_id++;
+	auto [it, insert] = sMemoryPool->files.insert({ id, vtek::File{} });
+	if (!insert)
+	{
+		vtek_log_debug("Failed to insert new Directory into std::unordered_map!");
+		vtek_log_error("Failed to open directory!");
+		return nullptr;
+	}
+	vtek::File* file = &it->second;
+	file->id = id;
 
-	return nullptr;
+	// Open the file
+	file->handle.open(path.c_str(), openmode);
+	if (!file->handle.is_open())
+	{
+		file->handle.clear();
+		sMemoryPool->files.erase(it);
+		return nullptr;
+	}
+	file->size = static_cast<uint64_t>(fs::file_size(path));
+
+	return file;
+}
+
+void vtek::file_close(vtek::File* file)
+{
+	file->handle.close();
+	file->handle.clear();
+	file->size = 0;
+
+	auto it = sMemoryPool->files.find(file->id);
+	if (it == sMemoryPool->files.end())
+	{
+		vtek_log_debug("Failed to find file with id in std::unordered_map!");
+		vtek_log_debug("--> cannot deallocate file!");
+	}
+
+	sMemoryPool->files.erase(it);
+}
+
+bool vtek::file_read_into_buffer(vtek::File* file, std::vector<char>& buffer)
+{
+	buffer.resize(file->size);
+	file->handle.seekg(0);
+	file->handle.read(buffer.data(), file->size);
+	file->handle.seekg(0);
+	return true;
 }

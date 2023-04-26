@@ -8,6 +8,7 @@
 
 // TODO: Also glslang?
 
+
 /* struct implementation */
 struct vtek::GraphicsShader
 {
@@ -18,14 +19,51 @@ struct vtek::GraphicsShader
 	std::vector<vtek::GraphicsShaderModule> modules;
 };
 
+
+
 /* helper functions */
-static bool is_file_source_spirv()
+static bool check_graphics_shader_files_exist(
+	const vtek::GraphicsShaderInfo* info, vtek::Directory* shaderdir)
 {
-	return false;
-}
-static bool is_file_source_glsl()
-{
-	return false;
+	bool exist = true;
+
+	if (info->vertex && (!vtek::file_exists(shaderdir, "vertex.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}vertex.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+	if (info->tess_control && (!vtek::file_exists(shaderdir, "tess_control.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}tess_control.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+	if (info->tess_eval && (!vtek::file_exists(shaderdir, "tess_eval.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}tess_eval.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+	if (info->geometry && (!vtek::file_exists(shaderdir, "geometry.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}geometry.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+	if (info->fragment && (!vtek::file_exists(shaderdir, "fragment.spv")))
+	{
+		vtek_log_error(
+			"Failed to find vertex shader file \"{}{}fragment.spv\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+		exist = false;
+	}
+
+	return exist;
 }
 
 
@@ -131,65 +169,38 @@ VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTra
 
 
 
-static bool check_shader_files_exist(
-	const vtek::GraphicsShaderInfo* info, vtek::Directory* shaderdir)
-{
-	bool exist = true;
-
-	if (info->vertex && (!vtek::file_exists(shaderdir, "vertex.spv")))
-	{
-		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}vertex.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
-		exist = false;
-	}
-	if (info->tess_control && (!vtek::file_exists(shaderdir, "tess_control.spv")))
-	{
-		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}tess_control.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
-		exist = false;
-	}
-	if (info->tess_eval && (!vtek::file_exists(shaderdir, "tess_eval.spv")))
-	{
-		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}tess_eval.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
-		exist = false;
-	}
-	if (info->geometry && (!vtek::file_exists(shaderdir, "geometry.spv")))
-	{
-		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}geometry.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
-		exist = false;
-	}
-	if (info->fragment && (!vtek::file_exists(shaderdir, "fragment.spv")))
-	{
-		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}fragment.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
-		exist = false;
-	}
-
-	return exist;
-}
-
 static void load_vertex_shader_spirv(vtek::Directory* shaderdir)
 {
-	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::write;
+	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::binary;
 	vtek::File* file = vtek::file_open(shaderdir, "vertex.spv", flags);
 	if (file == nullptr)
 	{
 		vtek_log_error("Failed to open vertex shader file!");
 	}
+	else
+	{
+		vtek_log_debug("Successfully opened the vertex shader file!");
+	}
+
+	std::vector<char> buffer;
+	bool read = vtek::file_read_into_buffer(file, buffer);
+	if (!read)
+	{
+		vtek_log_error("Failed to read vertex shader file!");
+	}
+	else
+	{
+		vtek_log_debug("Successfully read the vertex shader file!");
+	}
+
+	vtek::file_close(file);
 }
 
 vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	const vtek::GraphicsShaderInfo* info,
 	vtek::Directory* shaderdir, vtek::Device* device)
 {
-	bool exist = check_shader_files_exist(info, shaderdir);
+	bool exist = check_graphics_shader_files_exist(info, shaderdir);
 	if (!exist)
 	{
 		vtek_log_error("--> cannot create graphics shader!");

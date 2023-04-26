@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <vector>
 
 
 namespace vtek
@@ -107,8 +108,6 @@ namespace vtek
 	void file_close(File* file);
 
 	// Read the entire contents of the file, and copy it into `buffer`.
-	// This function does not reset the underlying file pointer, so make sure
-	// not to preceed this function with any reads from the file.
 	bool file_read_into_buffer(File* file, std::vector<char>& buffer);
 
 }
