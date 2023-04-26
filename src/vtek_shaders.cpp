@@ -27,6 +27,7 @@ static bool is_file_source_glsl()
 }
 
 
+
 /* interface */
 VkShaderStageFlagBits vtek::get_shader_stage(vtek::ShaderStage stage)
 {
@@ -125,6 +126,51 @@ VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTra
 		return static_cast<VkShaderStageFlagBits>(0);
 	}
 }
+
+
+enum GraphicsStageFlags : uint32_t {
+	graphics_vertex       = 0x01U,
+	graphics_tess_control = 0x02U,
+	graphics_tess_eval    = 0x04U,
+	graphics_geometry     = 0x08U,
+	graphics_fragment     = 0x10U
+};
+
+static uint32_t find_shader_files()
+{
+
+}
+
+vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
+	vtek::Directory* shaderdir, vtek::Device* device)
+{
+	uint32_t flags = 0U;
+
+	if (vtek::file_exists(shaderdir, "vertex.spv")) {
+		flags |= graphics_vertex;
+	}
+	if (vtek::file_exists(shaderdir, "tess_control.spv")) {
+		flags |= graphics_tess_control;
+	}
+	if (vtek::file_exists(shaderdir, "tess_eval.spv")) {
+		flags |= graphics_tess_eval;
+	}
+	if (vtek::file_exists(shaderdir, "geometry.spv")) {
+		flags |= graphics_geometry;
+	}
+	if (vtek::file_exists(shaderdir, "fragment.spv")) {
+		flags |= graphics_fragment;
+	}
+
+}
+
+
+
+
+
+
+
+
 
 vtek::GraphicsShader* vtek::graphics_shader_create(vtek::Device* device)
 {

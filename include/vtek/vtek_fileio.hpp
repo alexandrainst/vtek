@@ -1,7 +1,6 @@
 #pragma once
 
-// TODO: Test if we can use std::string_view:
-// #include <string_view>
+#include <string_view>
 
 
 namespace vtek
@@ -11,19 +10,29 @@ namespace vtek
 	struct File;
 
 
+	// ========================= //
+	// === Utility functions === //
+	// ========================= //
+	std::string_view get_filename_suffix(std::string_view filename);
+
+
+	// =========================== //
+	// === Directory functions === //
+	// =========================== //
+
 	// Attemps to open a directory, specified by `path`. Will return
 	// `nullptr` if the directory does not exist or if it cannot be accessed.
 	// The directory must be closed when no longer needed by calling
 	// `directory_close` - this will free all memory resources acquired
 	// by this function.
-	Directory* directory_open(const char* path);
+	Directory* directory_open(std::string_view dir);
 
 	// Attemps to open a subdirectory inside a given directory.
 	// Returns nullptr if the subdirectory `subdir` does not exist.
 	// The sub-directory must be closed when no longer needed by calling
 	// `directory_close` - this will free all memory resources acquired
 	// by this function.
-	Directory* subdirectory_open(const Directory* dir, const char* subdir);
+	Directory* subdirectory_open(std::string_view dir, std::string_view subdir);
 
 	// Attempts to open the canonical path "dir/subdir1/subdir2", where
 	// `dir` is a valid directory already opened. Returns `nullptr` if one
@@ -32,14 +41,19 @@ namespace vtek
 	// `directory_close` - this will free all memory resources acquired
 	// by this function.
 	Directory* subdirectory_open(
-		const Directory* dir, const char* subdir1, const char* subdir2);
+		std::string_view dir, std::string_view subdir1, std::string_view subdir2);
 
 	// Will close the directory and free all memory that was allocated
 	// when opening it.
 	void directory_close(Directory* dir);
 
+
+	// ====================== //
+	// === File functions === //
+	// ====================== //
+
 	// Check if a given file exists within a previously opened directory.
-	bool file_exists(const Directory* dir, const char* filename);
+	bool file_exists(const Directory* dir, std::string_view filename);
 
 	// Various flags for controlling how a file should be opened. These
 	// may be combined into bitmasks, though not all combinations are valid:

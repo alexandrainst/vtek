@@ -23,6 +23,7 @@ struct vtek::File
 {
 	uint64_t size;
 	std::fstream handle;
+	// TODO: Store a filename? `std::string filename;`, which is _not_ the entire path!
 };
 
 

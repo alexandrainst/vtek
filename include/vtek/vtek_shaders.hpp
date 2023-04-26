@@ -12,22 +12,16 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vtek_device.hpp"
-
-//
-// NOTE: By Travis: Requirements for a shader system:
-// - Loads from configuration
-//     - In files or code
-// - Is generic
-//     - Little to nothing hard-coded
-// - Is extensible
-//     - Easy to modify, extend, and maintain.
-
-
+#include "vtek_fileio.hpp"
+#include "vtek_types.hpp"
 
 
 namespace vtek
 {
+	//========================= //
+	// === Shader utilities === //
+	//========================= //
+
 	enum class ShaderStage
 	{
 		vertex, tessellation_control, tessellation_eval,
@@ -52,7 +46,10 @@ namespace vtek
 	VkShaderStageFlagBits get_shader_stage_ray_tracing(ShaderStageRayTracing stage);
 
 
-	struct GraphicsShader; // opaque handle
+	// TODO: Wew
+	GraphicsShader* graphics_shader_load_glsl(Directory* shaderdir, Device* device);
+	GraphicsShader* graphics_shader_load_spirv(Directory* shaderdir, Device* device);
+
 
 	GraphicsShader* graphics_shader_create(Device* device);
 	void graphics_shader_destroy(GraphicsShader* shader, Device* device);
