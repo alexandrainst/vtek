@@ -8,6 +8,7 @@ is probably the best suited for this purpose (GPL licenses have compatibility re
 
 ### How to build ###
 
+`vtek` is built with C++20, and a compiler supporting this language version must be present.
 `vtek` may be built as either a static or a dynamic-link library. This setup is specified with CMake.
 To build _everything_ on Linux distributions (tested with Ubuntu 22):
 
@@ -28,7 +29,33 @@ scripts located in `examples/` which demonstrate how to use `vtek`.
 - **Vulkan-Sdk:** May be dowloaded from LunarG's website.
 - **GLFW:** Open-source cross-platform window abstraction library. TODO: How to include this?
 - **Spdlog:** Popular open-source logging library. Contained as a git submodule.
+- **GLM:** OpenGL math library, for 3d linear algebra. TODO: How to include this?
 - **vma:** Vulkan memory allocation library
+- **SPIRV-Reflect:** Light-weight Spir-V reflection library for shader verification. TODO: Is this used?
+
+### How to compile shaders ###
+
+Shader files should be provided as pre-compiled Spir-V binaries, before running the example
+programs. This can be done vith two tools, either `glsLangValidator` (by Khronos) or `glslc`
+(by Google). Examples:
+```bash
+glslangValidator --spirv-val --glsl-version 450 -S vert -V vertex.glsl -o vertex.spv
+```
+The `--spirv-val` also runs the Spir-V Validator (optional). The flag `--glsl-version 450`
+specifies a desired version of GLSL - this should best be provided in the shader source file
+as `#version 450`, in which can this flag may be omitted. The flag `-S vert` speficies the
+target shader stage, and `-o vertex.spv` the name of the output. `vtek` expects a vertex
+shader file to be named `vertex.spv`, and will log whenever such a file is not found.
+
+```bash
+glslc -fshader-stage=vert test_vertex.glsl -o test_vertex.spv
+```
+This compiler is more similar to `GCC` and `Clang` in what the flags are called, but ultimately
+they do the same things.
+
+Raw shader files, in `GLSL` format, may also be provided to vtek. But this is less efficient,
+as they have to be compiled each time a program is run. So pre-compiling to Spir-V is
+preferrable.
 
 
 ### How to contribute ###
