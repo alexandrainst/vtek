@@ -238,6 +238,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	}
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 	auto modules = vtek::graphics_shader_get_modules(info->shader);
+	bool useFragmentShader = false;
 	for (const auto& module : modules)
 	{
 		VkPipelineShaderStageCreateInfo shaderInfo{};
@@ -250,19 +251,24 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		shaderInfo.pSpecializationInfo = nullptr; // VkSpecializationInfo*
 
 		shaderStages.emplace_back(shaderInfo);
+
+		if (module.stage == vtek::ShaderStageGraphics::fragment)
+		{
+			useFragmentShader = true;
+		}
 	}
 
 	// ==================== //
 	// === Vertex input === //
 	// ==================== //
 	// TODO: What to do here?
-	//auto& bindingDesc = vtek::vertex_binding_description(info->vertexType);
+	auto& bindingDesc = vtek::vertex_binding_description(info->vertexType, false);
 	auto& attributeDesc = vtek::vertex_attribute_descriptions(info->vertexType);
 
 	VkPipelineVertexInputStateCreateInfo vertexInfo{};
 	vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInfo.vertexBindingDescriptionCount = 1; // ??
-	vertexInfo.pVertexBindingDescriptions = nullptr; // ?? shading->bindingDesc ??
+	vertexInfo.pVertexBindingDescriptions = &bindingDesc;
 	vertexInfo.vertexAttributeDescriptionCount = attributeDesc.size();
 	vertexInfo.pVertexAttributeDescriptions = attributeDesc.data();
 
@@ -288,15 +294,19 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	viewport.y = viewportState.viewportRegion.offset.y;
 	viewport.width = viewportState.viewportRegion.extent.width;
 	viewport.width = viewportState.viewportRegion.extent.width;
+	viewport.minDepth = viewportState.depthRange.min();
+	viewport.maxDepth = viewportState.depthRange.max();
 	// TODO: Multiple viewport states?
 	// TODO: Using multiple viewports/scissors requires enabling a feature
 	// TODO: during device creation!
 	VkPipelineViewportStateCreateInfo viewportInfo{};
 	viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewportInfo.viewportCount = 1; // ??
+	viewportInfo.viewportCount = 1;
 	viewportInfo.pViewports = &viewport;
-	viewportInfo.scissorCount = (viewportState.useScissorRegion) ? 1 : 0; // ??
-	viewportInfo.pScissors = &viewportState.scissorRegion;
+	viewportInfo.scissorCount = 1;
+	viewportInfo.pScissors = (viewportState.useScissorRegion)
+		? &viewportState.scissorRegion
+		: &viewportState.viewportRegion;
 
 	// =========================== //
 	// === Rasterization state === //
@@ -324,6 +334,18 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	rasterizer.lineWidth = rasterizationState.lineWidth;
 	// TODO: Also check for enabled device features! This include:
 	// depthClampEnable, polygonMode, lineWidth.
+
+	if ((!rasterizationState.rasterizerDiscardEnable.get()) && (!useFragmentShader))
+	{
+		vtek_log_error("Rasterizer discard disabled, but no fragment shader module found!");
+		vtek_log_error("--> cabbit create graphics pipeline!");
+		return nullptr;
+	}
+	else if (rasterizationState.rasterizerDiscardEnable.get() && useFragmentShader)
+	{
+		vtek_log_error("Rasterizer discard enabled, but fragment shader module found!");
+		vtek_log_warn("Rasterization is disabled, and the fragment shader will be ignored.");
+	}
 
 	// ========================= //
 	// === Multisample state === //
@@ -430,6 +452,9 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// === Pipeline layout === //
 	// ======================= //
 	// TODO: Get this from shader!
+	VkDescriptorSetLayout descriptorSetLayout =
+		vtek::graphics_shader_get_descriptor_layout(info->shader);
+
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layoutInfo.pNext = nullptr;

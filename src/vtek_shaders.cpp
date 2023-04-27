@@ -1,6 +1,5 @@
 #include "vtek_shaders.hpp"
 
-#include "impl/vtek_init.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 
@@ -20,6 +19,8 @@ struct vtek::GraphicsShader
 	// REVIEW: If such a thing is useful.
 
 	std::vector<vtek::GraphicsShaderModule> modules;
+
+	VkDescriptorSetLayout descriptorLayout {VK_NULL_HANDLE};
 };
 
 // TODO: Create an allocator for shader objects?
@@ -27,6 +28,8 @@ struct vtek::GraphicsShader
 
 
 /* GLSL shader loading */
+#include "impl/vtek_init.hpp"
+
 bool vtek::initialize_glsl_shader_loading()
 {
 	vtek_log_trace("initialize_glsl_shader_loading()");
@@ -85,6 +88,45 @@ static bool check_graphics_shader_files_exist(
 	}
 
 	return exist;
+}
+
+static VkShaderModule load_spirv_shader(
+	vtek::Directory* shaderdir, const char* filename, const char* type,
+	VkDevice dev)
+{
+	// Open file
+	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::binary;
+	vtek::File* file = vtek::file_open(shaderdir, filename, flags);
+	if (file == nullptr)
+	{
+		vtek_log_error("Failed to open {} shader file!", type);
+		return VK_NULL_HANDLE;
+	}
+
+	// Read file into buffer
+	std::vector<char> buffer;
+	bool read = vtek::file_read_into_buffer(file, buffer);
+	vtek::file_close(file);
+	if (!read)
+	{
+		vtek_log_error("Failed to read {} shader file!", type);
+		return VK_NULL_HANDLE;
+	}
+
+	// Create shader module
+	VkShaderModule module;
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = buffer.size();
+	createInfo.pCode = reinterpret_cast<const uint32_t*>(buffer.data());
+	VkResult result = vkCreateShaderModule(dev, &createInfo, nullptr, &module);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create {} shader module!", type);
+		return VK_NULL_HANDLE;
+	}
+
+	return module;
 }
 
 
@@ -190,44 +232,7 @@ VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTra
 
 
 
-static VkShaderModule load_spirv_shader(
-	vtek::Directory* shaderdir, const char* filename, const char* type,
-	VkDevice dev)
-{
-	// Open file
-	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::binary;
-	vtek::File* file = vtek::file_open(shaderdir, filename, flags);
-	if (file == nullptr)
-	{
-		vtek_log_error("Failed to open {} shader file!", type);
-		return VK_NULL_HANDLE;
-	}
 
-	// Read file into buffer
-	std::vector<char> buffer;
-	bool read = vtek::file_read_into_buffer(file, buffer);
-	vtek::file_close(file);
-	if (!read)
-	{
-		vtek_log_error("Failed to read {} shader file!", type);
-		return VK_NULL_HANDLE;
-	}
-
-	// Create shader module
-	VkShaderModule module;
-	VkShaderModuleCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.codeSize = buffer.size();
-	createInfo.pCode = reinterpret_cast<const uint32_t*>(buffer.data());
-	VkResult result = vkCreateShaderModule(dev, &createInfo, nullptr, &module);
-	if (result != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to create {} shader module!", type);
-		return VK_NULL_HANDLE;
-	}
-
-	return module;
-}
 
 vtek::GraphicsShader* vtek::graphics_shader_load_glsl(
 	const vtek::GraphicsShaderInfo* info,
@@ -310,6 +315,10 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	auto shader = new vtek::GraphicsShader();
 	shader->modules.swap(modules);
 
+	// TODO: CreateDescriptorSetLayout
+	// VkDescriptorSetAllocateInfo
+	// TODO: Create descriptor pool!
+
 	vtek_log_info("Loaded SPIR-V shader(s) from directory \"{}{}\".",
 	              vtek::directory_get_name(shaderdir), vtek::get_path_separator());
 
@@ -333,4 +342,10 @@ const std::vector<vtek::GraphicsShaderModule>& vtek::graphics_shader_get_modules
 	vtek::GraphicsShader* shader)
 {
 	return shader->modules;
+}
+
+VkDescriptorSetLayout vtek::graphics_shader_get_descriptor_layout(
+	vtek::GraphicsShader* shader)
+{
+	return shader->descriptorLayout;
 }

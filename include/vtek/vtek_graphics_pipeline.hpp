@@ -103,8 +103,10 @@ namespace vtek
 	{
 		VkRect2D viewportRegion {};
 		// NOTE: good default values for min/max depth that need not be changed.
-		float minDepth {0.0f};
-		float maxDepth {1.0f};
+		// TODO: Where exactly are these used? Misplaced? Seems like depth/stencil stuff.
+		// float minDepth {0.0f};
+		// float maxDepth {1.0f};
+		FloatRange depthRange {0.0f, 1.0f};
 		// Scissor rectangle describes in which region pixels will be stored.
 		// Any pixels outside the scissor rectangle are discarded by the rasterizer.
 		bool useScissorRegion {false};

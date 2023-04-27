@@ -214,13 +214,13 @@ int main()
 		.colorBlendState = &colorBlending,
 		.dynamicStateFlags = 0U //vtek::PipelineDynamicState::viewport;
 	};
-	// vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
-	// 	&graphicsPipelineInfo, device);
-	// if (graphicsPipeline == nullptr)
-	// {
-	// 	log_error("Failed to create graphics pipeline!");
-	// 	return -1;
-	// }
+	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
+		&graphicsPipelineInfo, device);
+	if (graphicsPipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline!");
+		return -1;
+	}
 
 	// REVIEW: geometry ?
 
