@@ -54,6 +54,11 @@ namespace vtek
 		bool tess_eval {false};
 		bool geometry {false};
 		bool fragment {false};
+
+		// NOTE: Can optionally run SPIRV-Validator
+		// REVIEW: The validator tool is incomplete. But would be cool to have:
+		// https://github.com/KhronosGroup/SPIRV-Tools/tree/main
+		//bool runValidation {false};
 	};
 
 	GraphicsShader* graphics_shader_load_glsl(

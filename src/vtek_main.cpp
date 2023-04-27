@@ -12,8 +12,10 @@
 struct Context
 {
 	bool useGLFW {false};
+	bool useLoadShadersFromGLSL {false};
 };
 
+// TODO: Would dynamic memory allocation be better?
 static Context sContext = {};
 
 
@@ -43,7 +45,19 @@ bool vtek::initialize(const vtek::InitInfo* info)
 		return false;
 	}
 
-	// 4) allocators for basic Vulkan types
+	// 4) optional shader loading from GLSL source code (glslang)
+	if (info->loadShadersFromGLSL)
+	{
+		if (!vtek::initialize_glsl_shader_loading())
+		{
+			vtek_log_fatal("Failed to initialize GLSL shader loading backend!");
+			return false;
+		}
+
+		sContext.useLoadShadersFromGLSL = true;
+	}
+
+	// 5) allocators for basic Vulkan types
 	// TODO: This would be a good place to initialize the allocators.
 
 	return true;
@@ -51,6 +65,11 @@ bool vtek::initialize(const vtek::InitInfo* info)
 
 void vtek::terminate()
 {
+	if (sContext.useLoadShadersFromGLSL)
+	{
+		vtek::terminate_glsl_shader_loading();
+	}
+
 	vtek::terminate_fileio();
 
 	if (sContext.useGLFW)

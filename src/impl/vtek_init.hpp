@@ -17,6 +17,10 @@ namespace vtek
 	bool initialize_fileio();
 	void terminate_fileio();
 
+	/* shader loader */
+	bool initialize_glsl_shader_loading();
+	void terminate_glsl_shader_loading();
+
 	/* allocators for basic Vulkan types */
 	// TODO: We could place initialization functions here and make everyting better.
 

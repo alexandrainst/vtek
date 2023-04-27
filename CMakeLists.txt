@@ -29,6 +29,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 # Dependencies for building vtek
 # --------------------------------------------------------------------------------
 find_package(Vulkan REQUIRED)
+find_package(Threads REQUIRED)
+find_package(glslang REQUIRED)
 
 # spdlog submodule
 add_subdirectory(external/spdlog REQUIRED)
@@ -126,7 +128,7 @@ if(VTEK_BUILD_WARNINGS)
   endif()
 endif()
 
-target_link_libraries(vtek LINK_PUBLIC spdlog::spdlog glfw Vulkan::Vulkan)
+target_link_libraries(vtek LINK_PUBLIC spdlog::spdlog glfw Vulkan::Vulkan glslang::SPIRV)
 
 
 # --------------------------------------------------------------------------------

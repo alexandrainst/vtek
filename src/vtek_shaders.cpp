@@ -1,13 +1,15 @@
 #include "vtek_shaders.hpp"
 
+#include "impl/vtek_init.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 
 // External dependency: Spirv-reflect, to extract descriptor bindings from SPIR-V bytecode.
 #include <spirv_reflect.h>
 
-// TODO: Also glslang?
-#include <glslang/Include/glslang_c_interface.h>
+// External dependency: glslang for generating SPIR-V bytecode from GLSL.
+//#include <glslang/Include/glslang_c_interface.h>
+#include <glslang/Public/ShaderLang.h>
 
 
 /* struct implementation */
@@ -21,6 +23,22 @@ struct vtek::GraphicsShader
 };
 
 // TODO: Create an allocator for shader objects?
+
+
+
+/* GLSL shader loading */
+bool vtek::initialize_glsl_shader_loading()
+{
+	vtek_log_trace("initialize_glsl_shader_loading()");
+	glslang::InitializeProcess();
+	return true;
+}
+
+void vtek::terminate_glsl_shader_loading()
+{
+	vtek_log_trace("terminate_glsl_shader_loading()");
+	glslang::FinalizeProcess();
+}
 
 
 
@@ -211,6 +229,13 @@ static VkShaderModule load_spirv_shader(
 	return module;
 }
 
+vtek::GraphicsShader* vtek::graphics_shader_load_glsl(
+	const vtek::GraphicsShaderInfo* info,
+	vtek::Directory* shaderdir, vtek::Device* device)
+{
+
+}
+
 vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	const vtek::GraphicsShaderInfo* info,
 	vtek::Directory* shaderdir, vtek::Device* device)
@@ -284,6 +309,9 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	// TODO: Do better through a centralized allocation mechanism
 	auto shader = new vtek::GraphicsShader();
 	shader->modules.swap(modules);
+
+	vtek_log_info("Loaded SPIR-V shader(s) from directory \"{}{}\".",
+	              vtek::directory_get_name(shaderdir), vtek::get_path_separator());
 
 	return shader;
 }

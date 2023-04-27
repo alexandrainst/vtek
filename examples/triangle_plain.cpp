@@ -49,6 +49,7 @@ int main()
 	vtek::InitInfo initInfo{};
 	initInfo.applicationTitle = "triangle_plain";
 	initInfo.useGLFW = true;
+	initInfo.loadShadersFromGLSL = true; // set to `true` to enable GLSL shader loading
 	if (!vtek::initialize(&initInfo))
 	{
 		std::cerr << "Failed to initialize vtek!" << std::endl;
