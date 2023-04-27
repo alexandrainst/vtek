@@ -7,6 +7,7 @@
 #include <spirv_reflect.h>
 
 // TODO: Also glslang?
+#include <glslang/Include/glslang_c_interface.h>
 
 
 /* struct implementation */
@@ -18,6 +19,8 @@ struct vtek::GraphicsShader
 
 	std::vector<vtek::GraphicsShaderModule> modules;
 };
+
+// TODO: Create an allocator for shader objects?
 
 
 
@@ -169,31 +172,43 @@ VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTra
 
 
 
-static void load_vertex_shader_spirv(vtek::Directory* shaderdir)
+static VkShaderModule load_spirv_shader(
+	vtek::Directory* shaderdir, const char* filename, const char* type,
+	VkDevice dev)
 {
+	// Open file
 	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::binary;
-	vtek::File* file = vtek::file_open(shaderdir, "vertex.spv", flags);
+	vtek::File* file = vtek::file_open(shaderdir, filename, flags);
 	if (file == nullptr)
 	{
-		vtek_log_error("Failed to open vertex shader file!");
-	}
-	else
-	{
-		vtek_log_debug("Successfully opened the vertex shader file!");
+		vtek_log_error("Failed to open {} shader file!", type);
+		return VK_NULL_HANDLE;
 	}
 
+	// Read file into buffer
 	std::vector<char> buffer;
 	bool read = vtek::file_read_into_buffer(file, buffer);
+	vtek::file_close(file);
 	if (!read)
 	{
-		vtek_log_error("Failed to read vertex shader file!");
-	}
-	else
-	{
-		vtek_log_debug("Successfully read the vertex shader file!");
+		vtek_log_error("Failed to read {} shader file!", type);
+		return VK_NULL_HANDLE;
 	}
 
-	vtek::file_close(file);
+	// Create shader module
+	VkShaderModule module;
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = buffer.size();
+	createInfo.pCode = reinterpret_cast<const uint32_t*>(buffer.data());
+	VkResult result = vkCreateShaderModule(dev, &createInfo, nullptr, &module);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create {} shader module!", type);
+		return VK_NULL_HANDLE;
+	}
+
+	return module;
 }
 
 vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
@@ -207,26 +222,70 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 		return nullptr;
 	}
 
+	VkDevice dev = vtek::device_get_handle(device);
+	std::vector<vtek::GraphicsShaderModule> modules;
+
 	if (info->vertex)
 	{
-		// auto vert = ...
-		load_vertex_shader_spirv(shaderdir);
+		VkShaderModule vertex = load_spirv_shader(
+			shaderdir, "vertex.spv", "vertex", dev);
+		if (vertex == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({ vtek::ShaderStageGraphics::vertex, vertex });
+	}
+	if (info->tess_control)
+	{
+		VkShaderModule tess_control = load_spirv_shader(
+			shaderdir, "tess_control.spv", "tessellation control", dev);
+		if (tess_control == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({vtek::ShaderStageGraphics::tessellation_control, tess_control});
+	}
+	if (info->tess_eval)
+	{
+		VkShaderModule tess_eval = load_spirv_shader(
+			shaderdir, "tess_eval.spv", "tessellation evaluation", dev);
+		if (tess_eval == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({vtek::ShaderStageGraphics::tessellation_eval, tess_eval});
+	}
+	if (info->geometry)
+	{
+		VkShaderModule geometry = load_spirv_shader(
+			shaderdir, "geometry.spv", "geometry", dev);
+		if (geometry == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({ vtek::ShaderStageGraphics::geometry, geometry });
+	}
+	if (info->fragment)
+	{
+		VkShaderModule fragment = load_spirv_shader(
+			shaderdir, "fragment.spv", "fragment", dev);
+		if (fragment == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({ vtek::ShaderStageGraphics::fragment, fragment });
 	}
 
-	return nullptr;
-}
+	// TODO: Do better through a centralized allocation mechanism
+	auto shader = new vtek::GraphicsShader();
+	shader->modules.swap(modules);
 
-
-
-
-
-
-
-
-
-vtek::GraphicsShader* vtek::graphics_shader_create(vtek::Device* device)
-{
-
+	return shader;
 }
 
 void vtek::graphics_shader_destroy(vtek::GraphicsShader* shader, vtek::Device* device)
@@ -235,10 +294,11 @@ void vtek::graphics_shader_destroy(vtek::GraphicsShader* shader, vtek::Device* d
 
 	VkDevice dev = vtek::device_get_handle(device);
 
-	for (auto module : shader->modules)
+	for (auto& module : shader->modules)
 	{
 		vkDestroyShaderModule(dev, module.module, nullptr);
 	}
+	shader->modules.clear();
 }
 
 const std::vector<vtek::GraphicsShaderModule>& vtek::graphics_shader_get_modules(

@@ -175,6 +175,9 @@ int main()
 		return -1;
 	}
 
+	const std::vector<vtek::GraphicsShaderModule>& shaderModules =
+		vtek::graphics_shader_get_modules(shader);
+
 	// Vulkan graphics pipeline
 	const uint32_t width = swapchainCreateInfo.framebufferWidth;
 	const uint32_t height = swapchainCreateInfo.framebufferHeight;
@@ -395,6 +398,8 @@ int main()
 	// Cleanup
 	vtek::device_wait_idle(device);
 
+	// vtek::graphics_pipeline_destroy(graphicsPipeline, device);
+	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);
 	vtek::device_destroy(device);

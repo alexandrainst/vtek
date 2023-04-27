@@ -867,6 +867,10 @@ vtek::SwapchainStatus vtek::swapchain_acquire_next_image(
 	VkResult result = vkAcquireNextImageKHR(
 		dev, swapchain->vulkanHandle, timeout, semaphore, VK_NULL_HANDLE, frameIndex);
 
+	// NOTE: "Handle both out-of-date and suboptimal swapchains to re-create stale
+	//       swapchains when windows resize":
+	// https://developer.nvidia.com/blog/advanced-api-performance-vulkan-clearing-and-presenting/
+	// TODO: Should we follow this advice?
 	switch (result)
 	{
 	case VK_SUCCESS:

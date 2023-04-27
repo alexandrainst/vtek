@@ -61,8 +61,6 @@ namespace vtek
 	GraphicsShader* graphics_shader_load_spirv(
 		const GraphicsShaderInfo* info, Directory* shaderdir, Device* device);
 
-
-	GraphicsShader* graphics_shader_create(Device* device);
 	void graphics_shader_destroy(GraphicsShader* shader, Device* device);
 
 
