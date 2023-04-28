@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -49,8 +50,26 @@ namespace vtek
 	// when opening it.
 	void directory_close(Directory* dir);
 
-	// Get the full directory name, as was provided when opening the directory.
-	std::string_view directory_get_name(const Directory* dir);
+	// Get the directory name, as was provided when opening the directory.
+	std::string_view directory_get_path(const Directory* dir);
+
+	// Get the directory name, as was provided when opening the directory,
+	// and appended `filename`.
+	std::string directory_get_path(const Directory* dir, std::string_view filename);
+
+	// If a directory was created as a relative path (relative to the executing
+	// directory, or the location of the binary), then this function will
+	// convert that directory's path to an absolute, fully-qualified path.
+	std::string directory_get_absolute_path(const Directory* dir);
+
+	// If a directory was created as a relative path (relative to the executing
+	// directory, or the location of the binary), then this function will
+	// convert that directory's path to an absolute, fully-qualified path.
+	// In addition, it will append `filename` and return a platform-specific
+	// path with proper path separator placement.
+	// This function may be used for tools that require a fully-qualified path.
+	std::string directory_get_absolute_path(
+		const Directory* dir, std::string_view filename);
 
 
 	// ====================== //

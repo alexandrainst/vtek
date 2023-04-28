@@ -28,7 +28,8 @@ struct vtek::File
 };
 
 
-/* hashing of fileio structs */
+
+/* hashing of fileio structs (for memory pools) */
 namespace std
 {
 	template<> struct hash<vtek::Directory>
@@ -42,7 +43,7 @@ namespace std
 
 
 
-/* memory pools */
+/* global definitions: memory pools and directory locations */
 struct MemoryPool
 {
 	// TODO: This is really unoptimal! Can we use std::map or something else?
@@ -57,7 +58,39 @@ struct MemoryPool
 	// Mutex for thread-safe access to the pool
 	std::mutex m;
 };
+
+struct DirectoryLocations
+{
+	// Where was the consuming application run from
+	fs::path workingDirectory {};
+	// Where is the consuming application located
+	fs::path executableDirectory {};
+};
+
 static MemoryPool* sMemoryPool = nullptr;
+static DirectoryLocations* sDirLocations = nullptr;
+
+
+
+/* find directory locations */
+// NOTE: More answers may be found here:
+// https://stackoverflow.com/questions/1528298/get-path-of-executable
+// https://stackoverflow.com/questions/143174/how-do-i-get-the-directory-that-a-program-is-running-from
+static fs::path find_executable_directory()
+{
+	try
+	{
+		auto exec_path = fs::canonical("/proc/self/exe");
+		return exec_path.parent_path();
+	}
+	catch (...)
+	{
+		vtek_log_fatal("fileio: 'find_executable_path()' throwed!");
+		vtek_log_fatal("--> The application might not run!");
+		return {};
+	}
+}
+
 
 
 /* initialization */
@@ -68,6 +101,15 @@ bool vtek::initialize_fileio()
 	vtek_log_trace("vtek::initialize_fileio()");
 	sMemoryPool = new MemoryPool();
 
+	sDirLocations = new DirectoryLocations();
+	sDirLocations->workingDirectory = fs::current_path();
+	sDirLocations->executableDirectory = find_executable_directory();
+
+	vtek_log_info("Working directory: {}",
+	              sDirLocations->workingDirectory.c_str());
+	vtek_log_info("Executable directory: {}",
+	              sDirLocations->executableDirectory.c_str());
+
 	return true;
 }
 
@@ -76,6 +118,7 @@ void vtek::terminate_fileio()
 	vtek_log_trace("vtek::terminate_fileio()");
 	// TODO: We could check if some memory was not cleaned up.
 	delete sMemoryPool;
+	delete sDirLocations;
 }
 
 
@@ -131,8 +174,12 @@ char vtek::get_path_separator()
 
 vtek::Directory* vtek::directory_open(std::string_view path)
 {
-	auto p = fs::path(path);
-	if (!fs::exists(p)) return nullptr;
+	auto p = fs::path(path)/""; // Ensure trailing path separator, better logging
+	if (!fs::exists(p))
+	{
+		vtek_log_error("Cannot open non-existing directory \"{}\"!", path);
+		return nullptr;
+	}
 
 	std::lock_guard<std::mutex> lock(sMemoryPool->m);
 	const uint64_t id = sMemoryPool->dir_id++;
@@ -145,6 +192,7 @@ vtek::Directory* vtek::directory_open(std::string_view path)
 		return nullptr;
 	}
 
+	vtek_log_trace("Opened directory \"{}\"", p.c_str());
 	return &(it->second);
 }
 
@@ -167,9 +215,27 @@ void vtek::directory_close(vtek::Directory* dir)
 	vtek_log_fatal("vtek::directory_close - not implemented!");
 }
 
-std::string_view vtek::directory_get_name(const vtek::Directory* dir)
+std::string_view vtek::directory_get_path(const vtek::Directory* dir)
 {
 	return dir->handle.c_str();
+}
+
+std::string vtek::directory_get_path(
+	const vtek::Directory* dir, std::string_view filename)
+{
+	auto path = dir->handle/filename;
+	return std::string{path};
+}
+
+std::string vtek::directory_get_absolute_path(const vtek::Directory* dir)
+{
+
+}
+
+std::string vtek::directory_get_absolute_path(
+	const vtek::Directory* dir, std::string_view filename)
+{
+
 }
 
 
