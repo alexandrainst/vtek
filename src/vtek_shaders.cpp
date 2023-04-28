@@ -203,6 +203,24 @@ static VkShaderModule load_glsl_shader(
 
 
 
+
+
+
+
+
+
+	// TODO: I might just concur and use the C API, as it seems much more simple:
+	// https://github.com/KhronosGroup/glslang/tree/main#c-functional-interface-new
+
+
+
+
+
+
+
+
+
+
 	// NEXT: New, improved usage glslang and proper (recursive) header inclusion!
 	glslang::TShader shader;
 
@@ -230,16 +248,45 @@ static VkShaderModule load_glsl_shader(
 	}
 	shader.setEnvClient(EShClientVulkan, targetApiVersion);
 
+	// NOTE: Ray tracing shaders REQUIRED SPIR-V 1.4!
+	EShTargetLanguageVersion spirvVersion = EShTargetSpv_1_3;
+	shader.setEnvTarget(EshTargetSpv, spirvVersion);
 
+	// TODO: We need an includer for recursive shader inclusion
+	glslang::TShader::Includer includer;
+
+	// TODO: Probably need a mapper from physical device limits to glslang resource limits!
 	TBuiltInResource resources;
-
-
-	if (!shader.parse(&resources))
+	const int defaultVersion = 0; // TODO: WTF int defaultVersion ?? !!!
+	const bool forwardCompatible = false;
+	EShMessages messageFlags = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+	if (!shader.parse(&resources, defaultVersion, forwardCompatible, messageFlags, includer))
 	{
 		vtek_log_error("Failed to parse shader....");
 		// TODO: Absolutely MUST release resources acquired with glslang!
 		return VK_NULL_HANDLE;
 	}
+
+	// TODO: Do we log on error?
+	const char* shaderInfoLog = shader.getInfoLog();
+
+
+	// NEXT: Now we probably link the shader to create a program
+
+	glslang::TProgram program;
+	program.addShader(&shader);
+	if (!program.link())
+	{
+		vtek_log_error("Failed to link shader....");
+		// TODO: Absolutely MUST release resources acquired with glslang!
+		return VK_NULL_HANDLE;
+	}
+
+	// TODO: Do we log on error?
+	const char* programInfoLog = program.getInfoLog();
+
+	// NEXT: Reflection queries...
+
 }
 
 
@@ -378,6 +425,11 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	VkDevice dev = vtek::device_get_handle(device);
 	std::vector<vtek::GraphicsShaderModule> modules;
 
+	// TODO: Both geometry and tessellation shaders required physical device
+	// features be enabled!
+	const VkPhysicalDeviceFeatures* physDevFeatures =
+		vtek::device_get_enabled_features(device);
+
 	if (info->vertex)
 	{
 		VkShaderModule vertex = load_spirv_shader(
@@ -391,6 +443,14 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	}
 	if (info->tess_control)
 	{
+		if (physDevFeatures->tessellationShader == VK_FALSE)
+		{
+			vtek_log_error(
+				"Tessellation shader features was not enabled during device creation!");
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+
 		VkShaderModule tess_control = load_spirv_shader(
 			shaderdir, sFilenamesSPIRV[1], "tessellation control", dev);
 		if (tess_control == VK_NULL_HANDLE)
@@ -402,6 +462,14 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	}
 	if (info->tess_eval)
 	{
+		if (physDevFeatures->tessellationShader == VK_FALSE)
+		{
+			vtek_log_error(
+				"Tessellation shader features was not enabled during device creation!");
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+
 		VkShaderModule tess_eval = load_spirv_shader(
 			shaderdir, sFilenamesSPIRV[2], "tessellation evaluation", dev);
 		if (tess_eval == VK_NULL_HANDLE)
@@ -413,6 +481,14 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	}
 	if (info->geometry)
 	{
+		if (physDevFeatures->geometryShader == VK_FALSE)
+		{
+			vtek_log_error(
+				"Geometry shader features was not enabled during device creation!");
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+
 		VkShaderModule geometry = load_spirv_shader(
 			shaderdir, sFilenamesSPIRV[3], "geometry", dev);
 		if (geometry == VK_NULL_HANDLE)
