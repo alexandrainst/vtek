@@ -151,20 +151,20 @@ vtek::Directory* vtek::directory_open(std::string_view path)
 vtek::Directory* vtek::subdirectory_open(
 	const vtek::Directory* dir, std::string_view subdir)
 {
-	vtek_log_error("vtek::subdirectory_open(dir, str) - not implemented!");
+	vtek_log_fatal("vtek::subdirectory_open(dir, str) - not implemented!");
 	return nullptr;
 }
 
 vtek::Directory* vtek::subdirectory_open(
 	const vtek::Directory* dir, std::string_view subdir1, std::string_view subdir2)
 {
-	vtek_log_error("vtek::subdirectory_open(dir, str, str) - not implemented!");
+	vtek_log_fatal("vtek::subdirectory_open(dir, str, str) - not implemented!");
 	return nullptr;
 }
 
 void vtek::directory_close(vtek::Directory* dir)
 {
-	vtek_log_error("vtek::directory_close - not implemented!");
+	vtek_log_fatal("vtek::directory_close - not implemented!");
 }
 
 std::string_view vtek::directory_get_name(const vtek::Directory* dir)
@@ -254,4 +254,11 @@ bool vtek::file_read_into_buffer(vtek::File* file, std::vector<char>& buffer)
 	file->handle.read(buffer.data(), file->size);
 	file->handle.seekg(0);
 	return true;
+}
+
+bool vtek::file_read_line_accum(
+	vtek::File* file, std::vector<char>& accumBuffer, std::vector<char>& line)
+{
+	vtek_log_fatal("vtek::file_read_line_accum - not implemented!");
+	return false;
 }

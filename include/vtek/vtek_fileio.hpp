@@ -107,7 +107,16 @@ namespace vtek
 	// in a manner specified by the platform.
 	void file_close(File* file);
 
+	// Returns the size of a file, in bytes.
+	uint64_t file_get_size_bytes(File* file);
+
 	// Read the entire contents of the file, and copy it into `buffer`.
 	bool file_read_into_buffer(File* file, std::vector<char>& buffer);
 
+	// Read the file, line by line, until reaching EOF. The accumulated result
+	// is stored in `accumBuffer`, while each consecutive read replaces the
+	// contents of `line` with the next line.
+	// Returns true if a line was read, and false otherwise (ie. EOF).
+	bool file_read_line_accum(
+		File* file, std::vector<char>& accumBuffer, std::vector<char>& line);
 }

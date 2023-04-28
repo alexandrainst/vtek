@@ -34,6 +34,14 @@ bool vtek::initialize_glsl_shader_loading()
 {
 	vtek_log_trace("initialize_glsl_shader_loading()");
 	glslang::InitializeProcess();
+
+	// TODO: Default resource limits ?? Previously done as:
+	// CMakeLists.txt: target_link_libraries(vtek glslang::glslang-default-resource-limits)
+	// Code:
+	// namespace glslang {
+	//     // Implemented in libglslang-default-resource-limits
+	//     extern const TBuiltInResource DefaultTBuiltInResource;
+	// }
 	return true;
 }
 
@@ -164,6 +172,10 @@ static VkShaderModule load_glsl_shader(
 		vtek_log_error("Failed to open {} shader file!", type);
 		return VK_NULL_HANDLE;
 	}
+
+	// Read file line by line, necessary to check for shader inclusions
+	std::vector<char&> accumBuffer;
+	accumBuffer.resize()
 
 	// Read file into buffer
 	std::vector<char> buffer;
