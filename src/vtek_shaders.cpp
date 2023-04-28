@@ -46,44 +46,67 @@ void vtek::terminate_glsl_shader_loading()
 
 
 /* helper functions */
+static const char* sFilenamesGLSL[10] =
+{
+	"vertex.glsl", "tess_control.glsl", "tess_eval.glsl",
+	"geometry.glsl", "fragment.glsl"
+};
+static const char* sFilenamesSPIRV[10] = {
+	"vertex.spv", "tess_control.spv", "tess_eval.spv",
+	"geometry.spv", "fragment.spv"
+};
+
+enum class ShaderFileFormat
+{
+	glsl, spirv
+};
+
 static bool check_graphics_shader_files_exist(
-	const vtek::GraphicsShaderInfo* info, vtek::Directory* shaderdir)
+	const vtek::GraphicsShaderInfo* info, vtek::Directory* shaderdir,
+	ShaderFileFormat format)
 {
 	bool exist = true;
+	const char* filenames =
+		(format == ShaderFileFormat::glsl) ? sFilenamesGLSL : sFilenamesSPIRV;
 
-	if (info->vertex && (!vtek::file_exists(shaderdir, "vertex.spv")))
+	if (info->vertex && (!vtek::file_exists(shaderdir, filenames[0])))
 	{
 		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}vertex.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+			"Failed to find vertex shader file \"{}{}{}\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator(),
+			filenames[0]);
 		exist = false;
 	}
-	if (info->tess_control && (!vtek::file_exists(shaderdir, "tess_control.spv")))
+	if (info->tess_control && (!vtek::file_exists(shaderdir, filenames[1])))
 	{
 		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}tess_control.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+			"Failed to find tessellation control shader file \"{}{}{}\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator(),
+			filenames[1]);
 		exist = false;
 	}
-	if (info->tess_eval && (!vtek::file_exists(shaderdir, "tess_eval.spv")))
+	if (info->tess_eval && (!vtek::file_exists(shaderdir, filenames[2])))
 	{
 		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}tess_eval.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+			"Failed to find tessellation evaluation shader file \"{}{}{}\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator(),
+			filenames[2]);
 		exist = false;
 	}
-	if (info->geometry && (!vtek::file_exists(shaderdir, "geometry.spv")))
+	if (info->geometry && (!vtek::file_exists(shaderdir, filenames[3])))
 	{
 		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}geometry.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+			"Failed to find geometry shader file \"{}{}{}\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator(),
+			filenames[3]);
 		exist = false;
 	}
-	if (info->fragment && (!vtek::file_exists(shaderdir, "fragment.spv")))
+	if (info->fragment && (!vtek::file_exists(shaderdir, filenames[4])))
 	{
 		vtek_log_error(
-			"Failed to find vertex shader file \"{}{}fragment.spv\".",
-			vtek::directory_get_name(shaderdir), vtek::get_path_separator());
+			"Failed to find fragment shader file \"{}{}{}\".",
+			vtek::directory_get_name(shaderdir), vtek::get_path_separator(),
+			filenames[4]);
 		exist = false;
 	}
 
@@ -127,6 +150,33 @@ static VkShaderModule load_spirv_shader(
 	}
 
 	return module;
+}
+
+static VkShaderModule load_glsl_shader(
+	vtek::Directory* shaderdir, const char* filename, const char* type,
+	VkDevice dev)
+{
+	// Open file
+	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::binary;
+	vtek::File* file = vtek::file_open(shaderdir, filename, flags);
+	if (file == nullptr)
+	{
+		vtek_log_error("Failed to open {} shader file!", type);
+		return VK_NULL_HANDLE;
+	}
+
+	// Read file into buffer
+	std::vector<char> buffer;
+	bool read = vtek::file_read_into_buffer(file, buffer);
+	vtek::file_close(file);
+	if (!read)
+	{
+		vtek_log_error("Failed to read {} shader file!", type);
+		return VK_NULL_HANDLE;
+	}
+
+	// Search for statements that include other shader files, ie `#include <file>`.
+	// TODO: This could be optimized to run _while_ reading the file into buffer.
 }
 
 
@@ -238,6 +288,14 @@ vtek::GraphicsShader* vtek::graphics_shader_load_glsl(
 	const vtek::GraphicsShaderInfo* info,
 	vtek::Directory* shaderdir, vtek::Device* device)
 {
+	bool exist = check_graphics_shader_files_exist(
+		info, shaderdir, ShaderFileFormat::glsl);
+	if (!exist)
+	{
+		vtek_log_error("--> cannot create graphics shader!");
+		return nullptr;
+	}
+
 
 }
 
@@ -245,7 +303,8 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	const vtek::GraphicsShaderInfo* info,
 	vtek::Directory* shaderdir, vtek::Device* device)
 {
-	bool exist = check_graphics_shader_files_exist(info, shaderdir);
+	bool exist = check_graphics_shader_files_exist(
+		info, shaderdir, ShaderFileFormat::spirv);
 	if (!exist)
 	{
 		vtek_log_error("--> cannot create graphics shader!");
@@ -258,7 +317,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	if (info->vertex)
 	{
 		VkShaderModule vertex = load_spirv_shader(
-			shaderdir, "vertex.spv", "vertex", dev);
+			shaderdir, sFilenamesSPIRV[0], "vertex", dev);
 		if (vertex == VK_NULL_HANDLE)
 		{
 			vtek_log_error("--> cannot create graphics shader.");
@@ -269,7 +328,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	if (info->tess_control)
 	{
 		VkShaderModule tess_control = load_spirv_shader(
-			shaderdir, "tess_control.spv", "tessellation control", dev);
+			shaderdir, sFilenamesSPIRV[1], "tessellation control", dev);
 		if (tess_control == VK_NULL_HANDLE)
 		{
 			vtek_log_error("--> cannot create graphics shader.");
@@ -280,7 +339,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	if (info->tess_eval)
 	{
 		VkShaderModule tess_eval = load_spirv_shader(
-			shaderdir, "tess_eval.spv", "tessellation evaluation", dev);
+			shaderdir, sFilenamesSPIRV[2], "tessellation evaluation", dev);
 		if (tess_eval == VK_NULL_HANDLE)
 		{
 			vtek_log_error("--> cannot create graphics shader.");
@@ -291,7 +350,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	if (info->geometry)
 	{
 		VkShaderModule geometry = load_spirv_shader(
-			shaderdir, "geometry.spv", "geometry", dev);
+			shaderdir, sFilenamesSPIRV[3], "geometry", dev);
 		if (geometry == VK_NULL_HANDLE)
 		{
 			vtek_log_error("--> cannot create graphics shader.");
@@ -302,7 +361,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	if (info->fragment)
 	{
 		VkShaderModule fragment = load_spirv_shader(
-			shaderdir, "fragment.spv", "fragment", dev);
+			shaderdir, sFilenamesSPIRV[4], "fragment", dev);
 		if (fragment == VK_NULL_HANDLE)
 		{
 			vtek_log_error("--> cannot create graphics shader.");
