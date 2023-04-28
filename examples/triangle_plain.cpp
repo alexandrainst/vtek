@@ -157,13 +157,15 @@ int main()
 	// DONE: We use dynamic rendering
 
 	// Shader
-	const char* shaderdirstr = "../shaders/simple_triangle";
+	const char* shaderdirstr = "../shaders/simple_triangle/";
 	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
 	if (shaderdir == nullptr)
 	{
 		log_error("Failed to open shader directory!");
 		return -1;
 	}
+	std::string abs_shaderdir = vtek::directory_get_absolute_path(shaderdir);
+	log_debug("abs_shaderdir: \"{}\".", abs_shaderdir);
 
 	vtek::GraphicsShaderInfo shaderInfo{};
 	shaderInfo.vertex = true;

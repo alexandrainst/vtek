@@ -81,7 +81,7 @@ static fs::path find_executable_directory()
 	try
 	{
 		auto exec_path = fs::canonical("/proc/self/exe");
-		return exec_path.parent_path();
+		return exec_path.parent_path()/""; // Ensure trailing path separator
 	}
 	catch (...)
 	{
@@ -102,7 +102,7 @@ bool vtek::initialize_fileio()
 	sMemoryPool = new MemoryPool();
 
 	sDirLocations = new DirectoryLocations();
-	sDirLocations->workingDirectory = fs::current_path();
+	sDirLocations->workingDirectory = fs::current_path()/"";
 	sDirLocations->executableDirectory = find_executable_directory();
 
 	vtek_log_info("Working directory: {}",
@@ -229,7 +229,9 @@ std::string vtek::directory_get_path(
 
 std::string vtek::directory_get_absolute_path(const vtek::Directory* dir)
 {
-
+	std::error_code ec; // Added so fs::absolute will not throw!
+	auto path = fs::absolute(dir->handle);
+	return path.native(); // Hopefully RVO
 }
 
 std::string vtek::directory_get_absolute_path(
@@ -262,7 +264,7 @@ vtek::File* vtek::file_open(
 	// Mutex-lock the fileio module
 	std::lock_guard<std::mutex> lock(sMemoryPool->m);
 
-	std::error_code ec; // Added so fs::exists will not throw!
+	std::error_code ec; // Added so fs::<...> will not throw!
 
 	// The path exists
 	auto path = dir->handle/filename;

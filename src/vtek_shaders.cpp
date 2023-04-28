@@ -155,10 +155,25 @@ static VkShaderModule load_spirv_shader(
 	return module;
 }
 
-/*
+EShLanguage get_glslang_shader_stage(vtek::ShaderStageGraphics stage)
+{
+	switch (stage)
+	{
+	case vtek::ShaderStageGraphics::vertex:               return EShLangVertex;
+	case vtek::ShaderStageGraphics::tessellation_control: return EShLangTessControl;
+	case vtek::ShaderStageGraphics::tessellation_eval:    return EShLangTessEvaluation;
+	case vtek::ShaderStageGraphics::geometry:             return EShLangGeometry;
+	case vtek::ShaderStageGraphics::fragment:             return EShLangFragment;
+
+	default:
+		vtek_log_error("vtek_shaders.cpp -> get_glslang_shader_stage: Invalid stage!");
+		return static_cast<EShLanguage>(-1);
+	}
+}
+
 static VkShaderModule load_glsl_shader(
 	vtek::Directory* shaderdir, const char* filename, const char* type,
-	VkDevice dev)
+	vtek::ShaderStageGraphics stage, vtek::Device* device)
 {
 	// Open file
 	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::binary;
@@ -185,8 +200,48 @@ static VkShaderModule load_glsl_shader(
 
 	// Search for statements that include other shader files, ie `#include <file>`.
 	// TODO: This could be optimized to run _while_ reading the file into buffer.
+
+
+
+	// NEXT: New, improved usage glslang and proper (recursive) header inclusion!
+	glslang::TShader shader;
+
+	EShLanguage lang = get_glslang_shader_stage(stage);
+	if (lang < 0)
+	{
+		vtek_log_error("--> cannot load GLSL {} shader!", type);
+		return VK_NULL_HANDLE;
+	}
+	// NOTE: Version 100 indicated current branch of GLSL->Vulkan extension:
+	// https://github.com/KhronosGroup/GLSL/blob/master/extensions/khr/GL_KHR_vulkan_glsl.txt
+	const int version = 100;
+	shader.setEnvInput(EShSourceGlsl, lang, EShClientVulkan, version);
+
+	// Get the active Vulkan version of the client process.
+	// NOTE: This is *probably* a good default.
+	const VulkanVersion apiVersion = *(vtek::device_get_vulkan_version(device));
+	EShTargetClientVersion targetApiVersion;
+	switch (apiVersion.minor())
+	{
+	case 3:  targetApiVersion = EShTargetVulkan_1_3; break;
+	case 2:  targetApiVersion = EShTargetVulkan_1_2; break;
+	case 1:  targetApiVersion = EShTargetVulkan_1_1; break;
+	default: targetApiVersion = EShTargetVulkan_1_0; break;
+	}
+	shader.setEnvClient(EShClientVulkan, targetApiVersion);
+
+
+	TBuiltInResource resources;
+
+
+	if (!shader.parse(&resources))
+	{
+		vtek_log_error("Failed to parse shader....");
+		// TODO: Absolutely MUST release resources acquired with glslang!
+		return VK_NULL_HANDLE;
+	}
 }
-*/
+
 
 
 
