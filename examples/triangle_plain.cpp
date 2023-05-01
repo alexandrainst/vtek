@@ -164,14 +164,12 @@ int main()
 		log_error("Failed to open shader directory!");
 		return -1;
 	}
-	std::string abs_shaderdir = vtek::directory_get_absolute_path(shaderdir);
-	log_debug("abs_shaderdir: \"{}\".", abs_shaderdir);
 
 	vtek::GraphicsShaderInfo shaderInfo{};
 	shaderInfo.vertex = true;
 	shaderInfo.fragment = true;
 	vtek::GraphicsShader* shader =
-		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
+		vtek::graphics_shader_load_glsl(&shaderInfo, shaderdir, device);
 	if (shader == nullptr)
 	{
 		log_error("Failed to load graphics shader!");

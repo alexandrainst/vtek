@@ -200,7 +200,6 @@ vtek::Directory* vtek::directory_open(std::string_view path)
 		return nullptr;
 	}
 
-	vtek_log_trace("Opened directory \"{}\"", p.c_str());
 	return &(it->second);
 }
 
@@ -237,8 +236,14 @@ std::string vtek::directory_get_path(
 
 std::string vtek::directory_get_absolute_path(const vtek::Directory* dir)
 {
-	std::error_code ec; // Added so fs::absolute will not throw!
-	auto path = fs::absolute(dir->handle);
+	std::error_code ec; // Added so fs::canonical will not throw!
+	auto path = fs::canonical(dir->handle, ec);
+	if (ec.value() != 0)
+	{
+		vtek_log_error("vtek::directory_get_absolute_path(): {}: {}!",
+		               "fs::canonical failed with error code", ec.value());
+		return "";
+	}
 	return path.native(); // Hopefully RVO
 }
 

@@ -9,6 +9,7 @@
 #include "vtek_device.hpp"
 
 #include "impl/vtek_host_allocator.hpp"
+#include "impl/vtek_init.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_physical_device.hpp"
@@ -625,6 +626,9 @@ vtek::Device* vtek::device_create(
 		createInfo.pNext = &dynRenderInfo;
 	};
 
+	//
+	// NOTE: Dealing with legacy vTek stuff here (So left for future, but out-commented)!
+	//
 	// REVIEW: This should be done when picking physical device, IF at all!
 	// TODO: How best to approach this?
 	// if (info->enableMaintenance1Extension)
@@ -675,6 +679,12 @@ vtek::Device* vtek::device_create(
 
 	// Set features enabled, which is what was _required_ when picking physical device
 	device->enabledFeatures = *(vtek::physical_device_get_required_features(physicalDevice));
+
+	// If GLSL shader loading was enabled, build resource limits for shader compilation
+	if (vtek::is_glsl_shader_loading_enabled())
+	{
+		vtek::build_glslang_resource_limits(physicalDevice);
+	}
 
 	// TODO: Optional info logging that a (logical) device was created.
 	return device;

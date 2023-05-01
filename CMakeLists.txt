@@ -128,7 +128,9 @@ if(VTEK_BUILD_WARNINGS)
   endif()
 endif()
 
-target_link_libraries(vtek LINK_PUBLIC spdlog::spdlog glfw Vulkan::Vulkan glslang::SPIRV)
+target_link_libraries(vtek LINK_PUBLIC
+  spdlog::spdlog glfw Vulkan::Vulkan
+  glslang::glslang glslang::SPIRV glslang::glslang-default-resource-limits)
 
 
 # --------------------------------------------------------------------------------

@@ -46,7 +46,6 @@ namespace vtek
 	VkShaderStageFlagBits get_shader_stage_ray_tracing(ShaderStageRayTracing stage);
 
 
-	// TODO: Wew
 	struct GraphicsShaderInfo
 	{
 		bool vertex {false};

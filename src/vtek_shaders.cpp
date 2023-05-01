@@ -2,6 +2,7 @@
 
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_physical_device.hpp"
 
 #include <forward_list>
 
@@ -9,7 +10,11 @@
 #include <spirv_reflect.h>
 
 // External dependency: glslang for generating SPIR-V bytecode from GLSL.
-//#include <glslang/Include/glslang_c_interface.h>
+// NOTE: We may use the default resource limits, IFF we compile for OpenGL ES.
+// --> in practice, this means never! Has two functions though:
+// - GetResources() : TBuiltInResource*
+// - GetDefaultResources() :TBuiltInResource*
+#include <glslang/Public/ResourceLimits.h>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
 
@@ -58,6 +63,142 @@ void vtek::terminate_glsl_shader_loading()
 {
 	vtek_log_trace("terminate_glsl_shader_loading()");
 	glslang::FinalizeProcess();
+}
+
+
+
+void vtek::build_glslang_resource_limits(const vtek::PhysicalDevice* physicalDevice)
+{
+	vtek_log_debug("vtek::build_glslang_resource_limits");
+
+	// This is read/write global memory inside the glslang library, which has
+	// been loaded (hopefully) prior to calling this function. The parameters
+	// are modified here once, and then reused for each subsequent call to
+	// `graphics_shader_load_glsl`.
+	TBuiltInResource* res = GetResources();
+
+	// Before doing anything, we overwrite by the default values.
+	*res = *GetDefaultResources();
+
+	// Read values from `VkPhysicalDeviceLimits` obtained from the selected
+	// physical device, and copy the relevant fields over. This will 'program'
+	// glslang to compile GLSL shaders to SPIR-V correctly observing the limits
+	// of the actual target GPU instead of the default limits which are very
+	// conservative.
+	auto properties = vtek::physical_device_get_properties(physicalDevice);
+	const VkPhysicalDeviceLimits* limits = &properties->limits;
+
+    // res->maxLights;
+    // res->maxClipPlanes;
+    // res->maxTextureUnits;
+    // res->maxTextureCoords;
+    // res->maxVertexAttribs;
+    // res->maxVertexUniformComponents;
+    // res->maxVaryingFloats;
+    // res->maxVertexTextureImageUnits;
+    // res->maxCombinedTextureImageUnits;
+    // res->maxTextureImageUnits;
+    // res->maxFragmentUniformComponents;
+    // res->maxDrawBuffers;
+    // res->maxVertexUniformVectors;
+    // res->maxVaryingVectors;
+    // res->maxFragmentUniformVectors;
+    // res->maxVertexOutputVectors;
+    // res->maxFragmentInputVectors;
+    // res->minProgramTexelOffset;
+    // res->maxProgramTexelOffset;
+    // res->maxClipDistances;
+
+    res->maxComputeWorkGroupCountX = limits->maxComputeWorkGroupCount[0];
+    res->maxComputeWorkGroupCountY = limits->maxComputeWorkGroupCount[1];
+    res->maxComputeWorkGroupCountZ = limits->maxComputeWorkGroupCount[2];
+    res->maxComputeWorkGroupSizeX = limits->maxComputeWorkGroupSize[0];
+    res->maxComputeWorkGroupSizeY = limits->maxComputeWorkGroupSize[1];
+    res->maxComputeWorkGroupSizeZ = limits->maxComputeWorkGroupSize[2];
+
+    // res->maxComputeUniformComponents;
+    // res->maxComputeTextureImageUnits;
+    // res->maxComputeImageUniforms;
+    // res->maxComputeAtomicCounters;
+    // res->maxComputeAtomicCounterBuffers;
+    // res->maxVaryingComponents;
+    // res->maxVertexOutputComponents;
+    // res->maxGeometryInputComponents;
+    // res->maxGeometryOutputComponents;
+    // res->maxFragmentInputComponents;
+    // res->maxImageUnits;
+    // res->maxCombinedImageUnitsAndFragmentOutputs;
+    // res->maxCombinedShaderOutputResources;
+    // res->maxImageSamples;
+    // res->maxVertexImageUniforms;
+    // res->maxTessControlImageUniforms;
+    // res->maxTessEvaluationImageUniforms;
+    // res->maxGeometryImageUniforms;
+    // res->maxFragmentImageUniforms;
+    // res->maxCombinedImageUniforms;
+    // res->maxGeometryTextureImageUnits;
+    // res->maxGeometryOutputVertices;
+    // res->maxGeometryTotalOutputComponents;
+    // res->maxGeometryUniformComponents;
+    // res->maxGeometryVaryingComponents;
+
+    res->maxTessControlInputComponents =
+	    limits->maxTessellationControlPerVertexInputComponents;
+    res->maxTessControlOutputComponents =
+	    limits->maxTessellationControlPerVertexOutputComponents;
+    // res->maxTessControlTextureImageUnits;
+    // res->maxTessControlUniformComponents;
+    res->maxTessControlTotalOutputComponents =
+	    limits->maxTessellationControlTotalOutputComponents;
+    res->maxTessEvaluationInputComponents =
+	    limits->maxTessellationEvaluationInputComponents;
+    res->maxTessEvaluationOutputComponents =
+	    limits->maxTessellationEvaluationOutputComponents;
+    // res->maxTessEvaluationTextureImageUnits;
+    // res->maxTessEvaluationUniformComponents;
+    // res->maxTessPatchComponents;
+
+    // res->maxPatchVertices;
+    // res->maxTessGenLevel;
+    // res->maxViewports = limits->maxViewports;
+    // res->maxVertexAtomicCounters;
+    // res->maxTessControlAtomicCounters;
+    // res->maxTessEvaluationAtomicCounters;
+    // res->maxGeometryAtomicCounters;
+    // res->maxFragmentAtomicCounters;
+    // res->maxCombinedAtomicCounters;
+    // res->maxAtomicCounterBindings;
+    // res->maxVertexAtomicCounterBuffers;
+    // res->maxTessControlAtomicCounterBuffers;
+    // res->maxTessEvaluationAtomicCounterBuffers;
+    // res->maxGeometryAtomicCounterBuffers;
+    // res->maxFragmentAtomicCounterBuffers;
+    // res->maxCombinedAtomicCounterBuffers;
+    // res->maxAtomicCounterBufferSize;
+    // res->maxTransformFeedbackBuffers;
+    // res->maxTransformFeedbackInterleavedComponents;
+    // res->maxCullDistances;
+    // res->maxCombinedClipAndCullDistances;
+    // res->maxSamples;
+    // res->maxMeshOutputVerticesNV;
+    // res->maxMeshOutputPrimitivesNV;
+    // res->maxMeshWorkGroupSizeX_NV;
+    // res->maxMeshWorkGroupSizeY_NV;
+    // res->maxMeshWorkGroupSizeZ_NV;
+    // res->maxTaskWorkGroupSizeX_NV;
+    // res->maxTaskWorkGroupSizeY_NV;
+    // res->maxTaskWorkGroupSizeZ_NV;
+    // res->maxMeshViewCountNV;
+    // res->maxMeshOutputVerticesEXT;
+    // res->maxMeshOutputPrimitivesEXT;
+    // res->maxMeshWorkGroupSizeX_EXT;
+    // res->maxMeshWorkGroupSizeY_EXT;
+    // res->maxMeshWorkGroupSizeZ_EXT;
+    // res->maxTaskWorkGroupSizeX_EXT;
+    // res->maxTaskWorkGroupSizeY_EXT;
+    // res->maxTaskWorkGroupSizeZ_EXT;
+    // res->maxMeshViewCountEXT;
+    // res->maxDualSourceDrawBuffersEXT;
 }
 
 
@@ -276,12 +417,12 @@ static VkShaderModule load_glsl_shader(
 	shader.setEnvTarget(glslang::EshTargetSpv, spirvVersion);
 
 	// TODO: Probably need a mapper from physical device limits to glslang resource limits!
-	TBuiltInResource resources;
+	TBuiltInResource* resources = GetResources();
 	// int defaultVersion = 110, // use 100 for ES environment, overridden by #version in shader
 	const int defaultVersion = 450;
 	const bool forwardCompatible = false;
 	const EShMessages messageFlags = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
-	if (!shader.parse(&resources, defaultVersion, forwardCompatible, messageFlags, includer))
+	if (!shader.parse(resources, defaultVersion, forwardCompatible, messageFlags, includer))
 	{
 		vtek_log_error("Failed to parse shader: {}", shader.getInfoLog());
 		// TODO: Absolutely MUST release resources acquired with glslang!
@@ -304,6 +445,11 @@ static VkShaderModule load_glsl_shader(
 	// Convert the intermediate generated by glslang to Spir-V
 	glslang::TIntermediate& intermediateRef = *(shader.getIntermediate());
 	std::vector<uint32_t> spirv;
+	// glslang::SpvOptions options{};
+	// options.validate = true;
+	// TODO: We can also provide a logger to glslang! NOICE:
+	// glslang::spv::SpvBuildLogger logger; ---> then:
+	// glslang::GlslangToSpv(intermediateRef, spirv, &logger, &options);
 	glslang::GlslangToSpv(intermediateRef, spirv);
 
 	// Create shader module

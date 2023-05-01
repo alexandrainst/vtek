@@ -20,6 +20,14 @@ static Context sContext = {};
 
 
 
+/* useful stuff */
+bool vtek::is_glsl_shader_loading_enabled()
+{
+	return sContext.useLoadShadersFromGLSL;
+}
+
+
+
 /* interface */
 bool vtek::initialize(const vtek::InitInfo* info)
 {
