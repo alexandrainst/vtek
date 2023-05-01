@@ -3,12 +3,21 @@
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 
+#include <forward_list>
+
 // External dependency: Spirv-reflect, to extract descriptor bindings from SPIR-V bytecode.
 #include <spirv_reflect.h>
 
 // External dependency: glslang for generating SPIR-V bytecode from GLSL.
 //#include <glslang/Include/glslang_c_interface.h>
 #include <glslang/Public/ShaderLang.h>
+#include <glslang/SPIRV/GlslangToSpv.h>
+
+
+/* shorthand type aliases */
+using SStage = vtek::ShaderStage;
+using SSGraphics = vtek::ShaderStageGraphics;
+using SSRayTrace = vtek::ShaderStageRayTracing;
 
 
 /* struct implementation */
@@ -153,17 +162,19 @@ static VkShaderModule load_spirv_shader(
 	}
 
 	return module;
+
+	// NEXT: Reflection queries...
 }
 
-EShLanguage get_glslang_shader_stage(vtek::ShaderStageGraphics stage)
+static EShLanguage get_glslang_shader_stage(SSGraphics stage)
 {
 	switch (stage)
 	{
-	case vtek::ShaderStageGraphics::vertex:               return EShLangVertex;
-	case vtek::ShaderStageGraphics::tessellation_control: return EShLangTessControl;
-	case vtek::ShaderStageGraphics::tessellation_eval:    return EShLangTessEvaluation;
-	case vtek::ShaderStageGraphics::geometry:             return EShLangGeometry;
-	case vtek::ShaderStageGraphics::fragment:             return EShLangFragment;
+	case SSGraphics::vertex:               return EShLangVertex;
+	case SSGraphics::tessellation_control: return EShLangTessControl;
+	case SSGraphics::tessellation_eval:    return EShLangTessEvaluation;
+	case SSGraphics::geometry:             return EShLangGeometry;
+	case SSGraphics::fragment:             return EShLangFragment;
 
 	default:
 		vtek_log_error("vtek_shaders.cpp -> get_glslang_shader_stage: Invalid stage!");
@@ -173,8 +184,10 @@ EShLanguage get_glslang_shader_stage(vtek::ShaderStageGraphics stage)
 
 static VkShaderModule load_glsl_shader(
 	vtek::Directory* shaderdir, const char* filename, const char* type,
-	vtek::ShaderStageGraphics stage, vtek::Device* device)
+	SSGraphics stage, vtek::Device* device)
 {
+	VkDevice dev = vtek::device_get_handle(device);
+
 	// Open file
 	auto flags = vtek::FileModeFlag::read | vtek::FileModeFlag::binary;
 	vtek::File* file = vtek::file_open(shaderdir, filename, flags);
@@ -184,13 +197,21 @@ static VkShaderModule load_glsl_shader(
 		return VK_NULL_HANDLE;
 	}
 
-	// Read file line by line, necessary to check for shader inclusions
-	std::vector<char&> accumBuffer;
-	accumBuffer.resize()
+	// TODO: Read file line by line, necessary to check for shader inclusions
+	// std::vector<char> accumBuffer;
+	// accumBuffer.resize();
+	// std::vector<char> buffer;
+	// bool read = vtek::file_read_into_buffer(file, accumBuffer);
+	// vtek::file_close(file);
+	// if (!read)
+	// {
+	// 	vtek_log_error("Failed to read {} shader file!", type);
+	// 	return VK_NULL_HANDLE;
+	// }
 
 	// Read file into buffer
 	std::vector<char> buffer;
-	bool read = vtek::file_read_into_buffer(file, accumBuffer);
+	bool read = vtek::file_read_into_buffer(file, buffer);
 	vtek::file_close(file);
 	if (!read)
 	{
@@ -202,143 +223,141 @@ static VkShaderModule load_glsl_shader(
 	// TODO: This could be optimized to run _while_ reading the file into buffer.
 
 
-
-
-
-
-
-
-
 	// TODO: I might just concur and use the C API, as it seems much more simple:
 	// https://github.com/KhronosGroup/glslang/tree/main#c-functional-interface-new
 
 
-
-
-
-
-
-
-
-
 	// NEXT: New, improved usage glslang and proper (recursive) header inclusion!
-	glslang::TShader shader;
-
 	EShLanguage lang = get_glslang_shader_stage(stage);
 	if (lang < 0)
 	{
 		vtek_log_error("--> cannot load GLSL {} shader!", type);
 		return VK_NULL_HANDLE;
 	}
+	glslang::TShader shader(lang);
+
+	// TODO: We need an includer for recursive shader inclusion
+	glslang::TShader::ForbidIncluder includer;
+
+	// TODO: Adding sources to the shader
+	std::forward_list<const char*> shaderStringsList;
+	shaderStringsList.push_front(buffer.data());
+
+	std::vector<const char*> shaderStrings;
+	for (const char* str : shaderStringsList)
+	{
+		shaderStrings.push_back(str);
+	}
+	shader.setStrings(shaderStrings.data(), shaderStrings.size());
+
+
+
 	// NOTE: Version 100 indicated current branch of GLSL->Vulkan extension:
 	// https://github.com/KhronosGroup/GLSL/blob/master/extensions/khr/GL_KHR_vulkan_glsl.txt
 	const int version = 100;
-	shader.setEnvInput(EShSourceGlsl, lang, EShClientVulkan, version);
+	shader.setEnvInput(glslang::EShSourceGlsl, lang, glslang::EShClientVulkan, version);
 
 	// Get the active Vulkan version of the client process.
 	// NOTE: This is *probably* a good default.
-	const VulkanVersion apiVersion = *(vtek::device_get_vulkan_version(device));
-	EShTargetClientVersion targetApiVersion;
+	const vtek::VulkanVersion apiVersion = *(vtek::device_get_vulkan_version(device));
+	glslang::EShTargetClientVersion targetApiVersion;
 	switch (apiVersion.minor())
 	{
-	case 3:  targetApiVersion = EShTargetVulkan_1_3; break;
-	case 2:  targetApiVersion = EShTargetVulkan_1_2; break;
-	case 1:  targetApiVersion = EShTargetVulkan_1_1; break;
-	default: targetApiVersion = EShTargetVulkan_1_0; break;
+	case 3:  targetApiVersion = glslang::EShTargetVulkan_1_3; break;
+	case 2:  targetApiVersion = glslang::EShTargetVulkan_1_2; break;
+	case 1:  targetApiVersion = glslang::EShTargetVulkan_1_1; break;
+	default: targetApiVersion = glslang::EShTargetVulkan_1_0; break;
 	}
-	shader.setEnvClient(EShClientVulkan, targetApiVersion);
+	shader.setEnvClient(glslang::EShClientVulkan, targetApiVersion);
 
 	// NOTE: Ray tracing shaders REQUIRED SPIR-V 1.4!
-	EShTargetLanguageVersion spirvVersion = EShTargetSpv_1_3;
-	shader.setEnvTarget(EshTargetSpv, spirvVersion);
-
-	// TODO: We need an includer for recursive shader inclusion
-	glslang::TShader::Includer includer;
+	// TODO: If ray tracing extension is enabled, require SPIR-V 1.4!
+	glslang::EShTargetLanguageVersion spirvVersion = glslang::EShTargetSpv_1_3;
+	shader.setEnvTarget(glslang::EshTargetSpv, spirvVersion);
 
 	// TODO: Probably need a mapper from physical device limits to glslang resource limits!
 	TBuiltInResource resources;
-	const int defaultVersion = 0; // TODO: WTF int defaultVersion ?? !!!
+	// int defaultVersion = 110, // use 100 for ES environment, overridden by #version in shader
+	const int defaultVersion = 450;
 	const bool forwardCompatible = false;
-	EShMessages messageFlags = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+	const EShMessages messageFlags = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 	if (!shader.parse(&resources, defaultVersion, forwardCompatible, messageFlags, includer))
 	{
-		vtek_log_error("Failed to parse shader....");
+		vtek_log_error("Failed to parse shader: {}", shader.getInfoLog());
 		// TODO: Absolutely MUST release resources acquired with glslang!
 		return VK_NULL_HANDLE;
 	}
-
-	// TODO: Do we log on error?
-	const char* shaderInfoLog = shader.getInfoLog();
 
 
 	// NEXT: Now we probably link the shader to create a program
 
+	// TODO: Do we really need to create program and link?? We are doing 1 shader at a time!
 	glslang::TProgram program;
 	program.addShader(&shader);
-	if (!program.link())
+	if (!program.link(messageFlags))
 	{
-		vtek_log_error("Failed to link shader....");
+		vtek_log_error("Failed to link shader: {}", program.getInfoLog());
 		// TODO: Absolutely MUST release resources acquired with glslang!
 		return VK_NULL_HANDLE;
 	}
 
-	// TODO: Do we log on error?
-	const char* programInfoLog = program.getInfoLog();
+	// Convert the intermediate generated by glslang to Spir-V
+	glslang::TIntermediate& intermediateRef = *(shader.getIntermediate());
+	std::vector<uint32_t> spirv;
+	glslang::GlslangToSpv(intermediateRef, spirv);
+
+	// Create shader module
+	VkShaderModule module;
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = spirv.size();
+	createInfo.pCode = spirv.data();
+	VkResult result = vkCreateShaderModule(dev, &createInfo, nullptr, &module);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create {} shader module!", type);
+		return VK_NULL_HANDLE;
+	}
+
+	return module;
 
 	// NEXT: Reflection queries...
-
 }
 
 
 
 
 /* interface */
-VkShaderStageFlagBits vtek::get_shader_stage(vtek::ShaderStage stage)
+VkShaderStageFlagBits vtek::get_shader_stage(SStage stage)
 {
 	switch (stage)
 	{
-	case vtek::ShaderStage::vertex:
-		return VK_SHADER_STAGE_VERTEX_BIT;
-	case vtek::ShaderStage::tessellation_control:
-		return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-	case vtek::ShaderStage::tessellation_eval:
-		return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-	case vtek::ShaderStage::geometry:
-		return VK_SHADER_STAGE_GEOMETRY_BIT;
-	case vtek::ShaderStage::fragment:
-		return VK_SHADER_STAGE_FRAGMENT_BIT;
-	case vtek::ShaderStage::compute:
-		return VK_SHADER_STAGE_COMPUTE_BIT;
+	case SStage::vertex:               return VK_SHADER_STAGE_VERTEX_BIT;
+	case SStage::tessellation_control: return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+	case SStage::tessellation_eval:    return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+	case SStage::geometry:             return VK_SHADER_STAGE_GEOMETRY_BIT;
+	case SStage::fragment:             return VK_SHADER_STAGE_FRAGMENT_BIT;
+	case SStage::compute:              return VK_SHADER_STAGE_COMPUTE_BIT;
 
 	// NOTE: Making sure code compiles on platforms without these extensions.
 	// TODO: Check that these are accessible on platforms where extensions ARE present!
 	// Provided by VK_KHR_ray_tracing_pipeline
 #if defined(VK_VERSION_1_1) && defined(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
-	case vtek::ShaderStage::raygen:
-		return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-	case vtek::ShaderStage::any_hit:
-		return VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
-	case vtek::ShaderStage::closest_hit:
-		return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-	case vtek::ShaderStage::miss:
-		return VK_SHADER_STAGE_MISS_BIT_KHR;
-	case vtek::ShaderStage::intersection:
-		return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
-	case vtek::ShaderStage::callable:
-		return VK_SHADER_STAGE_CALLABLE_BIT_KHR;
+	case SStage::raygen:       return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+	case SStage::any_hit:      return VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+	case SStage::closest_hit:  return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	case SStage::miss:         return VK_SHADER_STAGE_MISS_BIT_KHR;
+	case SStage::intersection: return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+	case SStage::callable:     return VK_SHADER_STAGE_CALLABLE_BIT_KHR;
 #endif
 
 	// Provided by VK_EXT_mesh_shader
 #if defined(VK_VERSION_1_1) && defined(VK_EXT_MESH_SHADER_EXTENSION_NAME)
-	case vtek::ShaderStage::task:
-		return VK_SHADER_STAGE_TASK_BIT_EXT;
-	case vtek::ShaderStage::mesh:
-		return VK_SHADER_STAGE_MESH_BIT_EXT;
+	case SStage::task:         return VK_SHADER_STAGE_TASK_BIT_EXT;
+	case SStage::mesh:         return VK_SHADER_STAGE_MESH_BIT_EXT;
 
-	case vtek::ShaderStage::all_graphics:
-		return VK_SHADER_STAGE_ALL_GRAPHICS;
-	case vtek::ShaderStage::all:
-		return VK_SHADER_STAGE_ALL;
+	case SStage::all_graphics: return VK_SHADER_STAGE_ALL_GRAPHICS;
+	case SStage::all:          return VK_SHADER_STAGE_ALL;
 #endif
 
 	default:
@@ -347,20 +366,15 @@ VkShaderStageFlagBits vtek::get_shader_stage(vtek::ShaderStage stage)
 	}
 }
 
-VkShaderStageFlagBits vtek::get_shader_stage_graphics(vtek::ShaderStageGraphics stage)
+VkShaderStageFlagBits vtek::get_shader_stage_graphics(SSGraphics stage)
 {
 	switch (stage)
 	{
-	case vtek::ShaderStageGraphics::vertex:
-		return VK_SHADER_STAGE_VERTEX_BIT;
-	case vtek::ShaderStageGraphics::tessellation_control:
-		return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-	case vtek::ShaderStageGraphics::tessellation_eval:
-		return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-	case vtek::ShaderStageGraphics::geometry:
-		return VK_SHADER_STAGE_GEOMETRY_BIT;
-	case vtek::ShaderStageGraphics::fragment:
-		return VK_SHADER_STAGE_FRAGMENT_BIT;
+	case SSGraphics::vertex:               return VK_SHADER_STAGE_VERTEX_BIT;
+	case SSGraphics::tessellation_control: return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+	case SSGraphics::tessellation_eval:    return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+	case SSGraphics::geometry:             return VK_SHADER_STAGE_GEOMETRY_BIT;
+	case SSGraphics::fragment:             return VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	default:
 		vtek_log_error("vtek::get_shader_stage_graphics: Invalid stage!");
@@ -368,22 +382,16 @@ VkShaderStageFlagBits vtek::get_shader_stage_graphics(vtek::ShaderStageGraphics 
 	}
 }
 
-VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(vtek::ShaderStageRayTracing stage)
+VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(SSRayTrace stage)
 {
 	switch (stage)
 	{
-	case vtek::ShaderStageRayTracing::raygen:
-		return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-	case vtek::ShaderStageRayTracing::any_hit:
-		return VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
-	case vtek::ShaderStageRayTracing::closest_hit:
-		return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-	case vtek::ShaderStageRayTracing::miss:
-		return VK_SHADER_STAGE_MISS_BIT_KHR;
-	case vtek::ShaderStageRayTracing::intersection:
-		return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
-	case vtek::ShaderStageRayTracing::callable:
-		return VK_SHADER_STAGE_CALLABLE_BIT_KHR;
+	case SSRayTrace::raygen:       return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+	case SSRayTrace::any_hit:      return VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+	case SSRayTrace::closest_hit:  return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	case SSRayTrace::miss:         return VK_SHADER_STAGE_MISS_BIT_KHR;
+	case SSRayTrace::intersection: return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+	case SSRayTrace::callable:     return VK_SHADER_STAGE_CALLABLE_BIT_KHR;
 
 	default:
 		vtek_log_error("vtek::get_shader_stage_ray_tracing: Invalid stage!");
@@ -407,7 +415,108 @@ vtek::GraphicsShader* vtek::graphics_shader_load_glsl(
 		return nullptr;
 	}
 
+	VkDevice dev = vtek::device_get_handle(device);
+	std::vector<vtek::GraphicsShaderModule> modules;
 
+	// NOTE: Both geometry and tessellation shaders required physical device
+	// features be enabled!
+	const VkPhysicalDeviceFeatures* physDevFeatures =
+		vtek::device_get_enabled_features(device);
+
+	if (info->vertex)
+	{
+		VkShaderModule vertex = load_glsl_shader(
+			shaderdir, sFilenamesGLSL[0], "vertex", SSGraphics::vertex, device);
+		if (vertex == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({ SSGraphics::vertex, vertex });
+	}
+	if (info->tess_control)
+	{
+		if (physDevFeatures->tessellationShader == VK_FALSE)
+		{
+			vtek_log_error(
+				"Tessellation shader features was not enabled during device creation!");
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+
+		VkShaderModule tess_control = load_glsl_shader(
+			shaderdir, sFilenamesGLSL[1], "tessellation control",
+			SSGraphics::tessellation_control, device);
+		if (tess_control == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({ SSGraphics::tessellation_control, tess_control });
+	}
+	if (info->tess_eval)
+	{
+		if (physDevFeatures->tessellationShader == VK_FALSE)
+		{
+			vtek_log_error(
+				"Tessellation shader features was not enabled during device creation!");
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+
+		VkShaderModule tess_eval = load_glsl_shader(
+			shaderdir, sFilenamesGLSL[2], "tessellation evaluation",
+			SSGraphics::tessellation_eval, device);
+		if (tess_eval == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({ SSGraphics::tessellation_eval, tess_eval });
+	}
+	if (info->geometry)
+	{
+		if (physDevFeatures->geometryShader == VK_FALSE)
+		{
+			vtek_log_error(
+				"Geometry shader features was not enabled during device creation!");
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+
+		VkShaderModule geometry = load_glsl_shader(
+			shaderdir, sFilenamesGLSL[3], "geometry", SSGraphics::geometry, device);
+		if (geometry == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({ SSGraphics::geometry, geometry });
+	}
+	if (info->fragment)
+	{
+		VkShaderModule fragment = load_glsl_shader(
+			shaderdir, sFilenamesGLSL[4], "fragment", SSGraphics::fragment, device);
+		if (fragment == VK_NULL_HANDLE)
+		{
+			vtek_log_error("--> cannot create graphics shader.");
+			return nullptr;
+		}
+		modules.push_back({ SSGraphics::fragment, fragment });
+	}
+
+	// TODO: Do better through a centralized allocation mechanism
+	auto shader = new vtek::GraphicsShader();
+	shader->modules.swap(modules);
+
+	// TODO: CreateDescriptorSetLayout
+	// VkDescriptorSetAllocateInfo
+	// TODO: Create descriptor pool!
+
+	vtek_log_info("Loaded SPIR-V shader(s) from directory \"{}\".",
+	              vtek::directory_get_path(shaderdir));
+
+	return shader;
 }
 
 vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
@@ -425,7 +534,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 	VkDevice dev = vtek::device_get_handle(device);
 	std::vector<vtek::GraphicsShaderModule> modules;
 
-	// TODO: Both geometry and tessellation shaders required physical device
+	// NOTE: Both geometry and tessellation shaders required physical device
 	// features be enabled!
 	const VkPhysicalDeviceFeatures* physDevFeatures =
 		vtek::device_get_enabled_features(device);
@@ -439,7 +548,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 			vtek_log_error("--> cannot create graphics shader.");
 			return nullptr;
 		}
-		modules.push_back({ vtek::ShaderStageGraphics::vertex, vertex });
+		modules.push_back({ SSGraphics::vertex, vertex });
 	}
 	if (info->tess_control)
 	{
@@ -458,7 +567,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 			vtek_log_error("--> cannot create graphics shader.");
 			return nullptr;
 		}
-		modules.push_back({vtek::ShaderStageGraphics::tessellation_control, tess_control});
+		modules.push_back({ SSGraphics::tessellation_control, tess_control });
 	}
 	if (info->tess_eval)
 	{
@@ -477,7 +586,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 			vtek_log_error("--> cannot create graphics shader.");
 			return nullptr;
 		}
-		modules.push_back({vtek::ShaderStageGraphics::tessellation_eval, tess_eval});
+		modules.push_back({ SSGraphics::tessellation_eval, tess_eval });
 	}
 	if (info->geometry)
 	{
@@ -496,7 +605,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 			vtek_log_error("--> cannot create graphics shader.");
 			return nullptr;
 		}
-		modules.push_back({ vtek::ShaderStageGraphics::geometry, geometry });
+		modules.push_back({ SSGraphics::geometry, geometry });
 	}
 	if (info->fragment)
 	{
@@ -507,7 +616,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_spirv(
 			vtek_log_error("--> cannot create graphics shader.");
 			return nullptr;
 		}
-		modules.push_back({ vtek::ShaderStageGraphics::fragment, fragment });
+		modules.push_back({ SSGraphics::fragment, fragment });
 	}
 
 	// TODO: Do better through a centralized allocation mechanism

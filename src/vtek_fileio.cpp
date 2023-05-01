@@ -81,7 +81,7 @@ static fs::path find_executable_directory()
 	try
 	{
 		auto exec_path = fs::canonical("/proc/self/exe");
-		return exec_path.parent_path()/""; // Ensure trailing path separator
+		return exec_path.parent_path();
 	}
 	catch (...)
 	{
@@ -102,7 +102,7 @@ bool vtek::initialize_fileio()
 	sMemoryPool = new MemoryPool();
 
 	sDirLocations = new DirectoryLocations();
-	sDirLocations->workingDirectory = fs::current_path()/"";
+	sDirLocations->workingDirectory = fs::current_path();
 	sDirLocations->executableDirectory = find_executable_directory();
 
 	vtek_log_info("Working directory: {}",
@@ -174,7 +174,13 @@ char vtek::get_path_separator()
 
 vtek::Directory* vtek::directory_open(std::string_view path)
 {
-	auto p = fs::path(path)/""; // Ensure trailing path separator, better logging
+	if (path.ends_with(fs::path::preferred_separator))
+	{
+		vtek_log_debug("Ends with trailing separator");
+		path.remove_suffix(1);
+	}
+
+	auto p = fs::path(path);
 	if (!fs::exists(p))
 	{
 		vtek_log_error("Cannot open non-existing directory \"{}\"!", path);
