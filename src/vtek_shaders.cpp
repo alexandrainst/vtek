@@ -415,7 +415,6 @@ vtek::GraphicsShader* vtek::graphics_shader_load_glsl(
 		return nullptr;
 	}
 
-	VkDevice dev = vtek::device_get_handle(device);
 	std::vector<vtek::GraphicsShaderModule> modules;
 
 	// NOTE: Both geometry and tessellation shaders required physical device

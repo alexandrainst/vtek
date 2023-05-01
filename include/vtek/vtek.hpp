@@ -31,5 +31,6 @@
 #include "vtek_queue.hpp"
 #include "vtek_render_pass.hpp"
 #include "vtek_physical_device.hpp"
+#include "vtek_shaders.hpp"
 #include "vtek_submit_info.hpp"
 #include "vtek_swapchain.hpp"

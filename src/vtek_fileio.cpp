@@ -105,10 +105,12 @@ bool vtek::initialize_fileio()
 	sDirLocations->workingDirectory = fs::current_path();
 	sDirLocations->executableDirectory = find_executable_directory();
 
-	vtek_log_info("Working directory: {}",
-	              sDirLocations->workingDirectory.c_str());
-	vtek_log_info("Executable directory: {}",
-	              sDirLocations->executableDirectory.c_str());
+	vtek_log_info("Working directory: {}{}",
+	              sDirLocations->workingDirectory.c_str(),
+	              fs::path::preferred_separator);
+	vtek_log_info("Executable directory: {}{}",
+	              sDirLocations->executableDirectory.c_str(),
+	              fs::path::preferred_separator);
 
 	return true;
 }
@@ -174,9 +176,9 @@ char vtek::get_path_separator()
 
 vtek::Directory* vtek::directory_open(std::string_view path)
 {
+	// If path ends with a trailing separator, remove it
 	if (path.ends_with(fs::path::preferred_separator))
 	{
-		vtek_log_debug("Ends with trailing separator");
 		path.remove_suffix(1);
 	}
 

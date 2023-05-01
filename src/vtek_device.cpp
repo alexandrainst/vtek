@@ -673,6 +673,9 @@ vtek::Device* vtek::device_create(
 	// Set extensions as enabled
 	set_extensions_enabled(device, physicalDevice);
 
+	// Set features enabled, which is what was _required_ when picking physical device
+	device->enabledFeatures = *(vtek::physical_device_get_required_features(physicalDevice));
+
 	// TODO: Optional info logging that a (logical) device was created.
 	return device;
 }
@@ -718,6 +721,11 @@ const vtek::VulkanVersion* vtek::device_get_vulkan_version(const vtek::Device* d
 const vtek::DeviceExtensions* vtek::device_get_enabled_extensions(const vtek::Device* device)
 {
 	return &device->enabledExtensions;
+}
+
+const VkPhysicalDeviceFeatures* vtek::device_get_enabled_features(const vtek::Device* device)
+{
+	return &device->enabledFeatures;
 }
 
 vtek::Queue* vtek::device_get_graphics_queue(vtek::Device* device)
