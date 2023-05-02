@@ -242,6 +242,7 @@ int main()
 	}
 
 	// Command buffer recording
+	VkPipeline pipl = vtek::graphics_pipeline_get_handle(graphicsPipeline);
 	for (uint32_t i = 0; i < commandBufferCount; i++)
 	{
 		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
@@ -268,6 +269,7 @@ int main()
 				.layerCount = 1
 			}
 		};
+		// TODO: Also use barrier for depth/stencil image!
 
 		vkCmdPipelineBarrier(
 			cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -280,7 +282,7 @@ int main()
 			.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-			.clearValue = { .color = { .float32 = {1.0f, 0.0f, 0.0f, 1.0f} } },
+			.clearValue = { .color = { .float32 = {0.3f, 0.3f, 0.3f, 1.0f} } },
 		};
 
 		VkRenderingInfo renderingInfo{
@@ -288,13 +290,22 @@ int main()
 			.renderArea = { .offset = {0U, 0U}, .extent = {width, height} },
 			.layerCount = 1,
 			.colorAttachmentCount = 1,
-			.pColorAttachments = &colorAttachmentInfo
+			.pColorAttachments = &colorAttachmentInfo,
+			// NOTE: // A single depth stencil attachment info can be used, but
+			// they can also be specified separately. When both are specified
+			// separately, the only requirement is that the image view is identical.
+			// .pDepthAttachment = &depthStencilAttachmentInfo,
+			// .pStencilAttachment = &depthStencilAttachmentInfo
 		};
 		vkCmdBeginRendering(cmdBuf, &renderingInfo);
 
+		// TODO: Do we need a descriptor set here? Perhaps Vandervoorde knows.
+		// vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, ...);
+		vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
+
 		// draw calls here
-		// TODO: Can we do this without a bound vertex buffer?
-		// vkCmdDraw(cmdBuf, ...)
+		// TODO: Can we do this without a bound vertex buffer? Vandervoorde knows.
+		vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 
 		// End dynamic rendering
 		vkCmdEndRendering(cmdBuf);
@@ -314,6 +325,7 @@ int main()
 			.baseArrayLayer = 0,
 			.layerCount = 1
 		};
+		// TODO: Also use barrier for depth/stencil image!
 
 		vkCmdPipelineBarrier(
 			cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,

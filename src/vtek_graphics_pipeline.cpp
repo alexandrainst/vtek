@@ -269,10 +269,10 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 
 	VkPipelineVertexInputStateCreateInfo vertexInfo{};
 	vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInfo.vertexBindingDescriptionCount = 1; // ??
-	vertexInfo.pVertexBindingDescriptions = &bindingDesc;
-	vertexInfo.vertexAttributeDescriptionCount = attributeDesc.size();
-	vertexInfo.pVertexAttributeDescriptions = attributeDesc.data();
+	vertexInfo.vertexBindingDescriptionCount = 0; // 1
+	vertexInfo.pVertexBindingDescriptions = nullptr; //&bindingDesc;
+	vertexInfo.vertexAttributeDescriptionCount = 0; //attributeDesc.size();
+	vertexInfo.pVertexAttributeDescriptions = nullptr; //attributeDesc.data();
 
 	// ====================== //
 	// === Input assembly === //
