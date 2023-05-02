@@ -217,6 +217,7 @@ bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
 	// VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT:
 	//  - Specifies that the command buffer can be resubmitted to a queue while in
 	//    pending state, and recorded into multiple primary command buffers.
+	// TODO: Add support for these flags?
 	info.flags = 0;
 	info.pInheritanceInfo = nullptr;
 

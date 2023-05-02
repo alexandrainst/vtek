@@ -13,6 +13,7 @@
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_physical_device.hpp"
+#include "vtek_vulkan_version.hpp"
 
 
 /* queue implementation */
@@ -637,6 +638,13 @@ vtek::Device* vtek::device_create(
 	// 	enabledDeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
 	// }
 
+	// NOTE: We can check available Vulkan version, for features and extension:
+	// 1) Figure out what the Vulkan instance was created with (highest available!)
+	// 2) Figure out what the physical device supports
+	// 3) Choose the minimum of these two numbers (TODO: is that a good idea?)
+	// TODO: Get instance version and compare!
+	auto physDevProps = vtek::physical_device_get_properties(physicalDevice);
+	vtek::VulkanVersion apiVersion(physDevProps->apiVersion);
 
 	// Bindless texture support----------------------------------------
 	if (info->enableBindlessTextureSupport)
@@ -685,6 +693,9 @@ vtek::Device* vtek::device_create(
 	{
 		vtek::build_glslang_resource_limits(physicalDevice);
 	}
+
+	// Set the actual Vulkan API version
+	device->vulkanVersion = apiVersion;
 
 	// TODO: Optional info logging that a (logical) device was created.
 	return device;

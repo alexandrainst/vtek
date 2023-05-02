@@ -46,7 +46,7 @@ void recreateSwapchain()
 int main()
 {
 	// Initialize vtek
-	vtek::InitInfo initInfo{};
+	vtek::InitInfo initInfo{}; // TODO: test field 'disableLogging'
 	initInfo.applicationTitle = "triangle_plain";
 	initInfo.useGLFW = true;
 	initInfo.loadShadersFromGLSL = false; // set to `true` to enable GLSL shader loading
@@ -291,6 +291,8 @@ int main()
 			.layerCount = 1,
 			.colorAttachmentCount = 1,
 			.pColorAttachments = &colorAttachmentInfo,
+			.pDepthAttachment = nullptr,
+			.pStencilAttachment = nullptr
 			// NOTE: // A single depth stencil attachment info can be used, but
 			// they can also be specified separately. When both are specified
 			// separately, the only requirement is that the image view is identical.
@@ -352,11 +354,13 @@ int main()
 		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
 		if (beginStatus == vtek::SwapchainStatus::timeout)
 		{
+			log_error("Failed to wait begin frame - swapchain timeout!");
 			// TODO: Probably log an error and then run the loop again.
 			errors--; continue;
 		}
 		else if (beginStatus == vtek::SwapchainStatus::error)
 		{
+			log_error("Failed to wait begin frame - swapchain error!");
 			// NEXT: Terminate application.
 		}
 
@@ -365,11 +369,13 @@ int main()
 		auto acquireStatus = vtek::swapchain_acquire_next_image(swapchain, device, &frameIndex);
 		if (acquireStatus == vtek::SwapchainStatus::outofdate)
 		{
+			log_error("Failed to acquire image - swapchain outofdate!");
 			// TODO: Rebuild swapchain
 			// NOTE: Swapchain _may_ indeed change length!
 		}
 		else if (acquireStatus == vtek::SwapchainStatus::error)
 		{
+			log_error("Failed to acquire image - swapchain error!");
 			// NEXT: Terminate application.
 		}
 
@@ -378,18 +384,21 @@ int main()
 		auto readyStatus = vtek::swapchain_wait_image_ready(swapchain, device, frameIndex);
 		if (readyStatus == vtek::SwapchainStatus::timeout)
 		{
+			log_error("Failed to wait image ready - swapchain timeout!");
 			// TODO: Probably log an error and then run the loop again.
 		}
 		else if (readyStatus == vtek::SwapchainStatus::error)
 		{
+			log_error("Failed to wait image ready - swapchain error!");
 			// NEXT: Terminate application.
 		}
 
 		// Submit the current command buffer for execution on the graphics queue
 		vtek::SubmitInfo submitInfo{};
 		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
-		if (vtek::queue_submit(graphicsQueue, commandBuffers[frameIndex], &submitInfo))
+		if (!vtek::queue_submit(graphicsQueue, commandBuffers[frameIndex], &submitInfo))
 		{
+			log_error("Failed to submit to queue!");
 			// TODO: This is an error.
 		}
 
@@ -397,11 +406,13 @@ int main()
 		auto presentStatus = vtek::swapchain_present_frame(swapchain, frameIndex);
 		if (presentStatus == vtek::SwapchainStatus::outofdate)
 		{
+			log_error("Failed to present frame - swapchain outofdate!");
 			// TODO: Rebuild swapchain
 			// NOTE: Swapchain _may_ indeed change length!
 		}
 		else if (presentStatus == vtek::SwapchainStatus::error)
 		{
+			log_error("Failed to present frame - swapchain error!");
 			// NEXT: Terminate application.
 		}
 	}

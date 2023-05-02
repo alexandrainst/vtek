@@ -195,12 +195,9 @@ namespace vtek
 
 		static ColorBlendAttachment GetBlendingDisabled()
 		{
-			auto alpha = GetAlphaBlending();
-			alpha.blendEnable = VK_FALSE;
-			return alpha;
-			// return ColorBlendAttachment {
-			// 	.blendEnable = VK_FALSE
-			// };
+			return ColorBlendAttachment {
+				.blendEnable = VK_FALSE
+			};
 		}
 
 		static ColorBlendAttachment GetAlphaBlending()
