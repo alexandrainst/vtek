@@ -1,10 +1,12 @@
 #include "vtek_graphics_pipeline.hpp"
-#include "vtek_logging.hpp"
-#include "vtek_shaders.hpp"
-#include "impl/vtek_vulkan_helpers.hpp"
 
-// TODO: Temporary
-#include <iostream>
+#include "impl/vtek_vulkan_helpers.hpp"
+#include "vtek_device.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_render_pass.hpp"
+#include "vtek_shaders.hpp"
+#include "vtek_vulkan_version.hpp"
+
 
 /* struct implementation */
 struct vtek::GraphicsPipeline
@@ -434,7 +436,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	colorBlend.attachmentCount = static_cast<uint32_t>(colorAttachments.size());
 	colorBlend.pAttachments = colorAttachments.data();
 
-
 	// ===================== //
 	// === Dynamic state === //
 	// ===================== //
@@ -446,7 +447,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamic.dynamicStateCount = (dynState) ? dynamicStates.size() : 0U;
 	dynamic.pDynamicStates = (dynState) ? dynamicStates.data() : nullptr;
-
 
 	// ======================= //
 	// === Pipeline layout === //
@@ -541,12 +541,12 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		}
 	}
 
-
 	// ============================= //
 	// === Creating the pipeline === //
 	// ============================= //
 	// TODO: How to handle pipeline cache?
 	// TODO: How to handle multiple pipelines?
+	// TODO: How to handle derived pipelines?
 	VkGraphicsPipelineCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	createInfo.pNext = (useDynamicRendering) ? &renderingCreateInfo : nullptr;
@@ -569,14 +569,12 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	createInfo.pDepthStencilState = &depthStencil;
 	createInfo.pColorBlendState = &colorBlend;
 	createInfo.pDynamicState = &dynamic;
-
-
-
-
-
-
-
-	//createInfo.renderPass = vtek::render_pass_get_handle(info->renderPass);
+	createInfo.layout = layout;
+	createInfo.renderPass = (useDynamicRendering)
+		? VK_NULL_HANDLE : vtek::render_pass_get_handle(info->renderPass);
+	createInfo.subpass = int32_t{0};
+	createInfo.basePipelineHandle = VK_NULL_HANDLE;
+	createInfo.basePipelineIndex = int32_t{0};
 
 	VkPipeline outHandle = VK_NULL_HANDLE; // TODO: Temporary!
 	VkResult result = vkCreateGraphicsPipelines(
@@ -587,13 +585,28 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		return nullptr;
 	}
 
+	// TODO: We definitely need a pipeline allocator!
+	auto pipeline = new vtek::GraphicsPipeline();
+	pipeline->vulkanHandle = outHandle;
+	pipeline->layoutHandle = layout;
+	pipeline->renderPassType = info->renderPassType;
 
-	return nullptr;
+	return pipeline;
 }
 
-void vtek::graphics_pipeline_destroy(vtek::GraphicsPipeline* pipeline)
+void vtek::graphics_pipeline_destroy(vtek::GraphicsPipeline* pipeline, vtek::Device* device)
 {
+	if (pipeline == nullptr) { return; }
 
+	VkDevice dev = vtek::device_get_handle(device);
+
+	vkDestroyPipelineLayout(dev, pipeline->layoutHandle, nullptr);
+	vkDestroyPipeline(dev, pipeline->vulkanHandle, nullptr);
+
+	pipeline->layoutHandle = VK_NULL_HANDLE;
+	pipeline->vulkanHandle = VK_NULL_HANDLE;
+
+	delete pipeline;
 }
 
 VkPipeline vtek::graphics_pipeline_get_handle(vtek::GraphicsPipeline* pipeline)

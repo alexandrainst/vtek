@@ -3,8 +3,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vtek_device.hpp"
-
+#include "vtek_types.hpp"
 
 namespace vtek
 {

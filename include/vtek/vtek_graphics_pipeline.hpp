@@ -5,8 +5,6 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vtek_render_pass.hpp"
-#include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
 
@@ -317,7 +315,7 @@ namespace vtek
 
 	GraphicsPipeline* graphics_pipeline_create(
 		const GraphicsPipelineCreateInfo* info, Device* device);
-	void graphics_pipeline_destroy(GraphicsPipeline* pipeline);
+	void graphics_pipeline_destroy(GraphicsPipeline* pipeline, Device* device);
 
 	VkPipeline graphics_pipeline_get_handle(GraphicsPipeline* pipeline);
 	VkPipelineLayout graphics_pipeline_get_layout(GraphicsPipeline* pipeline);

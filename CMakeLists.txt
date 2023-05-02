@@ -100,6 +100,7 @@ set (src
   src/vtek_main.cpp
   src/vtek_physical_device.cpp
   src/vtek_queue.cpp
+  src/vtek_render_pass.cpp
   src/vtek_shaders.cpp
   src/vtek_swapchain.cpp
   src/vtek_vertex_data.cpp

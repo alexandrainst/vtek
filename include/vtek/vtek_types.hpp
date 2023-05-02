@@ -17,7 +17,7 @@ namespace vtek
 	struct Instance;
 	struct PhysicalDevice;
 	struct Queue;
-	// TODO: struct RenderPass;
+	struct RenderPass;
 	struct Swapchain;
 	// TODO: struct SwapchainFramebuffers;
 

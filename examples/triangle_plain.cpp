@@ -49,7 +49,7 @@ int main()
 	vtek::InitInfo initInfo{};
 	initInfo.applicationTitle = "triangle_plain";
 	initInfo.useGLFW = true;
-	initInfo.loadShadersFromGLSL = true; // set to `true` to enable GLSL shader loading
+	initInfo.loadShadersFromGLSL = false; // set to `true` to enable GLSL shader loading
 	if (!vtek::initialize(&initInfo))
 	{
 		std::cerr << "Failed to initialize vtek!" << std::endl;
@@ -169,7 +169,7 @@ int main()
 	shaderInfo.vertex = true;
 	shaderInfo.fragment = true;
 	vtek::GraphicsShader* shader =
-		vtek::graphics_shader_load_glsl(&shaderInfo, shaderdir, device);
+		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
 	if (shader == nullptr)
 	{
 		log_error("Failed to load graphics shader!");
@@ -399,7 +399,7 @@ int main()
 	// Cleanup
 	vtek::device_wait_idle(device);
 
-	// vtek::graphics_pipeline_destroy(graphicsPipeline, device);
+	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);
