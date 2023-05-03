@@ -433,8 +433,16 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	}
 	VkPipelineColorBlendStateCreateInfo colorBlend{};
 	colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlend.pNext = nullptr;
+	colorBlend.flags = 0; // reserved for future use (> Vulkan 1.3)
+	colorBlend.logicOpEnable = info->colorBlendState->logicOpEnable.get();
+	colorBlend.logicOp = get_logic_op(info->colorBlendState->logicOp);
 	colorBlend.attachmentCount = static_cast<uint32_t>(colorAttachments.size());
 	colorBlend.pAttachments = colorAttachments.data();
+	colorBlend.blendConstants[0] = 0.0f;
+	colorBlend.blendConstants[1] = 0.0f;
+	colorBlend.blendConstants[2] = 0.0f;
+	colorBlend.blendConstants[3] = 0.0f;
 
 	// ===================== //
 	// === Dynamic state === //
@@ -452,15 +460,36 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// === Pipeline layout === //
 	// ======================= //
 	// TODO: Get this from shader!
-	VkDescriptorSetLayout descriptorSetLayout =
-		vtek::graphics_shader_get_descriptor_layout(info->shader);
+	// VkDescriptorSetLayout descriptorSetLayout =
+	// 	vtek::graphics_shader_get_descriptor_layout(info->shader);
 
 	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layoutInfo.pNext = nullptr;
 	layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
-	layoutInfo.setLayoutCount = 0; // ??
-	layoutInfo.pSetLayouts = nullptr; // ??
+
+
+	// TODO: This is probably, _maybe_, an issue?
+	// layoutInfo.setLayoutCount = 0; // ??
+	// layoutInfo.pSetLayouts = nullptr; // ??
+	VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
+	setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	setLayoutInfo.pNext = nullptr;
+	setLayoutInfo.flags = 0; // ??
+	setLayoutInfo.bindingCount = 0;
+	setLayoutInfo.pBindings = nullptr;
+
+	VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+	VkResult setLayoutResult = vkCreateDescriptorSetLayout(dev, &setLayoutInfo, nullptr, &descriptorSetLayout);
+	if (setLayoutResult != VK_SUCCESS)
+	{
+		vtek_log_error("EXPERIMENTAL: Failed to create graphics pipeline descriptor set layout!");
+		return nullptr;
+	}
+	layoutInfo.setLayoutCount = 1;
+	layoutInfo.pSetLayouts = &descriptorSetLayout;
+
+
 	layoutInfo.pushConstantRangeCount = 0; // ??
 	layoutInfo.pPushConstantRanges = nullptr; // ??
 	// TODO: Library to extract descriptor layout from Spir-V ??

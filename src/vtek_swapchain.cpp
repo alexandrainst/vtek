@@ -308,10 +308,10 @@ static bool create_image_views(vtek::Swapchain* swapchain, VkDevice dev)
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		createInfo.format = swapchain->imageFormat;
 		// We don't need to swizzle (swap around) any of the color channels
-		createInfo.components.r = VK_COMPONENT_SWIZZLE_R;
-		createInfo.components.g = VK_COMPONENT_SWIZZLE_G;
-		createInfo.components.b = VK_COMPONENT_SWIZZLE_B;
-		createInfo.components.a = VK_COMPONENT_SWIZZLE_A;
+		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_R;
+		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_G;
+		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_B;
+		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_A;
 		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		// No mipmapping for the swapchain images.
 		createInfo.subresourceRange.baseMipLevel = 0;
@@ -662,12 +662,14 @@ vtek::Swapchain* vtek::swapchain_create(
 	};
 	if (vtek::queue_is_same_family(graphicsQueue, presentQueue))
 	{
+		vtek_log_debug("Swapchain: same queues");
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		createInfo.queueFamilyIndexCount = 0;
 		createInfo.pQueueFamilyIndices = nullptr;
 	}
 	else
 	{
+		vtek_log_debug("Swapchain: different queues");
 		// Graphics and Present are two distinct queue families, so we pick
 		// concurrent access to remove the need for manual transferring of
 		// ownership of swapchain images between queue families.

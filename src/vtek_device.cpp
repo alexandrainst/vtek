@@ -348,6 +348,7 @@ static void create_device_queues(
 		if (selections->presentPlacement == PresentPlacement::graphics_queue)
 		{
 			device->presentQueue = *queue;
+			queue->presentSupport = true;
 		}
 
 		// set inline compute queue

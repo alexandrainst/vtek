@@ -123,6 +123,12 @@ int main()
 		log_error("Failed to get graphics queue!");
 		return -1;
 	}
+	log_debug("graphicsQueue has graphics: {}",
+	          vtek::queue_supports_graphics(graphicsQueue));
+	log_debug("graphicsQueue has present: {}",
+	          vtek::queue_supports_present(graphicsQueue));
+	log_debug("graphicsQueue family index: {}",
+	          vtek::queue_get_family_index(graphicsQueue));
 
 	// Graphics command pool
 	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
