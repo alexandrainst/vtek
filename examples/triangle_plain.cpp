@@ -123,12 +123,6 @@ int main()
 		log_error("Failed to get graphics queue!");
 		return -1;
 	}
-	log_debug("graphicsQueue has graphics: {}",
-	          vtek::queue_supports_graphics(graphicsQueue));
-	log_debug("graphicsQueue has present: {}",
-	          vtek::queue_supports_present(graphicsQueue));
-	log_debug("graphicsQueue family index: {}",
-	          vtek::queue_get_family_index(graphicsQueue));
 
 	// Graphics command pool
 	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
@@ -194,6 +188,7 @@ int main()
 			.extent = {width, height}
 		},
 	};
+
 	vtek::RasterizationState rasterizer{};
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{}; // No depth testing!
@@ -249,6 +244,7 @@ int main()
 
 	// Command buffer recording
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(graphicsPipeline);
+	uint32_t queueIndex = vtek::queue_get_family_index(graphicsQueue);;
 	for (uint32_t i = 0; i < commandBufferCount; i++)
 	{
 		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
@@ -261,11 +257,15 @@ int main()
 		}
 
 		// Transition from whatever (probably present src) to color attachment
-		VkImageMemoryBarrier beginBarrier{
+		VkImageMemoryBarrier beginBarrier{ // TODO: Check spec and init all field _properly_ !
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.pNext = nullptr,
+			.srcAccessMask = 0,
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, // <-- transition to this!
+			.srcQueueFamilyIndex = queueIndex,
+			.dstQueueFamilyIndex = queueIndex,
 			.image = vtek::swapchain_get_image(swapchain, i),
 			.subresourceRange = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -284,15 +284,20 @@ int main()
 
 		VkRenderingAttachmentInfo colorAttachmentInfo{
 			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
+			.pNext = nullptr,
 			.imageView = vtek::swapchain_get_image_view(swapchain, i),
-			.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
+			.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+			.resolveMode = VK_RESOLVE_MODE_NONE,
+			.resolveImageView = VK_NULL_HANDLE,
+			.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.clearValue = { .color = { .float32 = {0.3f, 0.3f, 0.3f, 1.0f} } },
 		};
 
-		VkRenderingInfo renderingInfo{
-			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO, // _KHR ??
+		/*
+		VkRenderingInfo renderingInfo{ // TODO: Check spec and init all field _properly_ !
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO, // _KHR ?? FAIL: Debugger says 'VK_STRUCTURE_TYPE_APPLICATION_INFO' !!! ??! !?!?!?!?
 			.renderArea = { .offset = {0U, 0U}, .extent = {width, height} },
 			.layerCount = 1,
 			.colorAttachmentCount = 1,
@@ -305,14 +310,28 @@ int main()
 			// .pDepthAttachment = &depthStencilAttachmentInfo,
 			// .pStencilAttachment = &depthStencilAttachmentInfo
 		};
+		*/
+		VkRenderingInfo renderingInfo{};
+		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+		renderingInfo.pNext = nullptr;
+		renderingInfo.flags = 0;
+		renderingInfo.renderArea = { 0U, 0U, width, height };
+		renderingInfo.layerCount = 1;
+		renderingInfo.viewMask = 0;
+		renderingInfo.colorAttachmentCount = 1;
+		renderingInfo.pColorAttachments = &colorAttachmentInfo;
+		renderingInfo.pDepthAttachment = nullptr;
+		renderingInfo.pStencilAttachment = nullptr;
+
+		log_debug("renderingInfo.renderArea: offset={},{}, extent={},{}",
+		          renderingInfo.renderArea.offset.x, renderingInfo.renderArea.offset.y,
+		          renderingInfo.renderArea.extent.width, renderingInfo.renderArea.extent.height);
+
 		vkCmdBeginRendering(cmdBuf, &renderingInfo);
 
-		// TODO: Do we need a descriptor set here? Perhaps Vandervoorde knows.
-		// vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, ...);
 		vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 
 		// draw calls here
-		// TODO: Can we do this without a bound vertex buffer? Vandervoorde knows.
 		vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 
 		// End dynamic rendering
@@ -322,9 +341,13 @@ int main()
 		// PROG: We can extract function from this pipeline barrier (vtek::dynamic_rendering_insert_barrier(), etc.).
 		VkImageMemoryBarrier endBarrier{};
 		endBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		endBarrier.pNext = nullptr;
 		endBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		endBarrier.dstAccessMask = 0;
 		endBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		endBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		endBarrier.srcQueueFamilyIndex = queueIndex;
+		endBarrier.dstQueueFamilyIndex = queueIndex;
 		endBarrier.image = vtek::swapchain_get_image(swapchain, i);
 		endBarrier.subresourceRange = {
 			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

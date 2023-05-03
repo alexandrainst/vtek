@@ -148,7 +148,7 @@ namespace vtek
 		// in performance. It requires enabling the `sampleRateShading` feature
 		// during device creation. TODO: ??
 		VulkanBool enableSampleRateShading {false};
-		float minSampleShading {0.0f}; // range [0, 1], closer to 1 is smoother
+		float minSampleShading {1.0f}; // range [0, 1], closer to 1 is smoother
 		// TODO: Sample mask ?? (const VkSampleMask*, which is an array of ??)
 		VulkanBool enableAlphaToCoverage {false};
 		VulkanBool enableAlphaToOne {false};

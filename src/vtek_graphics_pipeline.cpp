@@ -295,7 +295,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	viewport.x = viewportState.viewportRegion.offset.x;
 	viewport.y = viewportState.viewportRegion.offset.y;
 	viewport.width = viewportState.viewportRegion.extent.width;
-	viewport.width = viewportState.viewportRegion.extent.width;
+	viewport.height = viewportState.viewportRegion.extent.height;
 	viewport.minDepth = viewportState.depthRange.min();
 	viewport.maxDepth = viewportState.depthRange.max();
 	// TODO: Multiple viewport states?
@@ -309,6 +309,10 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	viewportInfo.pScissors = (viewportState.useScissorRegion)
 		? &viewportState.scissorRegion
 		: &viewportState.viewportRegion;
+	vtek_log_debug("viewportState.useScissorRegion: {}", viewportState.useScissorRegion);
+	vtek_log_debug("viewportInfo.pScissors: {},{},{},{}",
+	               viewportInfo.pScissors[0].offset.x, viewportInfo.pScissors[0].offset.x,
+	               viewportInfo.pScissors[0].extent.width, viewportInfo.pScissors[0].extent.height);
 
 	// =========================== //
 	// === Rasterization state === //
@@ -450,11 +454,18 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// TODO: We need a data structure for dynamic states (and correctness check!)
 	std::vector<VkDynamicState> dynamicStates;
 	get_enabled_dynamic_states(info, device, dynamicStates);
+	vtek_log_debug("Num dynamic states: {}", dynamicStates.size());
+	for (auto dynState : dynamicStates)
+	{
+		vtek_log_debug("dynState: {}", static_cast<int>(dynState));
+	}
 	bool dynState = dynamicStates.size() > 0;
+	vtek_log_debug("dynState: {}", dynState);
 	VkPipelineDynamicStateCreateInfo dynamic{};
 	dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamic.dynamicStateCount = (dynState) ? dynamicStates.size() : 0U;
 	dynamic.pDynamicStates = (dynState) ? dynamicStates.data() : nullptr;
+	vtek_log_debug("dynamic.dynamicStateCount: {}", dynamic.dynamicStateCount);
 
 	// ======================= //
 	// === Pipeline layout === //
@@ -551,7 +562,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 
 		// Fill rendering info struct
 		renderingCreateInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO, // TODO: guess!
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
 			.pNext = nullptr,
 			.viewMask = 0, // TODO: uint32_t ?
 			.colorAttachmentCount = static_cast<uint32_t>(attachments.size()),
@@ -559,6 +570,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			.depthAttachmentFormat = pipRender->depthAttachmentFormat,
 			.stencilAttachmentFormat = pipRender->stencilAttachmentFormat
 		};
+		vtek_log_debug("renderingCreateInfo.colorAttachmentCount: {}", renderingCreateInfo.colorAttachmentCount);
 	}
 	else
 	{
