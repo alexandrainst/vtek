@@ -78,14 +78,20 @@ for the vertex shader, one file for the fragment shader, etc. The shader files t
 creates a _program_ must be stored inside the same directory, and must follow these naming
 conventions:
 
-- [vertex.glsl]
-- [tess_control.glsl]
-- [tess_eval.glsl]
-- [geometry.glsl]
-- [fragment.glsl]
-- [compute.glsl]
-- TODO: Ray tracing shaders...
+```
+graphics_shader_dir/
+├─ vertex.glsl
+├─ tess_control.glsl
+├─ tess_eval.glsl
+├─ geometry.glsl
+├─ fragment.glsl
 
+compute_shader_dir/
+├─ compute.glsl
+
+ray_tracing_shader_dir/
+├─ TODO: Filenames...
+```
 
 ### How to contribute ###
 
