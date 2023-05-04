@@ -7,42 +7,61 @@ import subprocess
 
 cmd_glslang = 'glslangValidator'
 cmd_glslang_str = ' --spirv-val --glsl-version 450 -S {stage} -V {fin} -o {fout}'
+spirv_validate = True
+spirv_val_arg = '--spirv-val'
+glsl_version = '450'
 
 def glslang_validator_exists():
     return shutil.which(cmd_glslang) is not None
 
+
 def build_shader(filepath, sh_stage):
     path_out_pair = os.path.splitext(filepath)
     path_out = path_out_pair[0] + '.spv'
-    # print('path_out: ', path_out)
-    cmd_str = cmd_glslang_str.format(stage = sh_stage, fin = filepath, fout = path_out)
-    cmd_str = cmd_glslang + cmd_str
-    print('cmd_str: ', cmd_str)
-    result = subprocess.call(cmd_str)
-    print("return code: ", result)
-    return 5
+    result = subprocess.call([
+        cmd_glslang, spirv_val_arg, '--glsl-version', glsl_version, '-S', sh_stage, '-V', filepath, '-o', path_out])
+    return result == 0
+
 
 def build_shaderdir(dirpath):
     if not glslang_validator_exists():
         print(cmd_glslang, ' was not found in system PATH. Cannot execute.')
         return False
 
+    result = 0
+
+    # vertex
     f_vertex = os.path.join(dirpath, 'vertex.glsl')
-    if not os.path.exists(f_vertex):
-        print('vertex.glsl was not found')
-        return False
-    else:
-        build_shader(f_vertex, 'vert')
+    if os.path.exists(f_vertex):
+        print("Compiling vertex shader..")
+        result += abs(build_shader(f_vertex, 'vert'))
 
+    # tessellation control
+    f_tess_control = os.path.join(dirpath, 'tess_control.glsl')
+    if os.path.exists(f_tess_control):
+        print("Compiling tessellation control shader..")
+        result += abs(build_shader(f_tess_control, 'tesc'))
+
+    # tessellation evaluation
+    f_tess_eval = os.path.join(dirpath, 'tess_eval.glsl')
+    if os.path.exists(f_tess_eval):
+        print("Compiling tessellation evaluation shader..")
+        result += abs(build_shader(f_tess_eval, 'tese'))
+
+    # geometry
+    f_geometry = os.path.join(dirpath, 'geometry.glsl')
+    if os.path.exists(f_geometry):
+        print("Compiling geometry shader")
+        result += abs(build_shader(f_geometry, 'geom'))
+
+    # fragment
     f_fragment = os.path.join(dirpath, 'fragment.glsl')
-    if not os.path.exists(f_fragment):
-        print('fragment.glsl was not found')
-        return False
-    else:
-        build_shader(f_fragment, 'frag')
+    if os.path.exists(f_fragment):
+        print("Compiling fragment shader..")
+        result += abs(build_shader(f_fragment, 'frag'))
 
+    return result == 0
 
-    return True
 
 def main():
     # Parse arguments
