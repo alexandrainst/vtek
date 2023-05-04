@@ -90,6 +90,6 @@ namespace vtek
 		bool stencil {false};
 	};
 
-	VkSampleCountFlags device_get_max_sample_count(
+	VkSampleCountFlagBits device_get_max_sample_count(
 		Device* device, const SampleCountQuery* query);
 }

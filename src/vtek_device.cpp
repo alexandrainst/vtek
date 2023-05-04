@@ -40,9 +40,9 @@ struct vtek::Device
 	std::vector<vtek::Queue> transferQueues {};
 	std::vector<vtek::Queue> computeQueues {};
 
-	VkSampleCountFlags msaaColorLimit {VK_SAMPLE_COUNT_1_BIT};
-	VkSampleCountFlags msaaDepthLimit {VK_SAMPLE_COUNT_1_BIT};
-	VkSampleCountFlags msaaStencilLimit {VK_SAMPLE_COUNT_1_BIT};
+	VkSampleCountFlagBits msaaColorLimit {VK_SAMPLE_COUNT_1_BIT};
+	VkSampleCountFlagBits msaaDepthLimit {VK_SAMPLE_COUNT_1_BIT};
+	VkSampleCountFlagBits msaaStencilLimit {VK_SAMPLE_COUNT_1_BIT};
 };
 
 
@@ -834,11 +834,13 @@ void vtek::device_wait_idle(vtek::Device* device)
 	vkDeviceWaitIdle(device->vulkanHandle);
 }
 
-VkSampleCountFlags vtek::device_get_max_sample_count(
+VkSampleCountFlagBits vtek::device_get_max_sample_count(
 	vtek::Device* device, const vtek::SampleCountQuery* query)
 {
-	VkSampleCountFlags maxCount = VK_SAMPLE_COUNT_64_BIT;
+	VkSampleCountFlagBits maxCount = VK_SAMPLE_COUNT_64_BIT;
 	if (query->color) { maxCount = std::min(maxCount, device->msaaColorLimit); }
+	if (query->depth) { maxCount = std::min(maxCount, device->msaaDepthLimit); }
+	if (query->stencil) { maxCount = std::min(maxCount, device->msaaStencilLimit); }
 
 	return maxCount;
 }

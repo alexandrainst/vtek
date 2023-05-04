@@ -7,6 +7,8 @@
 #include "vtek_shaders.hpp"
 #include "vtek_vulkan_version.hpp"
 
+#include <vulkan/vk_enum_string_helper.h>
+
 
 /* struct implementation */
 struct vtek::GraphicsPipeline
@@ -218,6 +220,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	const vtek::GraphicsPipelineCreateInfo* info, vtek::Device* device)
 {
 	VkDevice dev = vtek::device_get_handle(device);
+	auto devEnabledFeatures = vtek::device_get_enabled_features(device);
 
 	// REVIEW: Could extract function for each state to prettify code.
 
@@ -327,8 +330,27 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	rasterizer.depthBiasClamp = rasterizationState.depthBiasClamp;
 	rasterizer.depthBiasSlopeFactor = rasterizationState.depthBiasSlopeFactor;
 	rasterizer.lineWidth = rasterizationState.lineWidth;
-	// TODO: Also check for enabled device features! This include:
-	// depthClampEnable, polygonMode, lineWidth.
+
+	if ((rasterizer.depthClampEnable == VK_TRUE) &&
+	    (devEnabledFeatures->depthClamp == VK_FALSE))
+	{
+		vtek_log_error("DepthClamp feature was not enabled during device creation!");
+		vtek_log_warn("Pipeline will disable it. Application might not work correctly!");
+		rasterizer.depthClampEnable = VK_FALSE;
+	}
+	if ((rasterizer.polygonMode != VK_POLYGON_MODE_FILL) &&
+	    (devEnabledFeatures->fillModeNonSolid == VK_FALSE))
+	{
+		vtek_log_error("FillModeNonSolid feature was not enabled during device creation!");
+		vtek_log_warn("Pipeline will set polygonMode to default (=SOLID).");
+		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+	}
+	if ((rasterizer.lineWidth > 1.0f) && (devEnabledFeatures->wideLines == VK_FALSE))
+	{
+		vtek_log_error("WideLines feature was not enabled during device creation!");
+		vtek_log_warn("Pipeline will clamp lineWidth to default (=1.0f).");
+		rasterizer.lineWidth = 1.0f;
+	}
 
 	if ((!rasterizationState.rasterizerDiscardEnable.get()) && (!useFragmentShader))
 	{
@@ -356,17 +378,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisample.pNext = nullptr;
 	multisample.flags = 0U;
-	// TODO: Perhaps check that device supports number of samples provided?
 	multisample.rasterizationSamples = get_multisample_count(multisampleState.numSamples);
-
-	if (false)
-	{
-		vtek_log_error("Pipeline multisample state was set to msaa_x, but {}"
-		               "the physical device supports maximum msaa_x!");
-		vtek_log_warn("The number of samples will be clamped. {}",
-		              "Application might not run correctly!");
-		//multisample.rasterizationSamples = ;
-	}
 	multisample.sampleShadingEnable = multisampleState.enableSampleRateShading.get();
 	multisample.pSampleMask = nullptr;
 	multisample.alphaToCoverageEnable = multisampleState.enableAlphaToCoverage.get();
@@ -400,6 +412,28 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	}
 	depthStencil.minDepthBounds = dsState.depthBounds.min();
 	depthStencil.maxDepthBounds = dsState.depthBounds.max();
+
+	// After reading depth/stencil state, we can make some modifications to the
+	// multisample count, depending on whether depth/stencil testing has been
+	// enabled. This will be equivalent to depth/stencil buffers being attached
+	// to the render pass/render pass instance associated with this pipeline.
+	vtek::SampleCountQuery sampleQuery = {
+		.color = true,
+		.depth = (depthStencil.depthTestEnable == VK_TRUE),
+		.stencil = (depthStencil.stencilTestEnable == VK_TRUE)
+	};
+	VkSampleCountFlagBits maxSampleCount =
+		vtek::device_get_max_sample_count(device, &sampleQuery);
+	if (multisample.rasterizationSamples > maxSampleCount)
+	{
+		vtek_log_error("Pipeline multisample state was set to {}, but {} {}!",
+		               string_VkSampleCountFlags(multisample.rasterizationSamples),
+		               "the physical device supports maximum",
+		               string_VkSampleCountFlags(maxSampleCount));
+		vtek_log_warn("The number of samples will be clamped. {}",
+		              "Application might not run correctly!");
+		multisample.rasterizationSamples = maxSampleCount;
+	}
 
 	// ============================ //
 	// === color blending state === //
