@@ -42,6 +42,7 @@ namespace vtek
 	void instance_destroy(Instance* instance);
 
 	VkInstance instance_get_handle(const Instance* instance);
+	VulkanVersion instance_get_vulkan_version(const Instance* instance);
 	bool instance_get_raytracing_enabled(const Instance* instance);
 
 	bool instance_get_validation_enabled(const Instance* instance);

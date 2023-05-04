@@ -326,8 +326,6 @@ static bool create_queue_infos(
 		queueSelections->transfer = std::move(transferDescription);
 	}
 
-	// TODO: We could (should?) have some post-condition guards here..
-
 	return true;
 }
 
@@ -550,7 +548,7 @@ static void create_device_queues(
 				pQueue.familyIndex = familyIndex;
 				pQueue.queueFlags = description.queueFlags;
 				pQueue.presentSupport = true;
-				device->presentQueue = pQueue; // TODO: std::move ?
+				device->presentQueue = std::move(pQueue);
 				i++;
 			}
 
@@ -668,36 +666,27 @@ vtek::Device* vtek::device_create(
 		createInfo.pNext = &dynRenderInfo;
 	};
 
-	//
-	// NOTE: Dealing with legacy vTek stuff here (So left for future, but out-commented)!
-	//
-	// REVIEW: This should be done when picking physical device, IF at all!
-	// TODO: How best to approach this?
-	// if (info->enableMaintenance1Extension)
-	// {
-	// 	// TODO: If we are using Vulkan 1.1 or later, then this extension is automatically included.
-	// 	enabledDeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-	// }
-
-	// NOTE: We can check available Vulkan version, for features and extension:
-	// 1) Figure out what the Vulkan instance was created with (highest available!)
-	// 2) Figure out what the physical device supports
-	// 3) Choose the minimum of these two numbers (TODO: is that a good idea?)
-	// TODO: Get instance version and compare!
+	// Set the actual Vulkan API version.
+	// This is needed for enabling and querying features and extensions.
 	auto physDevProps = vtek::physical_device_get_properties(physicalDevice);
-	vtek::VulkanVersion apiVersion(physDevProps->apiVersion);
+	vtek::VulkanVersion physDevVersion(physDevProps->apiVersion);
+	vtek::VulkanVersion instVersion = vtek::instance_get_vulkan_version(instance);
+	if ((instVersion.major() == 1U) && (instVersion.minor() == 0U))
+	{
+		// If instance version == 1.0, then device version must be the same.
+		device->vulkanVersion = instVersion;
+	}
+	else
+	{
+		// Instance version >= 1.1, so device version will be set to the apiVersion
+		// of the physical device, which is the maximum supported version.
+		device->vulkanVersion = physDevVersion;
+	}
 
-	// Bindless texture support----------------------------------------
+	// Bindless texture support---------------------- (Added for legacy reasons)
 	if (info->enableBindlessTextureSupport)
 	{
 		vtek_log_error("Bindless texture support untested/not implemented");
-		/*VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-		  vkGetPhysicalDeviceFeatures2(physicalDevice_, &physicalDeviceFeatures2);
-		  VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr };
-		  createInfo.pNext = &physicalDeviceFeatures2;
-		  indexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
-		  indexingFeatures.runtimeDescriptorArray = VK_TRUE;
-		  physicalDeviceFeatures2.pNext = &indexingFeatures;*/
 		return nullptr;
 	}
 
@@ -738,11 +727,12 @@ vtek::Device* vtek::device_create(
 		vtek::build_glslang_resource_limits(physicalDevice);
 	}
 
-	// Set the actual Vulkan API version
-	device->vulkanVersion = apiVersion;
-
 	// Compute limits for multisampling
 	get_msaa_limits(device, physDevProps);
+
+	// Log creation success and Vulkan version
+	auto vs = device->vulkanVersion;
+	vtek_log_info("Created Device with Vulkan v{}.{}.{}", vs.major(), vs.minor(), vs.patch());
 
 	return device;
 }

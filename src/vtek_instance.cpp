@@ -94,13 +94,12 @@ static bool checkInstanceExtensionSupport(const std::vector<const char*>& extens
 
 static uint32_t get_vulkan_instance_version()
 {
-	// TODO: Check documentation for VkApplicationInfo - it answers how to handle instance version.
 	auto vkEnumerateInstanceVersion =
 		reinterpret_cast<PFN_vkEnumerateInstanceVersion>(vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion"));
 	if (vkEnumerateInstanceVersion == nullptr)
 	{
 		// NOTE: This is a Vulkan 1.0 implementation!
-		// TODO: As long as the instance supports at least Vulkan 1.1, an application can use different
+		// NOTE: As long as the instance supports at least Vulkan 1.1, an application can use different
 		//       versions of Vulkan with an instance than it does with a device or physical device.
 		return VK_API_VERSION_1_0;
 	}
@@ -414,6 +413,11 @@ void vtek::instance_destroy(vtek::Instance* instance)
 VkInstance vtek::instance_get_handle(const vtek::Instance* instance)
 {
 	return instance->vulkanHandle;
+}
+
+vtek::VulkanVersion vtek::instance_get_vulkan_version(const vtek::Instance* instance)
+{
+	return instance->vulkanVersion;
 }
 
 bool vtek::instance_get_raytracing_enabled(const vtek::Instance* instance)
