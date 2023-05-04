@@ -384,6 +384,14 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	multisample.alphaToCoverageEnable = multisampleState.enableAlphaToCoverage.get();
 	multisample.alphaToOneEnable = multisampleState.enableAlphaToOne.get();
 
+	if ((multisample.sampleShadingEnable == VK_TRUE) &&
+	    (devEnabledFeatures->sampleRateShading == VK_FALSE))
+	{
+		vtek_log_error("SampleRateShading feature was not enabled during device creation!");
+		vtek_log_warn("Pipeline will disable it.");
+		multisample.sampleShadingEnable = VK_FALSE;
+	}
+
 	// =========================== //
 	// === Depth stencil state === //
 	// =========================== //
