@@ -662,14 +662,12 @@ vtek::Swapchain* vtek::swapchain_create(
 	};
 	if (vtek::queue_is_same_family(graphicsQueue, presentQueue))
 	{
-		vtek_log_debug("Swapchain: same queues");
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		createInfo.queueFamilyIndexCount = 0;
 		createInfo.pQueueFamilyIndices = nullptr;
 	}
 	else
 	{
-		vtek_log_debug("Swapchain: different queues");
 		// Graphics and Present are two distinct queue families, so we pick
 		// concurrent access to remove the need for manual transferring of
 		// ownership of swapchain images between queue families.

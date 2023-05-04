@@ -1,32 +1,14 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <type_traits>
 
 
 namespace vtek
 {
-	// ============================= //
-	// === Opaque vulkan handles === //
-	// ============================= //
-	struct ApplicationWindow;
-	struct CommandBuffer;
-	struct CommandPool;
-	struct Device;
-	struct GraphicsPipeline;
-	struct GraphicsShader;
-	struct Instance;
-	struct PhysicalDevice;
-	struct Queue;
-	struct RenderPass;
-	struct Swapchain;
-	// TODO: struct SwapchainFramebuffers;
-
-
-
 	// ========================= //
 	// === Useful data types === //
 	// ========================= //
-	// TODO: For increased compilation speed place these somewhere else.
 	class FloatRange
 	{
 	public:
@@ -62,5 +44,29 @@ namespace vtek
 		VkBool32 get() const { return static_cast<VkBool32>(b); }
 	private:
 		bool b;
+	};
+
+	template<typename Enum>
+	requires std::is_unsigned_v<std::underlying_type_t<Enum>>
+	class EnumBitflag
+	{
+	public:
+		using Type = std::underlying_type_t<Enum>;
+
+		inline EnumBitflag() {}
+		inline EnumBitflag(Type _flag) : flag(_flag) {}
+
+		inline Type get() { return flag; }
+		inline bool has_flag(Enum e) { return flag & static_cast<Type>(e); }
+		inline void clear() { flag = {Type{0}}; }
+
+		inline EnumBitflag& operator= (Enum e) { flag = static_cast<Type>(e); }
+		inline EnumBitflag& operator|= (Enum e) {
+			flag |= static_cast<Type>(e);
+			return *this;
+		}
+
+	private:
+		Type flag {Type{0}};
 	};
 }

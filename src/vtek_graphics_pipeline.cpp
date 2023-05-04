@@ -26,63 +26,56 @@ static void get_enabled_dynamic_states(
 	states.clear();
 
 	const vtek::VulkanVersion* apiVersion = vtek::device_get_vulkan_version(device);
-	vtek::PipelineDynamicStateFlags flags = info->dynamicStateFlags;
+	vtek::EnumBitflag<PDState> ds = info->dynamicStateFlags;
+
+	auto add = [&states](VkDynamicState s) { states.push_back(s); };
 
 	// Provided by VK_VERSION_1_0
-	if (flags & static_cast<uint32_t>(PDState::viewport))
-		states.push_back(VK_DYNAMIC_STATE_VIEWPORT);
-	if (flags & static_cast<uint32_t>(PDState::scissor))
-		states.push_back(VK_DYNAMIC_STATE_SCISSOR);
-	if (flags & static_cast<uint32_t>(PDState::line_width))
-		states.push_back(VK_DYNAMIC_STATE_LINE_WIDTH);
-	if (flags & static_cast<uint32_t>(PDState::depth_bias))
-		states.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
-	if (flags & static_cast<uint32_t>(PDState::blend_constants))
-		states.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
-	if (flags & static_cast<uint32_t>(PDState::depth_bounds))
-		states.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
-	if (flags & static_cast<uint32_t>(PDState::stencil_compare_mask))
-		states.push_back(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
-	if (flags & static_cast<uint32_t>(PDState::stencil_write_mask))
-		states.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
-	if (flags & static_cast<uint32_t>(PDState::stencil_reference))
-		states.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+	if (ds.has_flag(PDState::viewport))             add(VK_DYNAMIC_STATE_VIEWPORT);
+	if (ds.has_flag(PDState::scissor))              add(VK_DYNAMIC_STATE_SCISSOR);
+	if (ds.has_flag(PDState::line_width))           add(VK_DYNAMIC_STATE_LINE_WIDTH);
+	if (ds.has_flag(PDState::depth_bias))           add(VK_DYNAMIC_STATE_DEPTH_BIAS);
+	if (ds.has_flag(PDState::blend_constants))      add(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+	if (ds.has_flag(PDState::depth_bounds))         add(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
+	if (ds.has_flag(PDState::stencil_compare_mask)) add(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
+	if (ds.has_flag(PDState::stencil_write_mask))   add(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
+	if (ds.has_flag(PDState::stencil_reference))    add(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
 
 	// TODO: Error handling for when the device doesn't support >= Vulkan 1.3!
 	// Provided by VK_VERSION_1_3
 #if defined(VK_API_VERSION_1_3)
 	if (apiVersion->major() >= 1 && apiVersion->minor() >= 3)
 	{
-		if (flags & static_cast<uint32_t>(PDState::cull_mode))
-			states.push_back(VK_DYNAMIC_STATE_CULL_MODE);
-		if (flags & static_cast<uint32_t>(PDState::front_face))
-			states.push_back(VK_DYNAMIC_STATE_FRONT_FACE);
-		if (flags & static_cast<uint32_t>(PDState::primitive_topology))
-			states.push_back(VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY);
-		if (flags & static_cast<uint32_t>(PDState::viewport_with_count))
-			states.push_back(VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT);
-		if (flags & static_cast<uint32_t>(PDState::scissor_with_count))
-			states.push_back(VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT);
-		if (flags & static_cast<uint32_t>(PDState::vertex_input_binding_stride))
-			states.push_back(VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE);
-		if (flags & static_cast<uint32_t>(PDState::depth_test_enable))
-			states.push_back(VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE);
-		if (flags & static_cast<uint32_t>(PDState::depth_write_enable))
-			states.push_back(VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE);
-		if (flags & static_cast<uint32_t>(PDState::depth_compare_op))
-			states.push_back(VK_DYNAMIC_STATE_DEPTH_COMPARE_OP);
-		if (flags & static_cast<uint32_t>(PDState::depth_bounds_test_enable))
-			states.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE);
-		if (flags & static_cast<uint32_t>(PDState::stencil_test_enable))
-			states.push_back(VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE);
-		if (flags & static_cast<uint32_t>(PDState::stencil_op))
-			states.push_back(VK_DYNAMIC_STATE_STENCIL_OP);
-		if (flags & static_cast<uint32_t>(PDState::rasterizer_discard_enable))
-			states.push_back(VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE);
-		if (flags & static_cast<uint32_t>(PDState::depth_bias_enable))
-			states.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE);
-		if (flags & static_cast<uint32_t>(PDState::primitive_restart_enable))
-			states.push_back(VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE);
+		if (ds.has_flag(PDState::cull_mode))
+			add(VK_DYNAMIC_STATE_CULL_MODE);
+		if (ds.has_flag(PDState::front_face))
+			add(VK_DYNAMIC_STATE_FRONT_FACE);
+		if (ds.has_flag(PDState::primitive_topology))
+			add(VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY);
+		if (ds.has_flag(PDState::viewport_with_count))
+			add(VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT);
+		if (ds.has_flag(PDState::scissor_with_count))
+			add(VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT);
+		if (ds.has_flag(PDState::vertex_input_binding_stride))
+			add(VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE);
+		if (ds.has_flag(PDState::depth_test_enable))
+			add(VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE);
+		if (ds.has_flag(PDState::depth_write_enable))
+			add(VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE);
+		if (ds.has_flag(PDState::depth_compare_op))
+			add(VK_DYNAMIC_STATE_DEPTH_COMPARE_OP);
+		if (ds.has_flag(PDState::depth_bounds_test_enable))
+			add(VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE);
+		if (ds.has_flag(PDState::stencil_test_enable))
+			add(VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE);
+		if (ds.has_flag(PDState::stencil_op))
+			add(VK_DYNAMIC_STATE_STENCIL_OP);
+		if (ds.has_flag(PDState::rasterizer_discard_enable))
+			add(VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE);
+		if (ds.has_flag(PDState::depth_bias_enable))
+			add(VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE);
+		if (ds.has_flag(PDState::primitive_restart_enable))
+			add(VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE);
 	}
 #endif
 }
@@ -264,8 +257,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// === Vertex input === //
 	// ==================== //
 	// TODO: What to do here?
-	auto& bindingDesc = vtek::vertex_binding_description(info->vertexType, false);
-	auto& attributeDesc = vtek::vertex_attribute_descriptions(info->vertexType);
+	auto& bindingDesc = vtek::vertex_binding_description(info->vertexInputType, false);
+	auto& attributeDesc = vtek::vertex_attribute_descriptions(info->vertexInputType);
 
 	VkPipelineVertexInputStateCreateInfo vertexInfo{};
 	vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -309,10 +302,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	viewportInfo.pScissors = (viewportState.useScissorRegion)
 		? &viewportState.scissorRegion
 		: &viewportState.viewportRegion;
-	vtek_log_debug("viewportState.useScissorRegion: {}", viewportState.useScissorRegion);
-	vtek_log_debug("viewportInfo.pScissors: {},{},{},{}",
-	               viewportInfo.pScissors[0].offset.x, viewportInfo.pScissors[0].offset.x,
-	               viewportInfo.pScissors[0].extent.width, viewportInfo.pScissors[0].extent.height);
 
 	// =========================== //
 	// === Rasterization state === //
@@ -454,18 +443,11 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// TODO: We need a data structure for dynamic states (and correctness check!)
 	std::vector<VkDynamicState> dynamicStates;
 	get_enabled_dynamic_states(info, device, dynamicStates);
-	vtek_log_debug("Num dynamic states: {}", dynamicStates.size());
-	for (auto dynState : dynamicStates)
-	{
-		vtek_log_debug("dynState: {}", static_cast<int>(dynState));
-	}
 	bool dynState = dynamicStates.size() > 0;
-	vtek_log_debug("dynState: {}", dynState);
 	VkPipelineDynamicStateCreateInfo dynamic{};
 	dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamic.dynamicStateCount = (dynState) ? dynamicStates.size() : 0U;
 	dynamic.pDynamicStates = (dynState) ? dynamicStates.data() : nullptr;
-	vtek_log_debug("dynamic.dynamicStateCount: {}", dynamic.dynamicStateCount);
 
 	// ======================= //
 	// === Pipeline layout === //
@@ -570,7 +552,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			.depthAttachmentFormat = pipRender->depthAttachmentFormat,
 			.stencilAttachmentFormat = pipRender->stencilAttachmentFormat
 		};
-		vtek_log_debug("renderingCreateInfo.colorAttachmentCount: {}", renderingCreateInfo.colorAttachmentCount);
 	}
 	else
 	{

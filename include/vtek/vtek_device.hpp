@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "vtek_types.hpp"
+#include "vtek_vulkan_handles.hpp"
 #include "vtek_vulkan_version.hpp"
 
 

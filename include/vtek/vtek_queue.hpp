@@ -6,7 +6,7 @@
 #include <vulkan/vulkan.h>
 
 #include "vtek_submit_info.hpp"
-#include "vtek_types.hpp"
+#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek

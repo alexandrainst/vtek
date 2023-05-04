@@ -30,6 +30,7 @@ namespace vtek
 	// t = texcoord
 	enum class VertexType
 	{
+		// TODO: Call this `empty' instead:
 		none, // empty vertex buffer, for testing purposes (ie. no buffer bound!)
 		vec2
 	};

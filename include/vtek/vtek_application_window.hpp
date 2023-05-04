@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "vtek_input.hpp"
-#include "vtek_types.hpp"
+#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek

@@ -80,6 +80,7 @@ set (src
   include/vtek/vtek_swapchain.hpp
   include/vtek/vtek_types.hpp
   include/vtek/vtek_vertex_data.hpp
+  include/vtek/vtek_vulkan_handles.hpp
   include/vtek/vtek_vulkan_version.hpp
 
   src/impl/vtek_glfw_backend.hpp

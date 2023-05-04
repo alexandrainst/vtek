@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "vtek_types.hpp"
+#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek

@@ -7,6 +7,7 @@
 
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
+#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek
@@ -89,7 +90,6 @@ namespace vtek
 		primitive_restart_enable    = 0x00800000U,
 #endif
 	};
-	typedef uint32_t PipelineDynamicStateFlags;
 
 	enum class RenderPassType { renderpass, dynamic };
 
@@ -193,13 +193,6 @@ namespace vtek
 		VkBlendOp alphaBlendOp {VK_BLEND_OP_ADD};
 		VkColorComponentFlags colorWriteMask {0U};
 
-		static ColorBlendAttachment GetBlendingDisabled()
-		{
-			return ColorBlendAttachment {
-				.blendEnable = VK_FALSE
-			};
-		}
-
 		static ColorBlendAttachment GetAlphaBlending()
 		{
 			// The most common way to use color blending is to implement alpha
@@ -223,6 +216,25 @@ namespace vtek
 				| VK_COLOR_COMPONENT_A_BIT;
 
 			return attachment; // C++ RVO probably
+		}
+
+		static ColorBlendAttachment GetDefault()
+		{
+			ColorBlendAttachment attachment;
+			attachment.blendEnable = false;
+			attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+			attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+			attachment.colorBlendOp = VK_BLEND_OP_ADD;
+			attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+			attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+			attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+			attachment.colorWriteMask
+				= VK_COLOR_COMPONENT_R_BIT
+				| VK_COLOR_COMPONENT_G_BIT
+				| VK_COLOR_COMPONENT_B_BIT
+				| VK_COLOR_COMPONENT_A_BIT;
+
+			return attachment;
 		}
 	};
 
@@ -277,7 +289,7 @@ namespace vtek
 		GraphicsShader* shader {nullptr};
 
 		// vertex input
-		VertexType vertexType {vtek::VertexType::vec2};
+		VertexType vertexInputType {vtek::VertexType::vec2};
 		bool instancedRendering {false};
 
 		// input assembler
@@ -306,7 +318,7 @@ namespace vtek
 		ColorBlendState* colorBlendState {nullptr};
 
 		// dynamic states
-		PipelineDynamicStateFlags dynamicStateFlags {0U};
+		EnumBitflag<PipelineDynamicState> dynamicStateFlags {0U};
 
 		// pipeline layout
 		// TODO: Get this from shader!

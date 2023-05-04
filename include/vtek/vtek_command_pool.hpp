@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <memory>
 
-#include "vtek_types.hpp"
+#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek

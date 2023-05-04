@@ -194,7 +194,7 @@ int main()
 	vtek::DepthStencilState depthStencil{}; // No depth testing!
 	vtek::ColorBlendState colorBlending{};
 	colorBlending.attachments.emplace_back(
-		vtek::ColorBlendAttachment::GetBlendingDisabled());
+		vtek::ColorBlendAttachment::GetDefault());
 	vtek::PipelineRendering pipelineRendering{};
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
@@ -204,7 +204,7 @@ int main()
 		.renderPass = nullptr, // Nice!
 		.pipelineRendering = &pipelineRendering,
 		.shader = shader,
-		.vertexType = vtek::VertexType::vec2,
+		.vertexInputType = vtek::VertexType::vec2,
 		.instancedRendering = false,
 		.primitiveTopology = vtek::PrimitiveTopology::triangle_list,
 		.enablePrimitiveRestart = false,
@@ -213,8 +213,11 @@ int main()
 		.multisampleState = &multisampling,
 		.depthStencilState = &depthStencil,
 		.colorBlendState = &colorBlending,
-		.dynamicStateFlags = 0U //vtek::PipelineDynamicState::viewport;
+		.dynamicStateFlags = 0U
 	};
+	// graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::viewport;
+	// graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::scissor;
+
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
 	if (graphicsPipeline == nullptr)
@@ -257,13 +260,13 @@ int main()
 		}
 
 		// Transition from whatever (probably present src) to color attachment
-		VkImageMemoryBarrier beginBarrier{ // TODO: Check spec and init all field _properly_ !
+		VkImageMemoryBarrier beginBarrier{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 			.pNext = nullptr,
 			.srcAccessMask = 0,
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, // <-- transition to this!
+			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.srcQueueFamilyIndex = queueIndex,
 			.dstQueueFamilyIndex = queueIndex,
 			.image = vtek::swapchain_get_image(swapchain, i),
@@ -295,22 +298,6 @@ int main()
 			.clearValue = { .color = { .float32 = {0.3f, 0.3f, 0.3f, 1.0f} } },
 		};
 
-		/*
-		VkRenderingInfo renderingInfo{ // TODO: Check spec and init all field _properly_ !
-			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO, // _KHR ?? FAIL: Debugger says 'VK_STRUCTURE_TYPE_APPLICATION_INFO' !!! ??! !?!?!?!?
-			.renderArea = { .offset = {0U, 0U}, .extent = {width, height} },
-			.layerCount = 1,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = &colorAttachmentInfo,
-			.pDepthAttachment = nullptr,
-			.pStencilAttachment = nullptr
-			// NOTE: // A single depth stencil attachment info can be used, but
-			// they can also be specified separately. When both are specified
-			// separately, the only requirement is that the image view is identical.
-			// .pDepthAttachment = &depthStencilAttachmentInfo,
-			// .pStencilAttachment = &depthStencilAttachmentInfo
-		};
-		*/
 		VkRenderingInfo renderingInfo{};
 		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 		renderingInfo.pNext = nullptr;
@@ -322,10 +309,6 @@ int main()
 		renderingInfo.pColorAttachments = &colorAttachmentInfo;
 		renderingInfo.pDepthAttachment = nullptr;
 		renderingInfo.pStencilAttachment = nullptr;
-
-		log_debug("renderingInfo.renderArea: offset={},{}, extent={},{}",
-		          renderingInfo.renderArea.offset.x, renderingInfo.renderArea.offset.y,
-		          renderingInfo.renderArea.extent.width, renderingInfo.renderArea.extent.height);
 
 		vkCmdBeginRendering(cmdBuf, &renderingInfo);
 

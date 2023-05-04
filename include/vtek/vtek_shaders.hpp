@@ -13,7 +13,7 @@
 #include <vulkan/vulkan.h>
 
 #include "vtek_fileio.hpp"
-#include "vtek_types.hpp"
+#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek
