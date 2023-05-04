@@ -31,8 +31,6 @@
 #include <string_view>
 #include <spdlog/spdlog.h>
 
-#include "vtek_main.hpp"
-
 
 /*
  * NOTE:
@@ -43,10 +41,6 @@
  */
 namespace vtek
 {
-	void initialize_logging(const InitInfo* info);
-	void terminate_logging();
-	void disable_logging();
-
 	void flush_vtek_logger();
 	void flush_client_logger();
 

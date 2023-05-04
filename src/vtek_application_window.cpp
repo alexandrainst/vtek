@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 // std
+#include <unordered_map>
 #include <vector>
 
 // vtek
@@ -33,8 +34,14 @@ struct vtek::ApplicationWindow
 /* host allocator */
 static vtek::HostAllocator<vtek::ApplicationWindow> sAllocator("application_window");
 
+// Event mapper: Fetch a complete window context from an opaque GLFW handle.
+// Used for delegating input events and other window-related events, such as
+// minimizing/maximizing the window, resizing the framebuffer, etc.
+static std::unordered_map<GLFWwindow*, vtek::ApplicationWindow*>* spEventMapper = nullptr;
+
 
 /* implementation of GLFW backend */
+#include "vtek_main.hpp"
 #include "impl/vtek_glfw_backend.hpp"
 
 static std::vector<std::string> sRequiredInstanceExtensions {};
@@ -52,11 +59,22 @@ bool vtek::glfw_backend_initialize()
 		sRequiredInstanceExtensions.push_back(extensions[i]);
 	}
 
+	// Create the event mapper
+	spEventMapper = new std::unordered_map<GLFWwindow*, vtek::ApplicationWindow*>();
+
 	return true;
 }
 
 void vtek::glfw_backend_terminate()
 {
+	if (spEventMapper->size() > 0)
+	{
+		vtek_log_debug("vtek::glfw_backend_terminate: {}",
+		               "Not all windows were properly destroyed.");
+	}
+	delete spEventMapper;
+	spEventMapper = nullptr;
+
 	glfwTerminate();
 }
 
@@ -217,6 +235,18 @@ static vtek::InputAction get_input_action_from_glfw(int action)
 	}
 }
 
+static vtek::MouseButton get_mouse_button_from_glfw(int button)
+{
+	switch (button)
+	{
+	case GLFW_MOUSE_BUTTON_LEFT:   return vtek::MouseButton::left;
+	case GLFW_MOUSE_BUTTON_MIDDLE: return vtek::MouseButton::middle;
+	case GLFW_MOUSE_BUTTON_RIGHT:  return vtek::MouseButton::right;
+	default:
+		return vtek::MouseButton::ignore;
+	}
+}
+
 static void default_key_callback(vtek::KeyboardKey, vtek::InputAction) {}
 static void default_mouse_button_callback(vtek::MouseButton, vtek::InputAction) {}
 static void default_mouse_move_callback(double, double) {}
@@ -224,11 +254,8 @@ static void default_mouse_scroll_callback(double, double) {}
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-	// TODO: Multiple windows??
-	static const vtek::ApplicationWindow* appWindow =
-		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	// ASSERT_MSG(context != nullptr,
-	//            "key_callback: error fetching GLFW user pointer!");
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
 	vtek::KeyboardKey vKey = get_key_from_glfw(key);
 	vtek::InputAction vAction = get_input_action_from_glfw(action);
@@ -243,39 +270,29 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 static void mouse_move_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	static const vtek::ApplicationWindow* appWindow =
-		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	appWindow = appWindow; // TODO: Removes compiler warning!
-	// ASSERT_MSG(context != nullptr,
-	//            "mouse_move_callback: error fetching GLFW user pointer!");
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
-	// context->windowInterface.fMouseMove(xpos, ypos);
+	appWindow->fMouseMoveCallback(xpos, ypos);
 }
 
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-	static const vtek::ApplicationWindow* appWindow =
-		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	appWindow = appWindow; // TODO: Removes compiler warning!
-	// ASSERT_MSG(context != nullptr,
-	//            "mouse_button_callback: error fetching GLFW user pointer!");
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
-	// vtek::MouseButtonType bt = graphics::get_glfw_mouse_button(button);
+	vtek::MouseButton vButton = get_mouse_button_from_glfw(button);
 	vtek::InputAction vAction = get_input_action_from_glfw(action);
-	vAction = vAction; // TODO: Removes compiler warning!
 
-	// context->windowInterface.fMouseButton(bt, at);
+	appWindow->fMouseButtonCallback(vButton, vAction);
 }
 
 static void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	static const vtek::ApplicationWindow* appWindow =
-		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	appWindow = appWindow; // TODO: Removes compiler warning!
-	// ASSERT_MSG(context != nullptr,
-	//            "mouse_scroll_callback: error fetching GLFW user pointer!");
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
-	// context->windowInterface.fMouseScroll(xoffset, yoffset);
+	appWindow->fMouseScrollCallback(xoffset, yoffset);
 }
 
 static void set_window_hints(const vtek::WindowCreateInfo* info)
@@ -324,6 +341,9 @@ static void set_window_hints(const vtek::WindowCreateInfo* info)
 
 static void configure_window(GLFWwindow* window, const vtek::WindowCreateInfo* info)
 {
+	// Raw mouse motion is not affected by the scaling and acceleration applied
+	// to the motion of the desktop cursor, hence more suitable for controlling
+	// a 3D camera.
 	if (info->cursorDisabled)
 	{
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -357,7 +377,7 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	if (appWindow->glfwHandle == nullptr)
 	{
 		vtek_log_error("Failed to create GLFW window!");
-		// TODO: Free allocated window
+		sAllocator.free(id);
 		return nullptr;
 	}
 
@@ -375,29 +395,19 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	glfwGetFramebufferSize(
 		appWindow->glfwHandle, &appWindow->framebufferWidth, &appWindow->framebufferHeight);
 
+	// Add window to the event mapper
+	(*spEventMapper)[appWindow->glfwHandle] = appWindow;
+
 	// Setup default event handlers
 	appWindow->fKeyCallback = default_key_callback;
 	appWindow->fMouseButtonCallback = default_mouse_button_callback;
 	appWindow->fMouseMoveCallback = default_mouse_move_callback;
 	appWindow->fMouseScrollCallback = default_mouse_scroll_callback;
 
-	glfwSetWindowUserPointer(appWindow->glfwHandle, static_cast<void*>(appWindow));
-
 	glfwSetKeyCallback(appWindow->glfwHandle, key_callback);
 	glfwSetMouseButtonCallback(appWindow->glfwHandle, mouse_button_callback);
 	glfwSetCursorPosCallback(appWindow->glfwHandle, mouse_move_callback);
 	glfwSetScrollCallback(appWindow->glfwHandle, mouse_scroll_callback);
-
-	// TODO: Do this properly.
-	// Raw mouse motion is not affected by the scaling and acceleration applied
-	// to the motion of the desktop cursor, hence more suitable for controlling
-	// a 3D camera.
-	bool cursorDisabled = (glfwGetInputMode(appWindow->glfwHandle, GLFW_CURSOR))
-		== GLFW_CURSOR_DISABLED;
-	if (cursorDisabled && glfwRawMouseMotionSupported())
-	{
-		glfwSetInputMode(appWindow->glfwHandle, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-	}
 
 	return appWindow;
 }
@@ -405,6 +415,14 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 void vtek::window_destroy(vtek::ApplicationWindow* window)
 {
 	if (window == nullptr) { return; }
+
+	auto erased = spEventMapper->erase(window->glfwHandle);
+	if (erased == 0)
+	{
+		vtek_log_debug(
+			"vtek::window_destroy(): {}",
+			"Window was not registered in the event mapper - cannot remove!");
+	}
 
 	if (window->glfwHandle != nullptr)
 	{

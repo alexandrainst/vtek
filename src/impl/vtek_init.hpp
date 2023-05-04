@@ -7,13 +7,16 @@
 
 #pragma once
 
+#include "vtek_main.hpp"
 #include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek
 {
 	/* logging */
-	// TODO: Probably initialize the logger here?
+	void initialize_logging(const InitInfo* info);
+	void terminate_logging();
+	void disable_logging();
 
 	/* fileio module */
 	bool initialize_fileio();

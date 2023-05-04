@@ -11,7 +11,7 @@ namespace vtek
 	struct InitInfo
 	{
 		// === app info ===
-		const char* applicationTitle {"app"}; // TODO: For logging purposes should always be "app" ??
+		const char* applicationTitle {"app"};
 
 		// === window creation ===
 		// This must be set to `true` if GLFW is used for window creation.

@@ -46,10 +46,11 @@ void recreateSwapchain()
 int main()
 {
 	// Initialize vtek
-	vtek::InitInfo initInfo{}; // TODO: test field 'disableLogging'
+	vtek::InitInfo initInfo{};
+	initInfo.disableLogging = false;
 	initInfo.applicationTitle = "triangle_plain";
 	initInfo.useGLFW = true;
-	initInfo.loadShadersFromGLSL = false; // set to `true` to enable GLSL shader loading
+	initInfo.loadShadersFromGLSL = false;
 	if (!vtek::initialize(&initInfo))
 	{
 		std::cerr << "Failed to initialize vtek!" << std::endl;

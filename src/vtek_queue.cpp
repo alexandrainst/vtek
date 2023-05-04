@@ -75,6 +75,5 @@ bool vtek::queue_submit(
 
 	VkResult result = vkQueueSubmit(
 		queue->vulkanHandle, 1, &info, submitInfo->PostSignalFence());
-	// TODO: Log here, using vulkan enum string helpers, and then return false?
 	return result == VK_SUCCESS;
 }

@@ -22,5 +22,5 @@ namespace vtek
 		menu
 	};
 
-	enum class MouseButton { left, middle, right, ignore };  // TODO: , ignore ?
+	enum class MouseButton { left, middle, right, ignore };
 }
