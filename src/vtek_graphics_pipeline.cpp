@@ -355,7 +355,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	if ((!rasterizationState.rasterizerDiscardEnable.get()) && (!useFragmentShader))
 	{
 		vtek_log_error("Rasterizer discard disabled, but no fragment shader module found!");
-		vtek_log_error("--> cabbit create graphics pipeline!");
+		vtek_log_error("--> cannot create graphics pipeline!");
 		return nullptr;
 	}
 	else if (rasterizationState.rasterizerDiscardEnable.get() && useFragmentShader)
