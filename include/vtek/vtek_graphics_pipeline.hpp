@@ -149,7 +149,7 @@ namespace vtek
 		// during device creation. TODO: ??
 		VulkanBool enableSampleRateShading {false};
 		float minSampleShading {1.0f}; // range [0, 1], closer to 1 is smoother
-		// TODO: Sample mask ?? (const VkSampleMask*, which is an array of ??)
+		// TODO: Sample mask ?? (const VkSampleMask*, which is an array of VkSampleMask)
 		VulkanBool enableAlphaToCoverage {false};
 		VulkanBool enableAlphaToOne {false};
 	};
@@ -268,7 +268,6 @@ namespace vtek
 
 	// NOTE: All fields must be filled out properly so the behaviour of the
 	// pipeline is well-defined.
-	// TODO: Fields to be values or pointers?
 	struct GraphicsPipelineCreateInfo
 	{
 		// NOTE: If renderPassType == `RenderPassType::dynamic`, then
@@ -277,11 +276,6 @@ namespace vtek
 		RenderPassType renderPassType {vtek::RenderPassType::renderpass};
 		RenderPass* renderPass {nullptr};
 		PipelineRendering* pipelineRendering {nullptr};
-
-		// TODO: Parameters:
-		// GraphicsShader* shader;
-		// RenderPass* renderPass;
-		// DescriptorSetLayout descriptorSetLayout;
 
 		/* Neat and ordered: */
 
@@ -309,19 +303,13 @@ namespace vtek
 		MultisampleState* multisampleState {nullptr};
 
 		// depth and stencil testing
-		// TODO: Could be a pointer instead?
 		DepthStencilState* depthStencilState {nullptr};
 
 		// color blending
-		// TODO: Overlap between ColorBlendState and PipelineRendering!
-		//       Perhaps merge them somehow!!? ! YESSSHHSH
 		ColorBlendState* colorBlendState {nullptr};
 
 		// dynamic states
 		EnumBitflag<PipelineDynamicState> dynamicStateFlags {0U};
-
-		// pipeline layout
-		// TODO: Get this from shader!
 	};
 
 

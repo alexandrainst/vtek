@@ -9,6 +9,8 @@ namespace vtek
 	// ========================= //
 	// === Useful data types === //
 	// ========================= //
+	// This class can be used to capture a range, e.g. a depth range
+	// which is required for viewport state during pipeline creation.
 	class FloatRange
 	{
 	public:
@@ -23,7 +25,10 @@ namespace vtek
 		float fmin, fmax;
 	};
 
-
+	// This class is used to clamp a value within a certain range, e.g.
+	// when a queue's priority must be a number between 0 and 1, this
+	// class can be templated as <0.0f, 1.0f>, and will then automatically
+	// clamp its value inside this range.
 	template<float Min, float Max>
 	class FloatClamp
 	{
@@ -36,6 +41,10 @@ namespace vtek
 		float val;
 	};
 
+	// Short wrapper for the conversion from C++ `bool` to an untyped
+	// raw integer alias `VkBool32`, which many Vulkan functions and structs
+	// expect. In such regard it's a type safe alternative to writing
+	// `VK_TRUE` and `VK_FALSE`.
 	class VulkanBool
 	{
 	public:
@@ -46,6 +55,10 @@ namespace vtek
 		bool b;
 	};
 
+	// This class can be used to perform bitwise operations on the values
+	// inside an enumeration, and removes the need for filling up the code
+	// base with calls to `static_cast`. It provides a clean interface with
+	// the member functions `get()`, `has_flag()`, and `clear()`.
 	template<typename Enum>
 	requires std::is_unsigned_v<std::underlying_type_t<Enum>>
 	class EnumBitflag

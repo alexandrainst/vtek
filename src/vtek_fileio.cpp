@@ -250,7 +250,16 @@ std::string vtek::directory_get_absolute_path(const vtek::Directory* dir)
 std::string vtek::directory_get_absolute_path(
 	const vtek::Directory* dir, std::string_view filename)
 {
-
+	std::error_code ec; // Added so fs::canonical will not throw!
+	auto p = dir->handle/filename;
+	auto path = fs::canonical(p, ec);
+	if (ec.value() != 0)
+	{
+		vtek_log_error("vtek::directory_get_absolute_path(dir, fname): {}: {}!",
+		               "fs::canonical failed with error code", ec.value());
+		return "";
+	}
+	return path.native();
 }
 
 

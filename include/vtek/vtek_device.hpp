@@ -77,4 +77,19 @@ namespace vtek
 	bool device_get_graphics_present_same_family(const Device* device);
 
 	void device_wait_idle(Device* device);
+
+
+	// Obtain the maximum number of samples this device supports for any rendering
+	// purposes. This value may be different for depth/stencil buffers than for
+	// color buffers, so the returned value will be the minimum for the
+	// corresponding queried buffer types.
+	struct SampleCountQuery
+	{
+		bool color {false};
+		bool depth {false};
+		bool stencil {false};
+	};
+
+	VkSampleCountFlags device_get_max_sample_count(
+		Device* device, const SampleCountQuery* query);
 }
