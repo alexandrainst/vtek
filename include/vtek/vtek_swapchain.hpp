@@ -35,11 +35,6 @@ namespace vtek
 
 		int framebufferWidth {0};
 		int framebufferHeight {0};
-
-		// TODO: This could be a neat feature, IFF window handling is implemented inside vtek.
-		// NOTE: Other things, such as render passes, pipelines, framebuffers, etc., should also be re-created!
-		// REVIEW: Perhaps then not after all?!
-		//bool recreateOnWindowResize {false};
 	};
 
 
@@ -56,22 +51,12 @@ namespace vtek
 	VkFormat swapchain_get_image_format(Swapchain* swapchain);
 
 
-	bool swapchain_acquire_next_image_index(Swapchain* swapchain, uint32_t* outImageIndex);
-
-	bool swapchain_present_image(Swapchain* swapchain, uint32_t presentImageIndex);
-
-
-	// ======================== //
-	// === Better interface === //
-	// ======================== //
-
-	// TODO: Simplified interface? :
+	// A status enum, returned by the frame functions below, to keep a client
+	// application informed on when a swapchain should be re-created, or if
+	// an error occured that requires process termination.
 	enum class SwapchainStatus
 	{
-		ok,
-		error,
-		timeout,
-		outofdate
+		ok, error, timeout, outofdate
 	};
 
 	// Call this function before starting a new rendering frame. This
@@ -79,21 +64,33 @@ namespace vtek
 	// of frames that can be handled at the GPU at any time. Failure
 	// to call this function at the beginning of each frame may result
 	// in indefinite stalls or GPU memory corruption.
-	SwapchainStatus swapchain_wait_begin_frame(Swapchain* swapchain, Device* device);
+	SwapchainStatus swapchain_wait_begin_frame(
+		Swapchain* swapchain, Device* device, uint64_t timeout = UINT64_MAX);
 
 	// Optionally returns an index which refers to a `VkImage` in the list
 	// of swapchain images array, which can be used to pick the right data
 	// for the frame. This can include looking up into arrays of
 	// command buffers, uniform buffers, etc.
 	SwapchainStatus swapchain_acquire_next_image(
-		Swapchain* swapchain, Device* device, uint32_t* imageIndex);
+		Swapchain* swapchain, Device* device,
+		uint32_t* imageIndex, uint64_t timeout = UINT64_MAX);
 
 	// Before using the image as framebuffer attachment, we need to make
 	// sure that no previous frame is still using this image.
 	SwapchainStatus swapchain_wait_image_ready(
-		Swapchain* swapchain, Device* device, uint32_t imageIndex);
+		Swapchain* swapchain, Device* device,
+		uint32_t imageIndex, uint64_t timeout = UINT64_MAX);
 
+	// Before submitting work to a queue which renders into the swapchain image, the
+	// queue needs to know which semaphore to wait on, and which semaphore to signal
+	// after rendering is completed. This function will provide these semaphores and
+	// return them inside the `submitInfo` argument, as well as a post-signal fence
+	// to synchronize the CPU with the rendered frame.
 	void swapchain_fill_queue_submit_info(Swapchain* swapchain, SubmitInfo* submitInfo);
 
+	// This function should be called after a rendering workload has been submitted
+	// to a queue which targets a swapchain image. It will instruct the presentation
+	// queue, to which the swapchain internally stores a handle, to wait for the
+	// rendering queue to finishe execution before presenting the frame.
 	SwapchainStatus swapchain_present_frame(Swapchain* swapchain, uint32_t frameIndex);
 }

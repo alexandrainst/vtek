@@ -38,8 +38,19 @@ scripts located in `examples/` which demonstrate how to use `vtek`.
 ### How to compile shaders ###
 
 Shader files should be provided as pre-compiled Spir-V binaries, before running the example
-programs. This can be done vith two tools, either `glsLangValidator` (by Khronos) or `glslc`
-(by Google). Examples:
+programs. `vtek` comes with a number of shaders for its example programs, all of which are
+located inside the `shaders` directory. There is a Python script (requires >= Python 3.3)
+which automates the process of compiling shaders. To e.g. compile the shader files inside
+the `shaders/simple_triangle` directory, enter these commands in terminal:
+```
+cd shaders/
+./build_shaders.py simple_triangle/
+```
+This runs the shader compiler `glslangValidator` (which comes bundled with the Vulkan Sdk)
+on all the individual shader files located inside this directory.
+
+Alternatively, the shader files can be compiled individually with either `glsLangValidator`
+(by Khronos) or `glslc` (by Google). Examples:
 ```bash
 glslangValidator --spirv-val --glsl-version 450 -S vert -V vertex.glsl -o vertex.spv
 ```
@@ -58,6 +69,22 @@ they do the same things.
 Raw shader files, in `GLSL` format, may also be provided to vtek. But this is less efficient,
 as they have to be compiled each time a program is run. So pre-compiling to Spir-V is
 preferrable.
+
+#### Shader filenames ####
+
+For more consistency, `vtek` places certain restrictions on the names of shader files and
+how they are stored. Shaders are expected to be stored in individual files, ie. one file
+for the vertex shader, one file for the fragment shader, etc. The shader files that together
+creates a _program_ must be stored inside the same directory, and must follow these naming
+conventions:
+
+- [vertex.glsl]
+- [tess_control.glsl]
+- [tess_eval.glsl]
+- [geometry.glsl]
+- [fragment.glsl]
+- [compute.glsl]
+- TODO: Ray tracing shaders...
 
 
 ### How to contribute ###

@@ -82,13 +82,13 @@ def main():
         arg_parser.error('no directory was provided')
     if not args.directory:
         print('No directory was provided')
-        return
+        return 1
 
     # Locate target directory
     dirpath = os.path.join(os.getcwd(), args.directory)
     if not os.path.isdir(dirpath):
         print('Directory does not exist')
-        return
+        return 1
     success = build_shaderdir(dirpath)
 
     # All went well

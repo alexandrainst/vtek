@@ -45,12 +45,10 @@ struct vtek::Swapchain
 
 	// Semaphores that will be signaled once a swapchain image becomes ready.
 	// Used for acquiring swapchain images.
-	// TODO: This name is long - can we call it `waitSemaphores` instead?
 	VkSemaphore imageAvailableSemaphores[vtek::kMaxFramesInFlight];
 
 	// Semaphores that will be signaled once rendering of a frame has completed.
 	// Used for releasing swapchain images to the presentation queue.
-	// TODO: This name is long - can we call it `signalSemaphores` instead?
 	VkSemaphore renderFinishedSemaphores[vtek::kMaxFramesInFlight];
 
 	// Before we can start drawing a frame, the CPU needs to wait for
@@ -64,8 +62,6 @@ struct vtek::Swapchain
 	// and for each swapchain image hold a pointer to a fence in
 	// `inFlightFences`. Used for signalling when it's possible to
 	// render to a swapchain image.
-	// TODO: Can we write this instead:
-	// VkFence imagesInFlight[vtek::kMaxSwapchainLength];
 	std::vector<VkFence> imagesInFlight;
 };
 
@@ -390,7 +386,8 @@ static VkSurfaceTransformFlagBitsKHR choose_pre_transform(VkSurfaceCapabilitiesK
 	// flip. If no such transformation is desired specify the current one.
 	VkSurfaceTransformFlagBitsKHR current = capabilities.currentTransform;
 
-	// TODO: Could be fun to try out some of the options available:
+	// NOTE: Alternative options, which may only be picked if the are supported,
+	// as queried for by `vkGetPhysicalDeviceSurfaceCapabilitiesKHR`.
 	// VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
 	// VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR
 	// VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR
@@ -811,13 +808,11 @@ uint32_t vtek::swapchain_get_length(vtek::Swapchain* swapchain)
 
 VkImage vtek::swapchain_get_image(vtek::Swapchain* swapchain, uint32_t index)
 {
-	// TODO: Index precondition check!?
 	return swapchain->images[index];
 }
 
 VkImageView vtek::swapchain_get_image_view(vtek::Swapchain* swapchain, uint32_t index)
 {
-	// TODO: Index precondition check!?
 	return swapchain->imageViews[index];
 }
 
@@ -827,7 +822,7 @@ VkFormat vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
 }
 
 vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
-	vtek::Swapchain* swapchain, vtek::Device* device)
+	vtek::Swapchain* swapchain, vtek::Device* device, uint64_t timeout)
 {
 	// In here, we wait for the fence guarding the current frame index to be in
 	// signaled state, after which the frame may commence.
@@ -835,8 +830,6 @@ vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 	VkDevice dev = vtek::device_get_handle(device);
 	uint32_t index = swapchain->currentFrameIndex;
 	VkFence fence = swapchain->inFlightFences[index];
-	// TODO: Define better wait time!
-	uint64_t timeout = UINT64_MAX;
 
 	// Quoting the spec:
 	// If timeout is zero, then vkWaitForFences does not wait, but simply returns
@@ -856,21 +849,20 @@ vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 }
 
 vtek::SwapchainStatus vtek::swapchain_acquire_next_image(
-	vtek::Swapchain* swapchain, vtek::Device* device, uint32_t* frameIndex)
+	vtek::Swapchain* swapchain, vtek::Device* device,
+	uint32_t* frameIndex, uint64_t timeout)
 {
 	VkDevice dev = vtek::device_get_handle(device);
 	uint32_t currentFrame = swapchain->currentFrameIndex;
 	VkSemaphore semaphore = swapchain->imageAvailableSemaphores[currentFrame];
-	// TODO: Define better wait time!
-	uint64_t timeout = UINT64_MAX;
 
 	VkResult result = vkAcquireNextImageKHR(
 		dev, swapchain->vulkanHandle, timeout, semaphore, VK_NULL_HANDLE, frameIndex);
 
-	// NOTE: "Handle both out-of-date and suboptimal swapchains to re-create stale
-	//       swapchains when windows resize":
+	// NOTE: For optimal rendering efficiency, Nvidia developers give this advice:
+	// "Handle both out-of-date and suboptimal swapchains to re-create stale
+	//  swapchains when windows resize".
 	// https://developer.nvidia.com/blog/advanced-api-performance-vulkan-clearing-and-presenting/
-	// TODO: Should we follow this advice?
 	switch (result)
 	{
 	case VK_SUCCESS:
@@ -886,12 +878,11 @@ vtek::SwapchainStatus vtek::swapchain_acquire_next_image(
 }
 
 vtek::SwapchainStatus vtek::swapchain_wait_image_ready(
-	vtek::Swapchain* swapchain, vtek::Device* device, uint32_t frameIndex)
+	vtek::Swapchain* swapchain, vtek::Device* device,
+	uint32_t frameIndex, uint64_t timeout)
 {
 	VkDevice dev = vtek::device_get_handle(device);
 	VkFence fence = swapchain->imagesInFlight[frameIndex];
-	// TODO: Define better wait time!
-	uint64_t timeout = UINT64_MAX;
 
 	// Check if a previous frame is using this image, ie. if there is a fence
 	// to wait on.
