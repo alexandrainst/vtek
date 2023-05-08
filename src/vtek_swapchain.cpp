@@ -976,7 +976,7 @@ vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 	// the current state of the fences. VK_TIMEOUT will be returned in this case
 	// if the condition is not satisfied, even though no actual wait was performed.
 	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
-	if (test == VK_SUCCESS || test == VK_TIMEOUT) { return vtek::SwapchainStatus::ok; }
+	if (test == VK_SUCCESS) { return vtek::SwapchainStatus::ok; }
 
 	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
 	switch (result)
