@@ -34,6 +34,11 @@ namespace vtek
 	bool window_get_should_close(ApplicationWindow* window);
 	void window_set_should_close(ApplicationWindow* window, bool shouldClose);
 
+	// Wait while the window is minimized, ie. has a framebuffer of size 0.
+	// This should be used as a guard for when a swapchain is "out-of-date", and
+	// wait until the window is no longer minimized before re-creating the swapchain.
+	void window_wait_while_minimized(ApplicationWindow* window);
+
 	// surface for the application window, needed for Vulkan
 	VkSurfaceKHR window_create_surface(ApplicationWindow* window, Instance* instance);
 	void window_surface_destroy(VkSurfaceKHR surface, Instance* instance);

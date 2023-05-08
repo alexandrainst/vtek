@@ -453,6 +453,18 @@ void vtek::window_set_should_close(vtek::ApplicationWindow* window, bool shouldC
 	glfwSetWindowShouldClose(window->glfwHandle, shouldClose ? GLFW_TRUE : GLFW_FALSE);
 }
 
+void vtek::window_wait_while_minimized(vtek::ApplicationWindow* window)
+{
+	int width = 0;
+	int height = 0;
+	glfwGetFramebufferSize(window->glfwHandle, &width, &height);
+	while(width == 0 || height == 0)
+	{
+		glfwGetFramebufferSize(window->glfwHandle, &width, &height);
+		glfwWaitEvents();
+	}
+}
+
 VkSurfaceKHR vtek::window_create_surface(
 	vtek::ApplicationWindow* window, vtek::Instance* instance)
 {

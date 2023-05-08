@@ -28,20 +28,6 @@ void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 	}
 }
 
-// TODO: Provide function parameters (likely a _lot_) :
-// window, device, swapchain, frameSync, --renderPass--, --framebuffers--, commandBuffers
-// --> (window, device, swapchain, frameSync, commandBuffers) <---
-void recreateSwapchain()
-{
-	// 1) window minimization guard
-	// 2) device wait idle
-	// 3) recreate swapchain
-	// 4) reset frame sync
-	// 5) -- rebuild render pass --
-	// 6) -- recreate swapchain framebuffers --
-	// 7) re-record command buffers
-}
-
 
 int main()
 {
@@ -99,7 +85,7 @@ int main()
 	physicalDeviceInfo.requireGraphicsQueue = true;
 	physicalDeviceInfo.requirePresentQueue = true;
 	physicalDeviceInfo.requireSwapchainSupport = true;
-	physicalDeviceInfo.requireDynamicRendering = false;
+	physicalDeviceInfo.requireDynamicRendering = true;
 	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
 		&physicalDeviceInfo, instance, surface);
 	if (physicalDevice == nullptr)
@@ -177,9 +163,6 @@ int main()
 		log_error("Failed to load graphics shader!");
 		return -1;
 	}
-
-	const std::vector<vtek::GraphicsShaderModule>& shaderModules =
-		vtek::graphics_shader_get_modules(shader);
 
 	// Vulkan graphics pipeline
 	const uint32_t width = swapchainCreateInfo.framebufferWidth;
