@@ -257,7 +257,7 @@ static VkPresentModeKHR choose_present_mode(
 
 static VkExtent2D choose_image_extent(
 	const VkSurfaceCapabilitiesKHR& capabilities,
-	int framebufferWidth, int framebufferHeight)
+	uint32_t framebufferWidth, uint32_t framebufferHeight)
 {
 	// The swap extent is the resolution of the swapchain images, and is
 	// almost always equal to the window resolution in pixels.
@@ -277,10 +277,7 @@ static VkExtent2D choose_image_extent(
 		// So after the window is created, we should query the window library
 		// for the framebuffer size, which is always in pixels, and use this
 		// value to determine an appropriate swap image size.
-		VkExtent2D actualExtent = {
-			static_cast<uint32_t>(framebufferWidth),
-			static_cast<uint32_t>(framebufferHeight)
-		};
+		VkExtent2D actualExtent = { framebufferWidth, framebufferHeight };
 
 		// Clamp the swap extent within the mininum and maximum allowed
 		// image extents.
@@ -789,7 +786,7 @@ vtek::Swapchain* vtek::swapchain_create(
 
 bool vtek::swapchain_recreate(
 	vtek::Swapchain* swapchain, vtek::Device* device, VkSurfaceKHR surface,
-	int framebufferWidth, int framebufferHeight)
+	uint32_t framebufferWidth, uint32_t framebufferHeight)
 {
 	VkDevice dev = vtek::device_get_handle(device);
 	VkPhysicalDevice physDev = swapchain->physDev;

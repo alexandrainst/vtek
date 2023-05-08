@@ -33,8 +33,8 @@ namespace vtek
 		// NOTE: Highly discouraged for mobile devices!
 		bool prioritizeLowLatency {false};
 
-		int framebufferWidth {0};
-		int framebufferHeight {0};
+		uint32_t framebufferWidth {0};
+		uint32_t framebufferHeight {0};
 	};
 
 
@@ -43,7 +43,7 @@ namespace vtek
 		const PhysicalDevice* physicalDevice, Device* device);
 	bool swapchain_recreate(
 		Swapchain* swapchain, Device* device, VkSurfaceKHR surface,
-		int framebufferWidth, int framebufferHeight);
+		uint32_t framebufferWidth, uint32_t framebufferHeight);
 	void swapchain_destroy(Swapchain* swapchain, const Device* device);
 
 	uint32_t swapchain_get_length(Swapchain* swapchain);

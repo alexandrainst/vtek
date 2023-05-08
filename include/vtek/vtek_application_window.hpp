@@ -30,7 +30,8 @@ namespace vtek
 	void window_destroy(ApplicationWindow* window);
 
 	void window_poll_events();
-	void window_get_framebuffer_size(ApplicationWindow* window, int* width, int* height);
+	void window_get_framebuffer_size(
+		ApplicationWindow* window, uint32_t* width, uint32_t* height);
 	bool window_get_should_close(ApplicationWindow* window);
 	void window_set_should_close(ApplicationWindow* window, bool shouldClose);
 
@@ -49,8 +50,12 @@ namespace vtek
 	typedef std::function<void(double,double)> tMouseMoveCallback;
 	typedef std::function<void(double, double)> tMouseScrollCallback;
 
-	void window_set_key_handler(ApplicationWindow* window, tKeyCallback fn);
-	void window_set_mouse_button_handler(ApplicationWindow* window, tMouseButtonCallback fn);
-	void window_set_mouse_move_handler(ApplicationWindow* window, tMouseMoveCallback fn);
-	void window_set_mouse_scroll_handler(ApplicationWindow* window, tMouseScrollCallback fn);
+	void window_set_key_handler(
+		ApplicationWindow* window, tKeyCallback fn);
+	void window_set_mouse_button_handler(
+		ApplicationWindow* window, tMouseButtonCallback fn);
+	void window_set_mouse_move_handler(
+		ApplicationWindow* window, tMouseMoveCallback fn);
+	void window_set_mouse_scroll_handler(
+		ApplicationWindow* window, tMouseScrollCallback fn);
 }

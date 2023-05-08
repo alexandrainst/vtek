@@ -21,8 +21,8 @@ struct vtek::ApplicationWindow
 {
 	uint64_t id {0UL};
 	GLFWwindow* glfwHandle {nullptr};
-	int framebufferWidth {0};
-	int framebufferHeight {0};
+	uint32_t framebufferWidth {0U};
+	uint32_t framebufferHeight {0U};
 
 	tKeyCallback fKeyCallback;
 	tMouseButtonCallback fMouseButtonCallback;
@@ -392,8 +392,17 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	// So after the window is created, we can query GLFW for the
 	// framebuffer size, which is always in pixels, and use this value
 	// to determine an appropriate swap image size.
-	glfwGetFramebufferSize(
-		appWindow->glfwHandle, &appWindow->framebufferWidth, &appWindow->framebufferHeight);
+	int width, height;
+	glfwGetFramebufferSize(appWindow->glfwHandle, &width, &height);
+	if (width < 0 || height < 0)
+	{
+		vtek_log_error("Invalid framebuffer dimensions retrieved from GLFW!");
+		vtek_log_error("--> Cannot create application window.");
+		sAllocator.free(id);
+		return nullptr;
+	}
+	appWindow->framebufferWidth = static_cast<uint32_t>(width);
+	appWindow->framebufferHeight = static_cast<uint32_t>(height);
 
 	// Add window to the event mapper
 	(*spEventMapper)[appWindow->glfwHandle] = appWindow;
@@ -432,7 +441,8 @@ void vtek::window_destroy(vtek::ApplicationWindow* window)
 	sAllocator.free(window->id);
 }
 
-void vtek::window_get_framebuffer_size(vtek::ApplicationWindow* window, int* width, int* height)
+void vtek::window_get_framebuffer_size(
+	vtek::ApplicationWindow* window, uint32_t* width, uint32_t* height)
 {
 	*width = window->framebufferWidth;
 	*height = window->framebufferHeight;
@@ -463,6 +473,17 @@ void vtek::window_wait_while_minimized(vtek::ApplicationWindow* window)
 		glfwGetFramebufferSize(window->glfwHandle, &width, &height);
 		glfwWaitEvents();
 	}
+	if (width < 0 || height < 0)
+	{
+		vtek_log_error("Invalid framebuffer dimensions retrieved from GLFW!");
+		vtek_log_error("--> Cannot properly wait while minimized.");
+		window->framebufferWidth = 0U;
+		window->framebufferHeight = 0U;
+		return;
+	}
+
+	window->framebufferWidth = static_cast<uint32_t>(width);
+	window->framebufferHeight = static_cast<uint32_t>(height);
 }
 
 VkSurfaceKHR vtek::window_create_surface(

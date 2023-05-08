@@ -2,7 +2,9 @@
 #include <iostream>
 
 // global data
-vtek::ApplicationWindow* window = nullptr;
+vtek::ApplicationWindow* gWindow = nullptr;
+uint32_t gFramebufferWidth = 0U;
+uint32_t gFramebufferHeight = 0U;
 
 // helper functions
 void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
@@ -16,7 +18,7 @@ void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 		switch (key)
 		{
 		case vtek::KeyboardKey::escape:
-			vtek::window_set_should_close(window, true);
+			vtek::window_set_should_close(gWindow, true);
 			break;
 		default:
 			break;
@@ -33,15 +35,16 @@ bool recreateSwapchain(
 	vtek::Device* device, vtek::Swapchain* swapchain, VkSurfaceKHR surface)
 {
 	// 1) window minimization guard
-	vtek::window_wait_while_minimized(window);
+	vtek::window_wait_while_minimized(gWindow);
 
 	// 2) device wait idle
 	vtek::device_wait_idle(device);
 
 	// 3) recreate swapchain
-	int width, height;
-	vtek::window_get_framebuffer_size(window, &width, &height);
-	if (!vtek::swapchain_recreate(swapchain, device, surface, width, height))
+	vtek::window_get_framebuffer_size(
+		gWindow, &gFramebufferWidth, &gFramebufferHeight);
+	if (!vtek::swapchain_recreate(
+		    swapchain, device, surface, gFramebufferWidth, gFramebufferHeight))
 	{
 		log_error("Failed to recreate swapchain!");
 		return false;
@@ -49,7 +52,7 @@ bool recreateSwapchain(
 }
 
 bool recordCommandBuffer(
-	vtek::CommandBuffer* buffer, vtek::GraphicsPipeline* graphicsPipeline,
+	vtek::CommandBuffer* commandBuffer, vtek::GraphicsPipeline* graphicsPipeline,
 	VkImage swapchainImage, VkImageView swapchainImageView, uint32_t queueIndex)
 {
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
@@ -57,7 +60,7 @@ bool recordCommandBuffer(
 
 	if (!vtek::command_buffer_begin(commandBuffer))
 	{
-		log_error("Failed to begin command buffer recording!", i);
+		log_error("Failed to begin command buffer recording!");
 		return false;
 	}
 
@@ -104,7 +107,7 @@ bool recordCommandBuffer(
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
 	renderingInfo.flags = 0;
-	renderingInfo.renderArea = { 0U, 0U, width, height };
+	renderingInfo.renderArea = { 0U, 0U, gFramebufferWidth, gFramebufferHeight };
 	renderingInfo.layerCount = 1;
 	renderingInfo.viewMask = 0;
 	renderingInfo.colorAttachmentCount = 1;
@@ -138,7 +141,7 @@ bool recordCommandBuffer(
 	endBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	endBarrier.srcQueueFamilyIndex = queueIndex;
 	endBarrier.dstQueueFamilyIndex = queueIndex;
-	endBarrier.image = vtek::swapchain_get_image(swapchain, i);
+	endBarrier.image = swapchainImage,
 	endBarrier.subresourceRange = {
 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 		.baseMipLevel = 0,
@@ -150,16 +153,16 @@ bool recordCommandBuffer(
 
 	vkCmdPipelineBarrier(
 		cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &endBarrier);
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr,
+		0, nullptr, 1, &endBarrier);
 
 	if (!vtek::command_buffer_end(commandBuffer))
 	{
-		log_error("Failed to end command buffer {} recording!", i);
-		return -1;
+		log_error("Failed to end command buffer recording!");
+		return false;
 	}
 
-
-
+	return true;
 }
 
 
@@ -187,13 +190,15 @@ int main()
 	windowInfo.resizeable = true;
 	windowInfo.decorated = true;
 	windowInfo.cursorDisabled = false;
-	window = vtek::window_create(&windowInfo);
-	if (window == nullptr)
+	gWindow = vtek::window_create(&windowInfo);
+	if (gWindow == nullptr)
 	{
 		log_error("Failed to create window!");
 		return -1;
 	}
-	vtek::window_set_key_handler(window, keyCallback);
+	vtek::window_get_framebuffer_size(
+		gWindow, &gFramebufferWidth, &gFramebufferHeight);
+	vtek::window_set_key_handler(gWindow, keyCallback);
 
 	// Vulkan instance
 	vtek::InstanceCreateInfo instanceInfo{};
@@ -208,7 +213,7 @@ int main()
 	}
 
 	// Surface
-	VkSurfaceKHR surface = vtek::window_create_surface(window, instance);
+	VkSurfaceKHR surface = vtek::window_create_surface(gWindow, instance);
 	if (surface == VK_NULL_HANDLE)
 	{
 		log_error("Failed to create Vulkan window surface!");
@@ -261,9 +266,8 @@ int main()
 	vtek::SwapchainCreateInfo swapchainCreateInfo{};
 	swapchainCreateInfo.vsync = true;
 	swapchainCreateInfo.prioritizeLowLatency = false;
-	vtek::window_get_framebuffer_size(
-		window, &swapchainCreateInfo.framebufferWidth,
-		&swapchainCreateInfo.framebufferHeight);
+	swapchainCreateInfo.framebufferWidth = gFramebufferWidth;
+	swapchainCreateInfo.framebufferHeight = gFramebufferHeight;
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
 		&swapchainCreateInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)
