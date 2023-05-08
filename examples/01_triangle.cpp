@@ -200,8 +200,6 @@ int main()
 		.colorBlendState = &colorBlending,
 		.dynamicStateFlags = 0U
 	};
-	// graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::viewport;
-	// graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::scissor;
 
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
@@ -232,7 +230,7 @@ int main()
 
 	// Command buffer recording
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(graphicsPipeline);
-	uint32_t queueIndex = vtek::queue_get_family_index(graphicsQueue);;
+	uint32_t queueIndex = vtek::queue_get_family_index(graphicsQueue);
 	for (uint32_t i = 0; i < commandBufferCount; i++)
 	{
 		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
@@ -344,8 +342,6 @@ int main()
 	{
 		// React to incoming input events
 		vtek::window_poll_events();
-
-		// TODO: Check if framebuffer has been resized.
 
 		// To avoid excessive GPU work we wait until we may begin the frame
 		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);

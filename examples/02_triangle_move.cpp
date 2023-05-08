@@ -120,8 +120,20 @@ bool recordCommandBuffer(
 	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 
 	// TODO: Viewport dynamic state
+	VkViewport viewport{};
+	viewport.x = 0.0f; // upper-left corner
+	viewport.y = 0.0f; // upper-left corner
+	viewport.width = (float)gFramebufferWidth;
+	viewport.height = (float)gFramebufferHeight;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 0.0f;
+	vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
 	// TODO: Scissor dynamic state
+	VkRect2D scissor{};
+	scissor.offset = { 0, 0 };
+	scissor.extent = { gFramebufferWidth, gFramebufferHeight };
+	vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 	// TODO: Movement offset push constants
 
@@ -254,6 +266,7 @@ int main()
 
 	// Graphics command pool
 	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
+	commandPoolCreateInfo.allowIndividualBufferReset = true;
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
 		&commandPoolCreateInfo, device, graphicsQueue);
 	if (graphicsCommandPool == nullptr)
@@ -330,7 +343,147 @@ int main()
 	graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::viewport;
 	graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::scissor;
 
+	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
+		&graphicsPipelineInfo, device);
+	if (graphicsPipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline!");
+		return -1;
+	}
+
+	// Command buffers
+	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
+	vtek::CommandBufferCreateInfo commandBufferInfo{};
+	commandBufferInfo.isSecondary = false;
+	std::vector<vtek::CommandBuffer*> commandBuffers = vtek::command_buffer_create(
+		&commandBufferInfo, commandBufferCount, graphicsCommandPool, device);
+	if (commandBuffers.empty())
+	{
+		log_error("Failed to create command buffer!");
+		return -1;
+	}
+	if (commandBufferCount != commandBuffers.size())
+	{
+		log_error("Number of command buffers created not same as number asked!");
+		return -1;
+	}
+
+	// Error tolerance
+	int errors = 10;
+
+	while (vtek::window_get_should_close(gWindow) && errors > 0)
+	{
+		// React to incoming input events
+		vtek::window_poll_events();
+
+		// TODO: Check if framebuffer has been resized.
+
+		// To avoid excessive GPU work we wait until we may begin the frame
+		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
+		if (beginStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait begin frame - swapchain timeout!");
+			// TODO: Probably log an error and then run the loop again.
+			errors--; continue;
+		}
+		else if (beginStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait begin frame - swapchain error!");
+			errors = 0;
+			continue;
+		}
+
+		// Acquire the next available image in the swapchain
+		uint32_t frameIndex;
+		auto acquireStatus = vtek::swapchain_acquire_next_image(
+			swapchain, device, &frameIndex);
+		if (acquireStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_debug("Failed to acquire image - swapchain outofdate!");
+			if (!recreateSwapchain(device, swapchain, surface))
+			{
+				log_error("Failed to re-create swapchain!");
+				errors = 0;
+				continue;
+			}
+		}
+		else if (acquireStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to acquire image - swapchain error!");
+			errors = 0;
+			continue;
+		}
+
+		// Record command buffer for next frame
+		vtek::CommandBuffer* commandBuffer = commandBuffers[frameIndex];
+		bool record = recordCommandBuffer(
+			commandBuffer, graphicsPipeline,
+			vtek::swapchain_get_image(swapchain, frameIndex),
+			vtek::swapchain_get_image_view(swapchain, frameIndex),
+			vtek::queue_get_family_index(graphicsQueue));
+		if (!record)
+		{
+			log_error("Failed to record command buffer!");
+			errors--; continue;
+		}
+
+		// Wait until any previous operations are finished using this image.
+		auto readyStatus = vtek::swapchain_wait_image_ready(
+			swapchain, device, frameIndex);
+		if (readyStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait image ready - swapchain timeout!");
+			// TODO: Probably log an error and then run the loop again.
+		}
+		else if (readyStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait image ready - swapchain error!");
+			errors = 0;
+			continue;
+		}
+
+		// Submit the current command buffer for execution on the graphics queue
+		vtek::SubmitInfo submitInfo{};
+		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
+		if (!vtek::queue_submit(
+			    graphicsQueue, commandBuffers[frameIndex], &submitInfo))
+		{
+			log_error("Failed to submit to queue!");
+			// TODO: This is an error.
+		}
+
+		// Wait for command buffer to finish execution, and present frame to screen.
+		auto presentStatus = vtek::swapchain_present_frame(swapchain, frameIndex);
+		if (presentStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_error("Failed to present frame - swapchain outofdate!");
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (presentStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to present frame - swapchain error!");
+			errors = 0;
+			continue;
+		}
+	}
 
 
+	// Cleanup
+	vtek::device_wait_idle(device);
+
+	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
+	vtek::graphics_shader_destroy(shader, device);
+	vtek::swapchain_destroy(swapchain, device);
+	vtek::command_pool_destroy(graphicsCommandPool, device);
+	vtek::device_destroy(device);
+	vtek::physical_device_release(physicalDevice);
+	vtek::window_surface_destroy(surface, instance);
+	vtek::instance_destroy(instance);
+	vtek::window_destroy(gWindow);
+	gWindow = nullptr;
+
+	log_debug("All went well!");
+	vtek::terminate();
 	return 0;
 }
