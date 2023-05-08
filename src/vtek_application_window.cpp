@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 
 // std
+#include <chrono>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -28,6 +30,10 @@ struct vtek::ApplicationWindow
 	tMouseButtonCallback fMouseButtonCallback;
 	tMouseMoveCallback fMouseMoveCallback;
 	tMouseScrollCallback fMouseScrollCallback;
+
+	tFramebufferResizeCallback fFramebufferResizeCallback; // TODO: Needed?
+	bool frameBufferResized {false};
+	bool isMinimized {false};
 };
 
 
@@ -295,6 +301,35 @@ static void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yof
 	appWindow->fMouseScrollCallback(xoffset, yoffset);
 }
 
+static void framebuffer_resize_callback(GLFWwindow* window, int width, int height)
+{
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
+
+	appWindow->frameBufferResized = true;
+
+	vtek_log_debug("framebuffer_resize_callback");
+}
+
+static void window_minimize_callback(GLFWwindow* window, int iconified)
+{
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
+
+	if (iconified)
+	{
+		// The window was iconified (ie. minimized)
+		vtek_log_debug("window_minimize_callback: minimize");
+		appWindow->isMinimized = true;
+	}
+	else
+	{
+		// The window was restored
+		vtek_log_debug("window_minimize_callback: restore");
+		appWindow->isMinimized = false;
+	}
+}
+
 static void set_window_hints(const vtek::WindowCreateInfo* info)
 {
 	// TODO: Warning because not yet implemented
@@ -418,6 +453,15 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	glfwSetCursorPosCallback(appWindow->glfwHandle, mouse_move_callback);
 	glfwSetScrollCallback(appWindow->glfwHandle, mouse_scroll_callback);
 
+	if (!info->fullscreen && info->decorated && info->resizeable)
+	{
+		glfwSetFramebufferSizeCallback(
+			appWindow->glfwHandle, framebuffer_resize_callback);
+	}
+	glfwSetWindowIconifyCallback(appWindow->glfwHandle, window_minimize_callback);
+
+	// NEXT: Might use other callbacks: maximized, on_close, lose_focus, etc.
+
 	return appWindow;
 }
 
@@ -465,6 +509,7 @@ void vtek::window_set_should_close(vtek::ApplicationWindow* window, bool shouldC
 
 void vtek::window_wait_while_minimized(vtek::ApplicationWindow* window)
 {
+	vtek_log_trace("vtek::window_wait_while_minimized() - begin");
 	int width = 0;
 	int height = 0;
 	glfwGetFramebufferSize(window->glfwHandle, &width, &height);
@@ -484,6 +529,22 @@ void vtek::window_wait_while_minimized(vtek::ApplicationWindow* window)
 
 	window->framebufferWidth = static_cast<uint32_t>(width);
 	window->framebufferHeight = static_cast<uint32_t>(height);
+	vtek_log_trace("vtek::window_wait_while_minimized() - end");
+}
+
+bool vtek::window_is_resizing(vtek::ApplicationWindow* window)
+{
+	return window->frameBufferResized;
+}
+
+void vtek::window_wait_while_resizing(vtek::ApplicationWindow* window)
+{
+	while (window->frameBufferResized)
+	{
+		vtek_log_debug("vtek::window_wait_while_resizing(): while...");
+		window->frameBufferResized = false;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
 }
 
 VkSurfaceKHR vtek::window_create_surface(
@@ -531,4 +592,10 @@ void vtek::window_set_mouse_scroll_handler(
 	vtek::ApplicationWindow* window, vtek::tMouseScrollCallback fn)
 {
 	window->fMouseScrollCallback = fn;
+}
+
+void vtek::window_set_framebuffer_resize_handler(
+	vtek::ApplicationWindow* window, vtek::tFramebufferResizeCallback fn)
+{
+	window->fFramebufferResizeCallback = fn;
 }

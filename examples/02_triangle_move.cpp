@@ -26,14 +26,10 @@ void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 	}
 }
 
-void framebufferResizedCallback()
-{
-
-}
-
 bool recreateSwapchain(
 	vtek::Device* device, vtek::Swapchain* swapchain, VkSurfaceKHR surface)
 {
+	log_debug("begin");
 	// 1) window minimization guard
 	vtek::window_wait_while_minimized(gWindow);
 
@@ -43,12 +39,16 @@ bool recreateSwapchain(
 	// 3) recreate swapchain
 	vtek::window_get_framebuffer_size(
 		gWindow, &gFramebufferWidth, &gFramebufferHeight);
+
 	if (!vtek::swapchain_recreate(
 		    swapchain, device, surface, gFramebufferWidth, gFramebufferHeight))
 	{
 		log_error("Failed to recreate swapchain!");
 		return false;
 	}
+
+	log_debug("end");
+	return true;
 }
 
 bool recordCommandBuffer(
@@ -376,7 +376,18 @@ int main()
 		// React to incoming input events
 		vtek::window_poll_events();
 
-		// TODO: Check if framebuffer has been resized.
+		// Check if framebuffer has been resized.
+		if (vtek::window_is_resizing(gWindow))
+		{
+			vtek::window_wait_while_resizing(gWindow);
+
+			if (!recreateSwapchain(device, swapchain, surface))
+			{
+				log_error("Failed to re-create swapchain!");
+				errors = 0;
+				continue;
+			}
+		}
 
 		// To avoid excessive GPU work we wait until we may begin the frame
 		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
@@ -400,12 +411,7 @@ int main()
 		if (acquireStatus == vtek::SwapchainStatus::outofdate)
 		{
 			log_debug("Failed to acquire image - swapchain outofdate!");
-			if (!recreateSwapchain(device, swapchain, surface))
-			{
-				log_error("Failed to re-create swapchain!");
-				errors = 0;
-				continue;
-			}
+			continue;
 		}
 		else if (acquireStatus == vtek::SwapchainStatus::error)
 		{
@@ -434,6 +440,7 @@ int main()
 		{
 			log_error("Failed to wait image ready - swapchain timeout!");
 			// TODO: Probably log an error and then run the loop again.
+			continue;
 		}
 		else if (readyStatus == vtek::SwapchainStatus::error)
 		{
@@ -449,16 +456,16 @@ int main()
 			    graphicsQueue, commandBuffers[frameIndex], &submitInfo))
 		{
 			log_error("Failed to submit to queue!");
-			// TODO: This is an error.
+			errors = 0;
+			continue;
 		}
 
 		// Wait for command buffer to finish execution, and present frame to screen.
 		auto presentStatus = vtek::swapchain_present_frame(swapchain, frameIndex);
 		if (presentStatus == vtek::SwapchainStatus::outofdate)
 		{
-			log_error("Failed to present frame - swapchain outofdate!");
-			// TODO: Rebuild swapchain
-			// NOTE: Swapchain _may_ indeed change length!
+			log_debug("Failed to present frame - swapchain outofdate!");
+			continue;
 		}
 		else if (presentStatus == vtek::SwapchainStatus::error)
 		{

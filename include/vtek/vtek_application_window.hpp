@@ -40,6 +40,9 @@ namespace vtek
 	// wait until the window is no longer minimized before re-creating the swapchain.
 	void window_wait_while_minimized(ApplicationWindow* window);
 
+	bool window_is_resizing(ApplicationWindow* window);
+	void window_wait_while_resizing(ApplicationWindow* window);
+
 	// surface for the application window, needed for Vulkan
 	VkSurfaceKHR window_create_surface(ApplicationWindow* window, Instance* instance);
 	void window_surface_destroy(VkSurfaceKHR surface, Instance* instance);
@@ -49,6 +52,7 @@ namespace vtek
 	typedef std::function<void(MouseButton,InputAction)> tMouseButtonCallback;
 	typedef std::function<void(double,double)> tMouseMoveCallback;
 	typedef std::function<void(double, double)> tMouseScrollCallback;
+	typedef std::function<void(void)> tFramebufferResizeCallback;
 
 	void window_set_key_handler(
 		ApplicationWindow* window, tKeyCallback fn);
@@ -58,4 +62,7 @@ namespace vtek
 		ApplicationWindow* window, tMouseMoveCallback fn);
 	void window_set_mouse_scroll_handler(
 		ApplicationWindow* window, tMouseScrollCallback fn);
+
+	void window_set_framebuffer_resize_handler(
+		ApplicationWindow* window, tFramebufferResizeCallback fn);
 }

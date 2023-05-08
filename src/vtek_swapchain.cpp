@@ -472,8 +472,8 @@ static bool create_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 {
 	const uint32_t numFrames = std::clamp(swapchain->length - 1, 1U, vtek::kMaxFramesInFlight);
 	swapchain->numFramesInFlight = numFrames;
-	swapchain->currentFrameIndex = 0U;
 	swapchain->imagesInFlight.resize(swapchain->length, VK_NULL_HANDLE);
+	swapchain->currentFrameIndex = 0U;
 
 	const VkSemaphoreCreateInfo semInfo {
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -488,7 +488,7 @@ static bool create_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 		.flags = VK_FENCE_CREATE_SIGNALED_BIT
 	};
 
-	for (uint32_t i = 0; i < numFrames; i++)
+	for (uint32_t i = 0; i < vtek::kMaxFramesInFlight; i++)
 	{
 		vkCreateSemaphore(dev, &semInfo, nullptr, &swapchain->imageAvailableSemaphores[i]);
 		vkCreateSemaphore(dev, &semInfo, nullptr, &swapchain->renderFinishedSemaphores[i]);
@@ -524,7 +524,6 @@ static void reset_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 	const uint32_t numFrames = std::clamp(swapchain->length - 1, 1U, vtek::kMaxFramesInFlight);
 	swapchain->numFramesInFlight = numFrames;
 	swapchain->imagesInFlight.resize(numFrames, VK_NULL_HANDLE);
-
 	swapchain->currentFrameIndex = 0U;
 
 	// TODO: Should we signal the semaphores?
@@ -735,7 +734,9 @@ vtek::Swapchain* vtek::swapchain_create(
 	swapchain->length = swapchainLength;
 	swapchain->isInvalidated = false;
 	swapchain->presentQueue = vtek::queue_get_handle(presentQueue);
-
+	swapchain->vsync = info->vsync;
+	swapchain->prioritizeLowLatency = info->prioritizeLowLatency;
+	swapchain->physDev = physDev;
 
 	// ========================== //
 	// === Create image views === //
@@ -788,6 +789,7 @@ bool vtek::swapchain_recreate(
 	vtek::Swapchain* swapchain, vtek::Device* device, VkSurfaceKHR surface,
 	uint32_t framebufferWidth, uint32_t framebufferHeight)
 {
+	vtek_log_trace("vtek::swapchain_recreate()");
 	VkDevice dev = vtek::device_get_handle(device);
 	VkPhysicalDevice physDev = swapchain->physDev;
 
@@ -868,8 +870,9 @@ bool vtek::swapchain_recreate(
 	createInfo.oldSwapchain = swapchain->vulkanHandle;
 
 	// (re-)Create the swapchain
+	VkSwapchainKHR newSwapchain;
 	VkResult result = vkCreateSwapchainKHR(
-		dev, &createInfo, nullptr, &swapchain->vulkanHandle);
+		dev, &createInfo, nullptr, &newSwapchain);
 	if (result != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to re-create swapchain!");
@@ -880,12 +883,13 @@ bool vtek::swapchain_recreate(
 	destroy_swapchain_image_views(swapchain, dev);
 	destroy_swapchain_handle(swapchain, dev);
 
-	vkGetSwapchainImagesKHR(dev, swapchain->vulkanHandle, &swapchainLength, nullptr);
+	vkGetSwapchainImagesKHR(dev, newSwapchain, &swapchainLength, nullptr);
 	swapchain->images.resize(swapchainLength, VK_NULL_HANDLE);
 	vkGetSwapchainImagesKHR(
-		dev, swapchain->vulkanHandle, &swapchainLength, swapchain->images.data());
+		dev, newSwapchain, &swapchainLength, swapchain->images.data());
 
 	// Fill out the data members of the swapchain struct
+	swapchain->vulkanHandle = newSwapchain;
 	swapchain->imageFormat = surfaceFormat.format;
 	swapchain->imageExtent = imageExtent;
 	swapchain->length = swapchainLength;
@@ -972,9 +976,9 @@ vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 	// the current state of the fences. VK_TIMEOUT will be returned in this case
 	// if the condition is not satisfied, even though no actual wait was performed.
 	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
-	if (test == VK_SUCCESS) { return vtek::SwapchainStatus::ok; }
+	if (test == VK_SUCCESS || test == VK_TIMEOUT) { return vtek::SwapchainStatus::ok; }
 
-	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
 	switch (result)
 	{
 	case VK_SUCCESS: return vtek::SwapchainStatus::ok;
@@ -1036,7 +1040,7 @@ vtek::SwapchainStatus vtek::swapchain_wait_image_ready(
 		return vtek::SwapchainStatus::ok;
 	}
 
-	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
 	switch (result)
 	{
 	case VK_SUCCESS:
