@@ -262,9 +262,7 @@ static bool has_required_extension_support(
 	}
 
 	// dynamic rendering
-	// TODO: We probably ALWAYS want to be supporting this!
-	bool dynamicRendering = true;
-	if (dynamicRendering)
+	if (info->requireDynamicRendering)
 	{
 		// NOTE: Dynamic rendering is core in >= Vulkan 1.3, before that KHR extension.
 #if defined(VK_API_VERSION_1_3)

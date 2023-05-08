@@ -48,7 +48,7 @@ int main()
 	// Initialize vtek
 	vtek::InitInfo initInfo{};
 	initInfo.disableLogging = false;
-	initInfo.applicationTitle = "triangle_plain";
+	initInfo.applicationTitle = "triangle";
 	initInfo.useGLFW = true;
 	initInfo.loadShadersFromGLSL = false;
 	if (!vtek::initialize(&initInfo))
@@ -59,7 +59,7 @@ int main()
 
 	// Create window
 	vtek::WindowCreateInfo windowInfo{};
-	windowInfo.title = "triangle_plain";
+	windowInfo.title = "01_triangle";
 	windowInfo.width = 500;
 	windowInfo.height = 500;
 	windowInfo.maximized = false;
@@ -76,7 +76,7 @@ int main()
 
 	// Vulkan instance
 	vtek::InstanceCreateInfo instanceInfo{};
-	instanceInfo.applicationName = "triangle_plain";
+	instanceInfo.applicationName = "triangle";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
 	instanceInfo.enableValidationLayers = true;
 	auto instance = vtek::instance_create(&instanceInfo);
@@ -99,6 +99,7 @@ int main()
 	physicalDeviceInfo.requireGraphicsQueue = true;
 	physicalDeviceInfo.requirePresentQueue = true;
 	physicalDeviceInfo.requireSwapchainSupport = true;
+	physicalDeviceInfo.requireDynamicRendering = false;
 	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
 		&physicalDeviceInfo, instance, surface);
 	if (physicalDevice == nullptr)

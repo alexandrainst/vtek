@@ -27,6 +27,7 @@ namespace vtek
 		// required extensions
 		bool requireRaytracingSupport {false};
 		bool requireSwapchainSupport {false};
+		bool requireDynamicRendering {false};
 	};
 
 	// TODO: Since this is only needed by device creation, maybe place it somewhere else?

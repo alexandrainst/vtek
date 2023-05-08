@@ -221,6 +221,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 {
 	VkDevice dev = vtek::device_get_handle(device);
 	auto devEnabledFeatures = vtek::device_get_enabled_features(device);
+	auto enabledExtensions = vtek::device_get_enabled_extensions(device);
 
 	// REVIEW: Could extract function for each state to prettify code.
 
@@ -561,13 +562,22 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
+		if (!enabledExtensions->dynamicRendering)
+		{
+			vtek_log_error(
+				"Dynamic rendering extension was not enabled during device creation!");
+			vtek_log_error("--> Require it when picking a physical device.");
+			vtek_log_error("--> Cannot create graphics pipeline!");
+			return nullptr;
+		}
+
 		bool attachmentCountMatch = attachments.size() == colorAttachments.size();
 		if (useDynamicRendering && !attachmentCountMatch)
 		{
 			vtek_log_error(
 				"For dynamic rendering, number of attachments must match exactly for:");
-			vtek_log_error("--> color blending state and pipeline rendering state.");
-			vtek_log_error("--> cannot create graphics pipeline!");
+			vtek_log_error("--> Color blending state and pipeline rendering state.");
+			vtek_log_error("--> Cannot create graphics pipeline!");
 			return nullptr;
 		}
 
