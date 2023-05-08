@@ -29,7 +29,8 @@ void framebufferResizedCallback()
 
 }
 
-void recreateSwapchain(vtek::Device* device, vtek::Swapchain* swapchain)
+bool recreateSwapchain(
+	vtek::Device* device, vtek::Swapchain* swapchain, VkSurfaceKHR surface)
 {
 	// 1) window minimization guard
 	vtek::window_wait_while_minimized(window);
@@ -38,7 +39,13 @@ void recreateSwapchain(vtek::Device* device, vtek::Swapchain* swapchain)
 	vtek::device_wait_idle(device);
 
 	// 3) recreate swapchain
-	vtek::swapchain_recreate(swapchain);
+	int width, height;
+	vtek::window_get_framebuffer_size(window, &width, &height);
+	if (!vtek::swapchain_recreate(swapchain, device, surface, width, height))
+	{
+		log_error("Failed to recreate swapchain!");
+		return false;
+	}
 }
 
 bool recordCommandBuffer(
@@ -316,8 +323,8 @@ int main()
 		.colorBlendState = &colorBlending,
 		.dynamicStateFlags = 0U
 	};
-	// graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::viewport;
-	// graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::scissor;
+	graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::viewport;
+	graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::scissor;
 
 
 

@@ -41,7 +41,9 @@ namespace vtek
 	Swapchain* swapchain_create(
 		const SwapchainCreateInfo* info, VkSurfaceKHR surface,
 		const PhysicalDevice* physicalDevice, Device* device);
-	bool swapchain_recreate(Swapchain* swapchain);
+	bool swapchain_recreate(
+		Swapchain* swapchain, Device* device, VkSurfaceKHR surface,
+		int framebufferWidth, int framebufferHeight);
 	void swapchain_destroy(Swapchain* swapchain, const Device* device);
 
 	uint32_t swapchain_get_length(Swapchain* swapchain);

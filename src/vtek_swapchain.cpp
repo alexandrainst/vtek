@@ -63,6 +63,13 @@ struct vtek::Swapchain
 	// `inFlightFences`. Used for signalling when it's possible to
 	// render to a swapchain image.
 	std::vector<VkFence> imagesInFlight;
+
+	// ====================== //
+	// === Swapchain info === //
+	// ====================== //
+	bool vsync {false};
+	bool prioritizeLowLatency {false};
+	VkPhysicalDevice physDev {VK_NULL_HANDLE};
 };
 
 
@@ -250,7 +257,7 @@ static VkPresentModeKHR choose_present_mode(
 
 static VkExtent2D choose_image_extent(
 	const VkSurfaceCapabilitiesKHR& capabilities,
-	const vtek::SwapchainCreateInfo* info)
+	int framebufferWidth, int framebufferHeight)
 {
 	// The swap extent is the resolution of the swapchain images, and is
 	// almost always equal to the window resolution in pixels.
@@ -271,8 +278,8 @@ static VkExtent2D choose_image_extent(
 		// for the framebuffer size, which is always in pixels, and use this
 		// value to determine an appropriate swap image size.
 		VkExtent2D actualExtent = {
-			static_cast<uint32_t>(info->framebufferWidth),
-			static_cast<uint32_t>(info->framebufferHeight)
+			static_cast<uint32_t>(framebufferWidth),
+			static_cast<uint32_t>(framebufferHeight)
 		};
 
 		// Clamp the swap extent within the mininum and maximum allowed
@@ -594,7 +601,8 @@ vtek::Swapchain* vtek::swapchain_create(
 	VkPresentModeKHR presentMode = choose_present_mode(presentModes, options);
 
 	// 3) choose swapchain image extent
-	VkExtent2D imageExtent = choose_image_extent(capabilities, info);
+	VkExtent2D imageExtent = choose_image_extent(
+		capabilities, info->framebufferWidth, info->framebufferHeight);
 
 	// Choose swapchain length
 	bool mayTripleBuffer = (presentMode == VK_PRESENT_MODE_MAILBOX_KHR);
@@ -779,10 +787,141 @@ vtek::Swapchain* vtek::swapchain_create(
 	return swapchain;
 }
 
-bool vtek::swapchain_recreate(vtek::Swapchain* swapchain)
+bool vtek::swapchain_recreate(
+	vtek::Swapchain* swapchain, vtek::Device* device, VkSurfaceKHR surface,
+	int framebufferWidth, int framebufferHeight)
 {
-	vtek_log_error("vtek::swapchain_recreate(): Not implemented!");
-	return false;
+	VkDevice dev = vtek::device_get_handle(device);
+	VkPhysicalDevice physDev = swapchain->physDev;
+
+	// =============================== //
+	// === Swapchain configuration === //
+	// =============================== //
+
+	auto capabilities = get_surface_capabilities(physDev, surface);
+	auto formats = get_supported_surface_formats(physDev, surface);
+	auto presentModes = get_supported_present_modes(physDev, surface);
+	if ((formats.size() == 0) || (presentModes.size() == 0))
+	{
+		return false;
+	}
+
+	// 1) choose swapchain surface format
+	VkSurfaceFormatKHR surfaceFormat = choose_surface_format(formats);
+
+	// 2) choose swapchain present mode
+	PresentModeOptions options{};
+	options.AllowScreenTearing = !(swapchain->vsync);
+	options.QueueFullPolicy =
+		(swapchain->prioritizeLowLatency)
+		? QueueFullPolicyType::ReplaceQueuedImage
+		: QueueFullPolicyType::WaitForImage;
+	VkPresentModeKHR presentMode = choose_present_mode(presentModes, options);
+
+	// 3) choose swapchain image extent
+	VkExtent2D imageExtent = choose_image_extent(
+		capabilities, framebufferWidth, framebufferHeight);
+
+	// Choose swapchain length
+	bool mayTripleBuffer = (presentMode == VK_PRESENT_MODE_MAILBOX_KHR);
+	uint32_t swapchainLength = choose_swapchain_length(mayTripleBuffer, capabilities);
+
+	// Create info struct
+	VkSwapchainCreateInfoKHR createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	createInfo.surface = surface;
+	createInfo.minImageCount = swapchainLength;
+	createInfo.imageFormat = surfaceFormat.format;
+	createInfo.imageColorSpace = surfaceFormat.colorSpace;
+	createInfo.imageExtent = imageExtent;
+	createInfo.imageArrayLayers = 1;
+	// TODO: This needs to be modifiable!
+	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	if (capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+	{
+		// The swapchain will have support for screenshot capture
+		// TODO: Probably create a flag for this so clients can know!
+		createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	}
+	createInfo.presentMode = presentMode;
+
+	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
+	vtek::Queue* presentQueue = vtek::device_get_present_queue(device);
+
+	uint32_t qf_indices[2] = {
+		vtek::queue_get_family_index(graphicsQueue),
+		vtek::queue_get_family_index(presentQueue)
+	};
+	if (vtek::queue_is_same_family(graphicsQueue, presentQueue))
+	{
+		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		createInfo.queueFamilyIndexCount = 0;
+		createInfo.pQueueFamilyIndices = nullptr;
+	}
+	else
+	{
+		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		createInfo.queueFamilyIndexCount = 2;
+		createInfo.pQueueFamilyIndices = qf_indices;
+	}
+
+	createInfo.preTransform = choose_pre_transform(capabilities);
+	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	createInfo.clipped = VK_TRUE;
+	createInfo.oldSwapchain = swapchain->vulkanHandle;
+
+	// (re-)Create the swapchain
+	VkResult result = vkCreateSwapchainKHR(
+		dev, &createInfo, nullptr, &swapchain->vulkanHandle);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to re-create swapchain!");
+		return false;
+	}
+
+	// Cleanup the old swapchain images and handle
+	destroy_swapchain_image_views(swapchain, dev);
+	destroy_swapchain_handle(swapchain, dev);
+
+	vkGetSwapchainImagesKHR(dev, swapchain->vulkanHandle, &swapchainLength, nullptr);
+	swapchain->images.resize(swapchainLength, VK_NULL_HANDLE);
+	vkGetSwapchainImagesKHR(
+		dev, swapchain->vulkanHandle, &swapchainLength, swapchain->images.data());
+
+	// Fill out the data members of the swapchain struct
+	swapchain->imageFormat = surfaceFormat.format;
+	swapchain->imageExtent = imageExtent;
+	swapchain->length = swapchainLength;
+	swapchain->isInvalidated = false;
+
+	// Create image views
+	if (!create_image_views(swapchain, dev))
+	{
+		vtek_log_error("Failed to re-create swapchain image views!");
+		return false;
+	}
+
+	// Depth buffer format
+	std::vector<VkFormat> depthFormatCandidates = {
+		VK_FORMAT_D32_SFLOAT,
+		VK_FORMAT_D32_SFLOAT_S8_UINT,
+		VK_FORMAT_D24_UNORM_S8_UINT
+	};
+	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+	VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+	if (!findSupportedImageFormat(
+		    physDev, depthFormatCandidates, tiling, features, &swapchain->depthImageFormat))
+	{
+		vtek_log_error("Failed to find supported depth image format!");
+		return false;
+	}
+
+	// Reset frame sync objects
+	reset_frame_sync_objects(swapchain, dev);
+
+	// All done
+	return true;
 }
 
 void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* device)
