@@ -71,10 +71,13 @@ namespace vtek
 
 		inline Type get() const { return mask; }
 		inline bool has_flag(Enum e) const { return mask & static_cast<Type>(e); }
+		inline bool empty() const { return mask == Type{0}; }
 		inline void clear() { mask = {Type{0}}; }
-		inline bool empty() const { return mask == {Type{0}}; }
 
-		inline EnumBitmask& operator= (Enum e) { mask = static_cast<Type>(e); }
+		inline EnumBitmask& operator= (Enum e) {
+			mask = static_cast<Type>(e);
+			return *this;
+		}
 		inline EnumBitmask& operator|= (Enum e) {
 			mask |= static_cast<Type>(e);
 			return *this;

@@ -7,19 +7,33 @@ uint32_t gFramebufferWidth = 0U;
 uint32_t gFramebufferHeight = 0U;
 glm::vec2 gMoveOffset = glm::vec2(0.0f, 0.0f);
 float gRotateAngle = 0.0f;
+const float gMoveSpeed = 0.05f;
+const float gRotateSpeed = glm::two_pi<float>() * 0.01f;
 
 // helper functions
 void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 {
+	using vtek::KeyboardKey;
+
 	if (action == vtek::InputAction::press)
 	{
-
+		switch (key)
+		{
+		case KeyboardKey::left:  gMoveOffset.x -= gMoveSpeed; break;
+		case KeyboardKey::right: gMoveOffset.x += gMoveSpeed; break;
+		case KeyboardKey::up:    gMoveOffset.y -= gMoveSpeed; break;
+		case KeyboardKey::down:  gMoveOffset.y += gMoveSpeed; break;
+		case KeyboardKey::z:     gRotateAngle += gRotateSpeed; break;
+		case KeyboardKey::x:     gRotateAngle -= gRotateSpeed; break;
+		default:
+			break;
+		}
 	}
 	else if (action == vtek::InputAction::release)
 	{
 		switch (key)
 		{
-		case vtek::KeyboardKey::escape:
+		case KeyboardKey::escape:
 			vtek::window_set_should_close(gWindow, true);
 			break;
 		default:
@@ -142,7 +156,7 @@ bool recordCommandBuffer(
 	// 	cmdBuf, pipLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 	// 	sizeof(glm::vec3), &pushConstant);
 	vtek::PushConstant_v3 pc{};
-	pc.v1 = glm::vec3(gMoveOffset, gRotateAngle);
+	pc.v1 = glm::vec3(gMoveOffset.x, gMoveOffset.y, gRotateAngle);
 	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	pc.cmdPush(cmdBuf, pipLayout);
 
@@ -349,10 +363,12 @@ int main()
 		.multisampleState = &multisampling,
 		.depthStencilState = &depthStencil,
 		.colorBlendState = &colorBlending,
-		.dynamicStateFlags = 0U
+		.dynamicStateFlags = 0U,
+		.pushConstantType = vtek::PushConstantType::vec3
 	};
 	graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::viewport;
 	graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::scissor;
+	graphicsPipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
 
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);

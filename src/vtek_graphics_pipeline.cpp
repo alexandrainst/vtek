@@ -28,7 +28,7 @@ static void get_enabled_dynamic_states(
 	states.clear();
 
 	const vtek::VulkanVersion* apiVersion = vtek::device_get_vulkan_version(device);
-	vtek::EnumBitflag<PDState> ds = info->dynamicStateFlags;
+	vtek::EnumBitmask<PDState> ds = info->dynamicStateFlags;
 
 	auto add = [&states](VkDynamicState s) { states.push_back(s); };
 
@@ -503,7 +503,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ======================= //
 	// === Pipeline layout === //
 	// ======================= //
-	VkPipelineLayoutCreateInfo layoutInfo{}
+	VkPipelineLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layoutInfo.pNext = nullptr;
 	layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
@@ -528,7 +528,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		pushConstantRange.stageFlags =
 			vtek::get_shader_stage_flags_graphics(info->pushConstantShaderStages);
 		pushConstantRange.offset = 0;
-		pushConstantRange.size = ;
+		pushConstantRange.size = vtek::push_constant_size(info->pushConstantType);
 
 		layoutInfo.pushConstantRangeCount = 1;
 		layoutInfo.pPushConstantRanges = &pushConstantRange;

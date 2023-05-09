@@ -311,11 +311,11 @@ namespace vtek
 		ColorBlendState* colorBlendState {nullptr};
 
 		// dynamic states
-		EnumBitflag<PipelineDynamicState> dynamicStateFlags {0U};
+		EnumBitmask<PipelineDynamicState> dynamicStateFlags {0U};
 
 		// Optional: pipeline layout
 		PushConstantType pushConstantType {PushConstantType::none};
-		EnumBitFlag<ShaderStageGraphics> pushConstantShaderStages {};
+		EnumBitmask<ShaderStageGraphics> pushConstantShaderStages {0U};
 	};
 
 

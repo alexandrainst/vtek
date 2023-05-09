@@ -22,24 +22,43 @@ namespace vtek
 	//========================= //
 	// === Shader utilities === //
 	//========================= //
-
-	enum class ShaderStage
+	enum class ShaderStage : uint32_t
 	{
-		vertex, tessellation_control, tessellation_eval,
-		geometry, fragment, compute,
-		raygen, any_hit, closest_hit, miss, intersection, callable,
-		task, mesh,
-		all_graphics, all
+		vertex               = 0x0001U,
+		tessellation_control = 0x0002U,
+		tessellation_eval    = 0x0004U,
+		geometry             = 0x0008U,
+		fragment             = 0x0010U,
+		compute              = 0x0020U,
+		raygen               = 0x0040U,
+		any_hit              = 0x0080U,
+		closest_hit          = 0x0100U,
+		miss                 = 0x0200U,
+		intersection         = 0x0400U,
+		callable             = 0x0800U,
+		task                 = 0x1000U,
+		mesh                 = 0x2000U,
+		all_graphics         = 0x4000U,
+		all                  = 0x8000U
 	};
 
-	enum class ShaderStageGraphics
+	enum class ShaderStageGraphics : uint32_t
 	{
-		vertex, tessellation_control, tessellation_eval, geometry, fragment
+		vertex               = 0x01U,
+		tessellation_control = 0x02U,
+		tessellation_eval    = 0x04U,
+		geometry             = 0x08U,
+		fragment             = 0x10U
 	};
 
-	enum class ShaderStageRayTracing
+	enum class ShaderStageRayTracing : uint32_t
 	{
-		raygen, any_hit, closest_hit, miss, intersection, callable
+		raygen       = 0x01U,
+		any_hit      = 0x02U,
+		closest_hit  = 0x04U,
+		miss         = 0x08U,
+		intersection = 0x10U,
+		callable     = 0x20U
 	};
 
 	VkShaderStageFlagBits get_shader_stage(ShaderStage stage);
@@ -47,9 +66,12 @@ namespace vtek
 	VkShaderStageFlagBits get_shader_stage_ray_tracing(ShaderStageRayTracing stage);
 
 	VkShaderStageFlags get_shader_stage_flags_graphics(
-		EnumBitmask<ShaderStageGraphics> flags);
+		EnumBitmask<ShaderStageGraphics> mask);
 
 
+	// ======================== //
+	// === Graphics shaders === //
+	// ======================== //
 	struct GraphicsShaderInfo
 	{
 		bool vertex {false};
