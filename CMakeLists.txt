@@ -73,6 +73,7 @@ set (src
     include/vtek/vtek_logging.hpp
     include/vtek/vtek_main.hpp
     include/vtek/vtek_physical_device.hpp
+    include/vtek/vtek_push_constants.hpp
     include/vtek/vtek_queue.hpp
     include/vtek/vtek_render_pass.hpp
     include/vtek/vtek_shaders.hpp

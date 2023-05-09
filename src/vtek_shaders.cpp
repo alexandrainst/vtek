@@ -601,6 +601,20 @@ VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(SSRayTrace stage)
 	}
 }
 
+VkShaderStageFlags vtek::get_shader_stage_flags_graphics(
+	vtek::EnumBitmask<vtek::ShaderStageGraphics> flags)
+{
+	VkShaderStageFlags flags = 0U;
+
+	if (SSGraphics::vertex)               flags |= VK_SHADER_STAGE_VERTEX_BIT;
+	if (SSGraphics::tessellation_control) flags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+	if (SSGraphics::tessellation_eval)    flags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+	if (SSGraphics::geometry)             flags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+	if (SSGraphics::fragment)             flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	return flags;
+}
+
 
 
 

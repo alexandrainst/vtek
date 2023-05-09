@@ -137,10 +137,14 @@ bool recordCommandBuffer(
 	vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 	// TODO: Movement offset push constants
-	glm::vec3 pushConstant = glm::vec3(gMoveOffset, gRotateAngle);
-	vkCmdPushConstants(
-		cmdBuf, pipLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-		sizeof(glm::vec3), &pushConstant);
+	// glm::vec3 pushConstant = glm::vec3(gMoveOffset, gRotateAngle);
+	// vkCmdPushConstants(
+	// 	cmdBuf, pipLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+	// 	sizeof(glm::vec3), &pushConstant);
+	vtek::PushConstant_v3 pc{};
+	pc.v1 = glm::vec3(gMoveOffset, gRotateAngle);
+	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	pc.cmdPush(cmdBuf, pipLayout);
 
 	vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 

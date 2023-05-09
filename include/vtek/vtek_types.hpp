@@ -61,25 +61,26 @@ namespace vtek
 	// the member functions `get()`, `has_flag()`, and `clear()`.
 	template<typename Enum>
 	requires std::is_unsigned_v<std::underlying_type_t<Enum>>
-	class EnumBitflag
+	class EnumBitmask
 	{
 	public:
 		using Type = std::underlying_type_t<Enum>;
 
-		inline EnumBitflag() {}
-		inline EnumBitflag(Type _flag) : flag(_flag) {}
+		inline EnumBitmask() {}
+		inline EnumBitmask(Type _mask) : mask(_mask) {}
 
-		inline Type get() { return flag; }
-		inline bool has_flag(Enum e) { return flag & static_cast<Type>(e); }
-		inline void clear() { flag = {Type{0}}; }
+		inline Type get() const { return mask; }
+		inline bool has_flag(Enum e) const { return mask & static_cast<Type>(e); }
+		inline void clear() { mask = {Type{0}}; }
+		inline bool empty() const { return mask == {Type{0}}; }
 
-		inline EnumBitflag& operator= (Enum e) { flag = static_cast<Type>(e); }
-		inline EnumBitflag& operator|= (Enum e) {
-			flag |= static_cast<Type>(e);
+		inline EnumBitmask& operator= (Enum e) { mask = static_cast<Type>(e); }
+		inline EnumBitmask& operator|= (Enum e) {
+			mask |= static_cast<Type>(e);
 			return *this;
 		}
 
 	private:
-		Type flag {Type{0}};
+		Type mask {Type{0}};
 	};
 }

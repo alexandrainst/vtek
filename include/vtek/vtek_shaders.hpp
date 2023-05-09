@@ -13,6 +13,7 @@
 #include <vulkan/vulkan.h>
 
 #include "vtek_fileio.hpp"
+#include "vtek_types.hpp"
 #include "vtek_vulkan_handles.hpp"
 
 
@@ -44,6 +45,9 @@ namespace vtek
 	VkShaderStageFlagBits get_shader_stage(ShaderStage stage);
 	VkShaderStageFlagBits get_shader_stage_graphics(ShaderStageGraphics stage);
 	VkShaderStageFlagBits get_shader_stage_ray_tracing(ShaderStageRayTracing stage);
+
+	VkShaderStageFlags get_shader_stage_flags_graphics(
+		EnumBitmask<ShaderStageGraphics> flags);
 
 
 	struct GraphicsShaderInfo

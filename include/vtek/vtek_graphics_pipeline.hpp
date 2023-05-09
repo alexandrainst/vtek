@@ -5,6 +5,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "vtek_push_constants.hpp"
+#include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
 #include "vtek_vulkan_handles.hpp"
@@ -310,6 +312,10 @@ namespace vtek
 
 		// dynamic states
 		EnumBitflag<PipelineDynamicState> dynamicStateFlags {0U};
+
+		// Optional: pipeline layout
+		PushConstantType pushConstantType {PushConstantType::none};
+		EnumBitFlag<ShaderStageGraphics> pushConstantShaderStages {};
 	};
 
 

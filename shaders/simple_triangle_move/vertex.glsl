@@ -15,24 +15,24 @@ vec3 colors[3] = vec3[](
 );
 
 // push constants block
-layout (push_constant) uniform constants
+layout (push_constant) uniform PushConstants
 {
 	// x,y is offset; z is rotation angle
 	vec3 moveRotate;
-} PushConstants;
+};
 
 void main()
 {
 	vec2 pos = positions[gl_VertexIndex];
-	float sinA = sin(PushConstants.moveRotate.z);
-	float cosA = cos(PushConstants.moveRotate.z);
+	float sinA = sin(moveRotate.z);
+	float cosA = cos(moveRotate.z);
 
 	// A 2d rotation matrix:
 	// [ cosA -sinA ]
 	// [ sinA  cosA ]
 	mat2 rot = mat2(cosA, sinA, -sinA, cosA); // column-major
 
-	vec2 finalPos = PushConstants.moveRotate.xy + (rot * pos);
+	vec2 finalPos = moveRotate.xy + (rot * pos);
 	gl_Position = vec4(finalPos, 0.0, 1.0);
 
 	//gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);

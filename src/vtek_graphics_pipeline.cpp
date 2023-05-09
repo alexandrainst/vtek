@@ -455,9 +455,9 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	}
 	if (info->colorBlendState->attachments.empty() == !rasterizer.rasterizerDiscardEnable)
 	{
-		vtek_log_error("No color attachments provided in the color blending state,");
-		vtek_log_error("and rasterizer discard is not enabled.");
-		vtek_log_error("Cannot create graphics pipeline!");
+		vtek_log_error("No color attachments provided in the color blending state, {}",
+		               "and rasterizer discard is not enabled.");
+		vtek_log_error("--> Cannot create graphics pipeline!");
 		return nullptr;
 	}
 	std::vector<VkPipelineColorBlendAttachmentState> colorAttachments{};
@@ -503,6 +503,46 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ======================= //
 	// === Pipeline layout === //
 	// ======================= //
+	VkPipelineLayoutCreateInfo layoutInfo{}
+	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	layoutInfo.pNext = nullptr;
+	layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
+	// TODO: Descriptor sets
+	layoutInfo.setLayoutCount = 0;
+	layoutInfo.pSetLayouts = nullptr;
+	layoutInfo.pushConstantRangeCount = 0;
+	layoutInfo.pPushConstantRanges = nullptr;
+	VkPushConstantRange pushConstantRange{};
+	if (info->pushConstantType != vtek::PushConstantType::none)
+	{
+		if (info->pushConstantShaderStages.empty())
+		{
+			vtek_log_error(
+				"Push constant type was specified, but not its shader stages!");
+			vtek_log_error("--> Cannot create graphics pipeline!");
+			return nullptr;
+		}
+
+		// NOTE: Only 1 push constant is supported, and not multiple ranges!
+		// This could be changed, if the need arises.
+		pushConstantRange.stageFlags =
+			vtek::get_shader_stage_flags_graphics(info->pushConstantShaderStages);
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = ;
+
+		layoutInfo.pushConstantRangeCount = 1;
+		layoutInfo.pPushConstantRanges = &pushConstantRange;
+	}
+
+	VkPipelineLayout layout {VK_NULL_HANDLE};
+	VkResult layoutResult = vkCreatePipelineLayout(dev, &layoutInfo, nullptr, &layout);
+	if (layoutResult != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create graphics pipeline layout!");
+		return nullptr;
+	}
+
+
 	// TODO: Get this from shader!
 	// VkDescriptorSetLayout descriptorSetLayout =
 	// 	vtek::graphics_shader_get_descriptor_layout(info->shader);
@@ -525,23 +565,23 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// 	return nullptr;
 	// }
 
-	VkPipelineLayoutCreateInfo layoutInfo{};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	layoutInfo.pNext = nullptr;
-	layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
-	layoutInfo.setLayoutCount = 0; // 1;
-	layoutInfo.pSetLayouts = nullptr; // &descriptorSetLayout;
-	layoutInfo.pushConstantRangeCount = 0; // ??
-	layoutInfo.pPushConstantRanges = nullptr; // ??
-	// TODO: Library to extract descriptor layout from Spir-V ??
+	// VkPipelineLayoutCreateInfo layoutInfo{};
+	// layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	// layoutInfo.pNext = nullptr;
+	// layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
+	// layoutInfo.setLayoutCount = 0; // 1;
+	// layoutInfo.pSetLayouts = nullptr; // &descriptorSetLayout;
+	// layoutInfo.pushConstantRangeCount = 0; // ??
+	// layoutInfo.pPushConstantRanges = nullptr; // ??
+	// // TODO: Library to extract descriptor layout from Spir-V ??
 
-	VkPipelineLayout layout {VK_NULL_HANDLE};
-	VkResult layoutResult = vkCreatePipelineLayout(dev, &layoutInfo, nullptr, &layout);
-	if (layoutResult != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to create graphics pipeline layout!");
-		return nullptr;
-	}
+	// VkPipelineLayout layout {VK_NULL_HANDLE};
+	// VkResult layoutResult = vkCreatePipelineLayout(dev, &layoutInfo, nullptr, &layout);
+	// if (layoutResult != VK_SUCCESS)
+	// {
+	// 	vtek_log_error("Failed to create graphics pipeline layout!");
+	// 	return nullptr;
+	// }
 
 	// ========================= //
 	// === Dynamic rendering === // -- alternative to providing a render pass.
