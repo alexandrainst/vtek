@@ -519,7 +519,15 @@ static void destroy_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 
 static void reset_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 {
-	vkResetFences(dev, vtek::kMaxFramesInFlight, swapchain->inFlightFences);
+	for (uint32_t i = 0; i < vtek::kMaxFramesInFlight; i++)
+	{
+		VkFence fence = swapchain->inFlightFences[i];
+		VkResult waitResult = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
+		if (waitResult == VK_TIMEOUT)
+		{
+			vkResetFences(dev, 1, &fence);
+		}
+	}
 
 	const uint32_t numFrames = std::clamp(swapchain->length - 1, 1U, vtek::kMaxFramesInFlight);
 	swapchain->numFramesInFlight = numFrames;
