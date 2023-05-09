@@ -32,7 +32,7 @@ namespace vtek
 	};
 
 
-	template<uint32_t Size, PushConstantType Type, class Derived>
+	template<uint32_t Size, PushConstantType Type>
 	struct PushConstant
 	{
 		// NOTE: Size must always be a multiple of 4.
@@ -42,11 +42,11 @@ namespace vtek
 		static constexpr uint32_t static_size() { return Size; }
 
 		constexpr PushConstantType type() { return Type; }
+		virtual void* data() = 0;
 
 		void cmdPush(VkCommandBuffer buf, VkPipelineLayout layout)
 		{
-			vkCmdPushConstants(buf, layout, stageFlags, 0, Size,
-			                   (void*)(static_cast<Derived*>(this)));
+			vkCmdPushConstants(buf, layout, stageFlags, 0, Size, data());
 		}
 
 		VkShaderStageFlags stageFlags {0U};
@@ -57,8 +57,9 @@ namespace vtek
 	// === Push constant types === //
 	// =========================== //
 	struct PushConstant_v3 : public PushConstant<
-		sizeof(glm::vec3), PushConstantType::vec3, PushConstant_v3>
+		sizeof(glm::vec3), PushConstantType::vec3>
 	{
+		void* data() override { return static_cast<void*>(&v1); }
 		glm::vec3 v1 {0.0f};
 	};
 

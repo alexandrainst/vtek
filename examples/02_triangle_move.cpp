@@ -7,8 +7,9 @@ uint32_t gFramebufferWidth = 0U;
 uint32_t gFramebufferHeight = 0U;
 glm::vec2 gMoveOffset = glm::vec2(0.0f, 0.0f);
 float gRotateAngle = 0.0f;
-const float gMoveSpeed = 0.05f;
-const float gRotateSpeed = glm::two_pi<float>() * 0.01f;
+const float gMoveSpeed = 0.02f;
+const float gRotateSpeed = glm::two_pi<float>() * 0.005f;
+vtek::KeyboardMap gKeyboardMap;
 
 // helper functions
 void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
@@ -19,26 +20,46 @@ void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 	{
 		switch (key)
 		{
-		case KeyboardKey::left:  gMoveOffset.x -= gMoveSpeed; break;
-		case KeyboardKey::right: gMoveOffset.x += gMoveSpeed; break;
-		case KeyboardKey::up:    gMoveOffset.y -= gMoveSpeed; break;
-		case KeyboardKey::down:  gMoveOffset.y += gMoveSpeed; break;
-		case KeyboardKey::z:     gRotateAngle += gRotateSpeed; break;
-		case KeyboardKey::x:     gRotateAngle -= gRotateSpeed; break;
+		case KeyboardKey::escape:
+			vtek::window_set_should_close(gWindow, true);
+			break;
 		default:
+			gKeyboardMap.press_key(key);
 			break;
 		}
 	}
 	else if (action == vtek::InputAction::release)
 	{
-		switch (key)
-		{
-		case KeyboardKey::escape:
-			vtek::window_set_should_close(gWindow, true);
-			break;
-		default:
-			break;
-		}
+		gKeyboardMap.release_key(key);
+	}
+}
+
+void update_movement()
+{
+	using vtek::KeyboardKey;
+
+	// left / right
+	if (gKeyboardMap.get_key(KeyboardKey::left)) {
+		gMoveOffset.x -= gMoveSpeed;
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::right)) {
+		gMoveOffset.x += gMoveSpeed;
+	}
+
+	// up / down
+	if (gKeyboardMap.get_key(KeyboardKey::up)) {
+		gMoveOffset.y -= gMoveSpeed;
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::down)) {
+		gMoveOffset.y += gMoveSpeed;
+	}
+
+	// rotate
+	if (gKeyboardMap.get_key(KeyboardKey::z)) {
+		gRotateAngle += gRotateSpeed;
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::x)) {
+		gRotateAngle -= gRotateSpeed;
 	}
 }
 
@@ -215,6 +236,9 @@ int main()
 		std::cerr << "Failed to initialize vtek!" << std::endl;
 		return -1;
 	}
+
+	// Keyboard map
+	gKeyboardMap.reset();
 
 	// Create window
 	vtek::WindowCreateInfo windowInfo{};
@@ -402,6 +426,7 @@ int main()
 	{
 		// React to incoming input events
 		vtek::window_poll_events();
+		update_movement();
 
 		// Check if framebuffer has been resized.
 		if (vtek::window_is_resizing(gWindow))

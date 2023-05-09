@@ -1,11 +1,16 @@
 #pragma once
 
+#include <cstdint>
+
 
 namespace vtek
 {
+	// =================== //
+	// === Input types === //
+	// =================== //
 	enum class InputAction { press, release, repeat, ignore };
 
-	enum class KeyboardKey {
+	enum class KeyboardKey : uint32_t {
 		unknown,
 		space, apostrophe, comma, minus, period, slash,
 		num_0, num_1, num_2, num_3, num_4, num_5, num_6, num_7, num_8, num_9,
@@ -23,4 +28,29 @@ namespace vtek
 	};
 
 	enum class MouseButton { left, middle, right, ignore };
+
+
+	// =================== //
+	// === Keyboard map == //
+	// =================== //
+	class KeyboardMap
+	{
+	public:
+		static constexpr int kSize = 128;
+
+		inline void press_key(KeyboardKey key) {
+			map[static_cast<uint32_t>(key)] = true;
+		}
+		inline void release_key(KeyboardKey key) {
+			map[static_cast<uint32_t>(key)] = false;
+		}
+		inline bool get_key(KeyboardKey key) {
+			return map[static_cast<uint32_t>(key)];
+		}
+		inline void reset() {
+			for (int i = 0; i < kSize; i++) { map[i] = false; }
+		}
+	private:
+		bool map[kSize];
+	};
 }
