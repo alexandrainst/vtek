@@ -5,6 +5,8 @@
 vtek::ApplicationWindow* gWindow = nullptr;
 uint32_t gFramebufferWidth = 0U;
 uint32_t gFramebufferHeight = 0U;
+glm::vec2 gMoveOffset = glm::vec2(0.0f, 0.0f);
+float gRotateAngle = 0.0f;
 
 // helper functions
 void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
@@ -29,7 +31,6 @@ void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 bool recreateSwapchain(
 	vtek::Device* device, vtek::Swapchain* swapchain, VkSurfaceKHR surface)
 {
-	log_debug("begin");
 	// 1) window minimization guard
 	vtek::window_wait_while_minimized(gWindow);
 
@@ -47,7 +48,6 @@ bool recreateSwapchain(
 		return false;
 	}
 
-	log_debug("end");
 	return true;
 }
 
@@ -57,6 +57,7 @@ bool recordCommandBuffer(
 {
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(graphicsPipeline);
+	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(graphicsPipeline);
 
 	if (!vtek::command_buffer_begin(commandBuffer))
 	{
@@ -136,6 +137,10 @@ bool recordCommandBuffer(
 	vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 	// TODO: Movement offset push constants
+	glm::vec3 pushConstant = glm::vec3(gMoveOffset, gRotateAngle);
+	vkCmdPushConstants(
+		cmdBuf, pipLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+		sizeof(glm::vec3), &pushConstant);
 
 	vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 
@@ -308,6 +313,8 @@ int main()
 		log_error("Failed to load graphics shader!");
 		return -1;
 	}
+	// log_trace("exiting...");
+	// return 0;
 
 	// Vulkan graphics pipeline
 	const uint32_t width = swapchainCreateInfo.framebufferWidth;

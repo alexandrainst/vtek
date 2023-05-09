@@ -307,8 +307,6 @@ static void framebuffer_resize_callback(GLFWwindow* window, int width, int heigh
 	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
 	appWindow->frameBufferResized = true;
-
-	vtek_log_debug("framebuffer_resize_callback");
 }
 
 static void window_minimize_callback(GLFWwindow* window, int iconified)
@@ -509,7 +507,6 @@ void vtek::window_set_should_close(vtek::ApplicationWindow* window, bool shouldC
 
 void vtek::window_wait_while_minimized(vtek::ApplicationWindow* window)
 {
-	vtek_log_trace("vtek::window_wait_while_minimized() - begin");
 	int width = 0;
 	int height = 0;
 	glfwGetFramebufferSize(window->glfwHandle, &width, &height);
@@ -529,7 +526,6 @@ void vtek::window_wait_while_minimized(vtek::ApplicationWindow* window)
 
 	window->framebufferWidth = static_cast<uint32_t>(width);
 	window->framebufferHeight = static_cast<uint32_t>(height);
-	vtek_log_trace("vtek::window_wait_while_minimized() - end");
 }
 
 bool vtek::window_is_resizing(vtek::ApplicationWindow* window)
@@ -541,7 +537,6 @@ void vtek::window_wait_while_resizing(vtek::ApplicationWindow* window)
 {
 	while (window->frameBufferResized)
 	{
-		vtek_log_debug("vtek::window_wait_while_resizing(): while...");
 		window->frameBufferResized = false;
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}

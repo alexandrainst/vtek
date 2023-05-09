@@ -266,6 +266,51 @@ static bool check_graphics_shader_files_exist(
 	return exist;
 }
 
+static bool spirv_reflect_test(const void* spirv_code, size_t spirv_nbytes)
+{
+	vtek_log_trace("spirv_reflect_test()");
+
+	// Generate reflection data for a shader
+	SpvReflectShaderModule module;
+	SpvReflectResult result = spvReflectCreateShaderModule(spirv_nbytes, spirv_code, &module);
+	if (result != SPV_REFLECT_RESULT_SUCCESS)
+	{
+		vtek_log_error("Failed to create SPIRV-Reflect shader module!");
+		return false;
+	}
+	//assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+	// Enumerate and extract shader's input variables
+	uint32_t var_count = 0;
+	result = spvReflectEnumerateInputVariables(&module, &var_count, NULL);
+	if (result != SPV_REFLECT_RESULT_SUCCESS)
+	{
+		vtek_log_error("Failed to enumerate shader input variables!");
+		spvReflectDestroyShaderModule(&module);
+		return false;
+	}
+	//assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+	SpvReflectInterfaceVariable** input_vars =
+		(SpvReflectInterfaceVariable**)malloc(var_count * sizeof(SpvReflectInterfaceVariable*));
+	result = spvReflectEnumerateInputVariables(&module, &var_count, input_vars);
+	if (result != SPV_REFLECT_RESULT_SUCCESS)
+	{
+		vtek_log_error("Failed to enumerate shader input variables!");
+		spvReflectDestroyShaderModule(&module);
+		return false;
+	}
+	//assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+	// Output variables, descriptor bindings, descriptor sets, and push constants
+	// can be enumerated and extracted using a similar mechanism.
+
+	// Destroy the reflection data when no longer required.
+	spvReflectDestroyShaderModule(&module);
+
+	return true;
+}
+
 static VkShaderModule load_spirv_shader(
 	vtek::Directory* shaderdir, const char* filename, const char* type,
 	VkDevice dev)
@@ -302,9 +347,16 @@ static VkShaderModule load_spirv_shader(
 		return VK_NULL_HANDLE;
 	}
 
-	return module;
-
 	// NEXT: Reflection queries...
+	if (!spirv_reflect_test(buffer.data(), buffer.size()))
+	{
+		vtek_log_error(
+			"Failed SPIR-V reflection query -- cannot create graphics shader!");
+		vkDestroyShaderModule(dev, module, nullptr);
+		return VK_NULL_HANDLE;
+	}
+
+	return module;
 }
 
 static EShLanguage get_glslang_shader_stage(SSGraphics stage)
