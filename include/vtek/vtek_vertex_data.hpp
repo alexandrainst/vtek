@@ -32,8 +32,7 @@ namespace vtek
 	// t = texcoord
 	enum class VertexType
 	{
-		// TODO: Call this `empty' instead:
-		none, // empty vertex buffer, for testing purposes (ie. no buffer bound!)
+		empty, // empty vertex buffer, for testing purposes (ie. no buffer bound!)
 		vec2
 	};
 
@@ -41,6 +40,30 @@ namespace vtek
 	// ====================================== //
 	// === Binding/attribute descriptions === //
 	// ====================================== //
+	class BindingDescription
+	{
+	public:
+		// With `instancedVertexArray`, the vertex shader only updates the
+		// contents of the vertex attribute on a per-instance basis. This
+		// allows for instanced rendering without an external buffer containing
+		// the per-instance transforms (like UBO array of SSBO). Instanced
+		// rendering may be done without settings this flag, in which case
+		// a UBO array or an SSBO should be bound.
+		void add_binding(VertexType vt, bool instancedVertexArray)
+		{
+
+		}
+
+
+	private:
+		std::vector<VkVertexInputAttributeDescription> mAttrDesc;
+	};
+
+	class AttributeDescription
+	{
+
+	};
+
 	using BindingDescription = VkVertexInputBindingDescription;
 	using AttributeDescriptions = std::vector<VkVertexInputAttributeDescription>;
 
@@ -53,7 +76,7 @@ namespace vtek
 	// ==================== //
 	// === Vertex types === //
 	// ==================== //
-	struct Vertex_p2
+	struct Vertex_v2
 	{
 		// data
 		glm::vec2 pos;

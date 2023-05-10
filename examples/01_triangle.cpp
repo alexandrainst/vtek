@@ -189,7 +189,7 @@ int main()
 		.renderPass = nullptr, // Nice!
 		.pipelineRendering = &pipelineRendering,
 		.shader = shader,
-		.vertexInputType = vtek::VertexType::vec2,
+		.vertexInputType = vtek::VertexType::empty,
 		.instancedRendering = false,
 		.primitiveTopology = vtek::PrimitiveTopology::triangle_list,
 		.enablePrimitiveRestart = false,

@@ -62,7 +62,8 @@ namespace vtek
 		or_inverted, nand, set
 	};
 
-	// NOTE: cpp-enum-proposal for bitmasks!
+	// A pipeline may have several dynamic states activated at once, so we
+	// provide them as an enum suitable for creating a bitmask.
 	enum class PipelineDynamicState : uint32_t
 	{
 		viewport                    = 0x00000001U,
@@ -285,8 +286,11 @@ namespace vtek
 		GraphicsShader* shader {nullptr};
 
 		// vertex input
-		VertexType vertexInputType {vtek::VertexType::vec2};
+		VertexType vertexInputType {vtek::VertexType::empty};
 		bool instancedRendering {false};
+		// TODO: An alternative suggestion for vertex input, since different buffers
+		// could be bound, ie. one buffer for positions, and another for normals.
+		std::vector<BindingDescription>
 
 		// input assembler
 		PrimitiveTopology primitiveTopology {PrimitiveTopology::triangle_list};
