@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -32,45 +33,40 @@ namespace vtek
 	// t = texcoord
 	enum class VertexType
 	{
-		empty, // empty vertex buffer, for testing purposes (ie. no buffer bound!)
-		vec2
+		uvec2,
+		ivec2,
+		vec2,
+		vec3,
+		vec4
 	};
 
 
 	// ====================================== //
 	// === Binding/attribute descriptions === //
 	// ====================================== //
-	class BindingDescription
+	class VertexDescription
 	{
 	public:
+		using BindingList = std::vector<VkVertexInputBindingDescription>;
+		using AttributeList = std::vector<VkVertexInputAttributeDescription>;
+
+		inline const BindingList& GetBindingDescriptions() { return mBindDesc; }
+		inline const AttributeList& GetAttributeDescriptions() { return mAttrDesc; }
+
 		// With `instancedVertexArray`, the vertex shader only updates the
 		// contents of the vertex attribute on a per-instance basis. This
 		// allows for instanced rendering without an external buffer containing
 		// the per-instance transforms (like UBO array of SSBO). Instanced
 		// rendering may be done without settings this flag, in which case
 		// a UBO array or an SSBO should be bound.
-		void add_binding(VertexType vt, bool instancedVertexArray)
-		{
-
-		}
-
+		void add_attribute(VertexType vt, bool instancedVertexArray = false);
 
 	private:
-		std::vector<VkVertexInputAttributeDescription> mAttrDesc;
+		uint32_t mNumAttrBindings {0};
+		uint32_t mAttrOffset {0};
+		BindingList mBindDesc;
+		AttributeList mAttrDesc;
 	};
-
-	class AttributeDescription
-	{
-
-	};
-
-	using BindingDescription = VkVertexInputBindingDescription;
-	using AttributeDescriptions = std::vector<VkVertexInputAttributeDescription>;
-
-	// TODO: Need other things such as `bool instanced` and binding description count!
-	const BindingDescription& vertex_binding_description(
-		VertexType vt, bool instanced);
-	const AttributeDescriptions& vertex_attribute_descriptions(VertexType vt);
 
 
 	// ==================== //

@@ -260,6 +260,9 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ==================== //
 	// === Vertex input === //
 	// ==================== //
+	const vtek::VertexDescription vertexDesc = info->vertexDescription;
+
+
 	// TODO: What to do here?
 	auto& bindingDesc = vtek::vertex_binding_description(info->vertexInputType, false);
 	auto& attributeDesc = vtek::vertex_attribute_descriptions(info->vertexInputType);
