@@ -27,11 +27,11 @@ namespace vtek
 	// =================== //
 	// === Vertex enum === //
 	// =================== //
-	// How format of a single vertex is described, as laid out in memory.
-	// p = point
-	// n = normal
-	// t = texcoord
-	enum class VertexType
+	// Type of a single vertex attribute, as if provided by a single vertex
+	// buffer. When multiple vertex attributes are packed together in the
+	// same vertex buffer, a list of these should be provided to the
+	// `VertexDescription` class when specifying the bindings.
+	enum class VertexAttribute
 	{
 		uvec2,
 		ivec2,
@@ -40,11 +40,21 @@ namespace vtek
 		vec4
 	};
 
+	enum class PackedVertexAttribute
+	{
+
+	};
+
 
 	// ====================================== //
 	// === Binding/attribute descriptions === //
 	// ====================================== //
-	class VertexDescription
+	class VertexBufferBinding
+	{
+
+	};
+
+	class VertexBufferBindings
 	{
 	public:
 		using BindingList = std::vector<VkVertexInputBindingDescription>;
@@ -60,6 +70,8 @@ namespace vtek
 		// rendering may be done without settings this flag, in which case
 		// a UBO array or an SSBO should be bound.
 		void add_attribute(VertexType vt, bool instancedVertexArray = false);
+
+		void add_attributes(std::vector<VertexType> vts);
 
 	private:
 		uint32_t mNumAttrBindings {0};
