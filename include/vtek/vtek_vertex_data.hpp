@@ -40,44 +40,43 @@ namespace vtek
 		vec4
 	};
 
-	enum class PackedVertexAttribute
+	// With a per-instance input rate, the vertex shader only updates the
+	// contents of the vertex attribute on a per-instance basis. This
+	// allows for instanced rendering without an external buffer containing
+	// the per-instance transforms (like UBO array of SSBO). Instanced
+	// rendering may be done without settings this flag, in which case
+	// a UBO array or an SSBO should be bound.
+	enum class VertexInputRate
 	{
-
+		per_vertex, per_instance
 	};
 
 
 	// ====================================== //
 	// === Binding/attribute descriptions === //
 	// ====================================== //
-	class VertexBufferBinding
-	{
-
-	};
-
 	class VertexBufferBindings
 	{
 	public:
+		using VT = VertexType;
+		using VIR = VertexInputRate;
+
+		void add_buffer(VT vt, VIR rate);
+		void add_buffer(VT vt1, VT vt2, VIR rate);
+		void add_buffer(VT vt1, VT vt2, VT vt3, VIR rate);
+		void add_buffer(VT vt1, VT vt2, VT vt3, VT vt4, VIR rate);
+
 		using BindingList = std::vector<VkVertexInputBindingDescription>;
 		using AttributeList = std::vector<VkVertexInputAttributeDescription>;
 
 		inline const BindingList& GetBindingDescriptions() { return mBindDesc; }
 		inline const AttributeList& GetAttributeDescriptions() { return mAttrDesc; }
 
-		// With `instancedVertexArray`, the vertex shader only updates the
-		// contents of the vertex attribute on a per-instance basis. This
-		// allows for instanced rendering without an external buffer containing
-		// the per-instance transforms (like UBO array of SSBO). Instanced
-		// rendering may be done without settings this flag, in which case
-		// a UBO array or an SSBO should be bound.
-		void add_attribute(VertexType vt, bool instancedVertexArray = false);
-
-		void add_attributes(std::vector<VertexType> vts);
-
 	private:
-		uint32_t mNumAttrBindings {0};
-		uint32_t mAttrOffset {0};
-		BindingList mBindDesc;
-		AttributeList mAttrDesc;
+		BindingList mBindDesc {};
+		AttributeList mAttrDesc {};
+		uint32_t mBindCount {0};
+		uint32_t mLocCount {0};
 	};
 
 

@@ -100,11 +100,6 @@ namespace vtek
 	// ====================== //
 	// === Pipeline states == //
 	// ====================== //
-	struct VertexInputState
-	{
-		std::vector<VertexBufferBinding> bufferBindings;
-	};
-
 	struct ViewportState
 	{
 		VkRect2D viewportRegion {};
@@ -291,16 +286,7 @@ namespace vtek
 		GraphicsShader* shader {nullptr};
 
 		// vertex input
-		// TODO: Experimental code:
-		VertexInputState* vertexInput{nullptr};
-
-
-
-		VertexType vertexInputType {vtek::VertexType::empty};
-		bool instancedRendering {false};
-		// TODO: An alternative suggestion for vertex input, since different buffers
-		// could be bound, ie. one buffer for positions, and another for normals.
-		//std::vector<BindingDescription>
+		VertexBufferBindings* vertexInputBindings{nullptr};
 
 		// input assembler
 		PrimitiveTopology primitiveTopology {PrimitiveTopology::triangle_list};

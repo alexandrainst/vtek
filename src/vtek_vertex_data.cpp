@@ -24,7 +24,10 @@ const vtek::BindingDescription& binding_desc_vertex_p2(bool instanced)
 // ============================= //
 // === Alternative interface === //
 // ============================= //
-static uint32_t get_vertex_offset(vtek::VertexType vt)
+using VT = vtek::VertexType;
+using VIR = vtek::VertexInputRate;
+
+static uint32_t get_vertex_size(vtek::VertexType vt)
 {
 	using vtek::VertexType;
 
@@ -40,6 +43,13 @@ static uint32_t get_vertex_offset(vtek::VertexType vt)
 			"vtek_vertex_data.cpp: Invalid vertex type to calculate offset!");
 		return 0U;
 	}
+}
+
+static VkVertexInputRate get_vertex_input_rate(VIR rate)
+{
+	return (rate == VIR::per_instance)
+		? VK_VERTEX_INPUT_RATE_INSTANCE
+		: VK_VERTEX_INPUT_RATE_VERTEX;
 }
 
 static VkFormat get_vertex_format(vtek::VertexType vt)
@@ -59,6 +69,56 @@ static VkFormat get_vertex_format(vtek::VertexType vt)
 		return VK_FORMAT_UNDEFINED;
 	}
 }
+
+
+// ============================== //
+// === Vertex buffer bindings === //
+// ============================== //
+void vtek::VertexBufferBindings::add_buffer(VT vt, VIR rate)
+{
+	VkVertexInputAttributeDescription attrDesc{};
+	attrDesc.binding = mBindCount;
+	attrDesc.location = mLocCount;
+	attrDesc.format = get_vertex_format(vt);
+	attrDesc.offset = 0;
+	mAttrDesc.emplace_back(attrDesc);
+
+	VkVertexInputBindingDescription bindDesc{};
+	bindDesc.binding = mBindCount;
+	bindDesc.stride = get_vertex_size(vt);
+	bindDesc.inputRate = get_vertex_input_rate(rate);
+	mBindDesc.emplace_back(bindDesc);
+
+	mBindCount++;
+	mLocCount++;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void vtek::VertexDescription::add_attribute(
 	vtek::VertexType vt, bool instancedVertexArray = false)

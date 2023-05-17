@@ -260,19 +260,25 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ==================== //
 	// === Vertex input === //
 	// ==================== //
-	const vtek::VertexDescription vertexDesc = info->vertexDescription;
-
-
-	// TODO: What to do here?
-	auto& bindingDesc = vtek::vertex_binding_description(info->vertexInputType, false);
-	auto& attributeDesc = vtek::vertex_attribute_descriptions(info->vertexInputType);
-
 	VkPipelineVertexInputStateCreateInfo vertexInfo{};
 	vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInfo.vertexBindingDescriptionCount = 0; // 1
-	vertexInfo.pVertexBindingDescriptions = nullptr; //&bindingDesc;
-	vertexInfo.vertexAttributeDescriptionCount = 0; //attributeDesc.size();
-	vertexInfo.pVertexAttributeDescriptions = nullptr; //attributeDesc.data();
+	vtek::VertexBufferBindings* vertexBindings = info->vertexInputBindings;
+	if (vertexBindings == nullptr)
+	{
+		vertexInfo.vertexBindingDescriptionCount = 0;
+		vertexInfo.pVertexBindingDescriptions = nullptr;
+		vertexInfo.vertexAttributeDescriptionCount = 0;
+		vertexInfo.pVertexAttributeDescriptions = nullptr;
+	}
+	else
+	{
+		auto bindings = vertexBindings->GetBindingDescriptions();
+		auto attributes = vertexBindings->GetAttributeDescriptions();
+		vertexInfo.vertexBindingDescriptionCount = bindings.size();
+		vertexInfo.pVertexBindingDescriptions = bindings.data();
+		vertexInfo.vertexAttributeDescriptionCount = attributes.size();
+		vertexInfo.pVertexAttributeDescriptions = attributes.data();
+	}
 
 	// ====================== //
 	// === Input assembly === //
