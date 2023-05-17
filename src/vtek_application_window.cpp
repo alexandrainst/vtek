@@ -18,6 +18,11 @@
 #include "vtek_logging.hpp"
 
 
+/* global constants */
+constexpr int kMinWindowWidth = 100;
+constexpr int kMinWindowHeight = 100;
+
+
 /* struct implementation */
 struct vtek::ApplicationWindow
 {
@@ -331,12 +336,12 @@ static void window_minimize_callback(GLFWwindow* window, int iconified)
 static void set_window_hints(const vtek::WindowCreateInfo* info)
 {
 	// TODO: Warning because not yet implemented
-	if (info->fullscreen)
-	{
-		vtek_log_warn("Fullscreen windows is not implemented in vtek yet!");
-	}
+	// if (info->fullscreen)
+	// {
+	// 	vtek_log_warn("Fullscreen windows is not implemented in vtek yet!");
+	// }
 
-	// Always disable API with Vulkan
+	// Always disable GL API with Vulkan
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	// The swap interval indicates how many frames to wait until swapping the
@@ -386,6 +391,41 @@ static void configure_window(GLFWwindow* window, const vtek::WindowCreateInfo* i
 			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 		}
 	}
+
+	// Define window size limits, such that when a window is resized its size
+	// will never be too small. We use `GLFW_DONT_CARE` for maximum width and
+	// height.
+	if (!info->fullscreen)
+	{
+		glfwSetWindowSizeLimits(
+			window, kMinWindowWidth, kMinWindowHeight,
+			GLFW_DONT_CARE, GLFW_DONT_CARE);
+	}
+}
+
+static GLFWwindow* create_fullscreen_window(const vtek::WindowCreateInfo* info)
+{
+	// Quoting GLFW docs:
+	// "Unless you have a way for the user to choose a specific monitor, it is
+	// recommended that you pick the primary monitor."
+	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+	if (monitor == nullptr)
+	{
+		vtek_log_error("Failed to call glfwGetPrimaryMonitor -- {}",
+		               "cannot create GLFW fullscreen window!");
+		return nullptr;
+	}
+
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+	if (mode == nullptr)
+	{
+		vtek_log_error("Failed to call glfwGetVideoMode -- {}",
+		               "cannot create GLFW fullscreen window!");
+		return nullptr;
+	}
+
+	return glfwCreateWindow(
+		mode->width, mode->height, info->title, monitor, nullptr);
 }
 
 
@@ -405,8 +445,13 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	// Set hints for how GLFW should create the window
 	set_window_hints(info);
 
-	appWindow->glfwHandle = glfwCreateWindow(
-		info->width, info->height, info->title, NULL, NULL);
+	if (info->fullscreen) {
+		appWindow->glfwHandle = create_fullscreen_window(info);
+	}
+	else {
+		appWindow->glfwHandle = glfwCreateWindow(
+			info->width, info->height, info->title, NULL, NULL);
+	}
 	if (appWindow->glfwHandle == nullptr)
 	{
 		vtek_log_error("Failed to create GLFW window!");
@@ -483,16 +528,39 @@ void vtek::window_destroy(vtek::ApplicationWindow* window)
 	sAllocator.free(window->id);
 }
 
-void vtek::window_get_framebuffer_size(
-	vtek::ApplicationWindow* window, uint32_t* width, uint32_t* height)
+VkSurfaceKHR vtek::window_create_surface(
+	vtek::ApplicationWindow* window, vtek::Instance* instance)
 {
-	*width = window->framebufferWidth;
-	*height = window->framebufferHeight;
+	VkInstance inst = vtek::instance_get_handle(instance);
+
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	if (glfwCreateWindowSurface(inst, window->glfwHandle, nullptr, &surface) != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create GLFW window surface!");
+		return VK_NULL_HANDLE;
+	}
+
+	return surface;
+}
+
+void vtek::window_surface_destroy(VkSurfaceKHR surface, vtek::Instance* instance)
+{
+	if (surface == VK_NULL_HANDLE) { return; }
+
+	VkInstance inst = vtek::instance_get_handle(instance);
+	vkDestroySurfaceKHR(inst, surface, nullptr);
 }
 
 void vtek::window_poll_events()
 {
 	glfwPollEvents();
+}
+
+void vtek::window_get_framebuffer_size(
+	vtek::ApplicationWindow* window, uint32_t* width, uint32_t* height)
+{
+	*width = window->framebufferWidth;
+	*height = window->framebufferHeight;
 }
 
 bool vtek::window_get_should_close(vtek::ApplicationWindow* window)
@@ -542,28 +610,13 @@ void vtek::window_wait_while_resizing(vtek::ApplicationWindow* window)
 	}
 }
 
-VkSurfaceKHR vtek::window_create_surface(
-	vtek::ApplicationWindow* window, vtek::Instance* instance)
+void vtek::window_get_content_scale(
+	vtek::ApplicationWindow* window, float* scaleX, float* scaleY)
 {
-	VkInstance inst = vtek::instance_get_handle(instance);
-
-	VkSurfaceKHR surface = VK_NULL_HANDLE;
-	if (glfwCreateWindowSurface(inst, window->glfwHandle, nullptr, &surface) != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to create GLFW window surface!");
-		return VK_NULL_HANDLE;
-	}
-
-	return surface;
+	glfwGetWindowContentScale(window->glfwHandle, scaleX, scaleY);
 }
 
-void vtek::window_surface_destroy(VkSurfaceKHR surface, vtek::Instance* instance)
-{
-	if (surface == VK_NULL_HANDLE) { return; }
 
-	VkInstance inst = vtek::instance_get_handle(instance);
-	vkDestroySurfaceKHR(inst, surface, nullptr);
-}
 
 void vtek::window_set_key_handler(
 	vtek::ApplicationWindow* window, vtek::tKeyCallback fn)

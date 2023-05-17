@@ -26,9 +26,18 @@ namespace vtek
 	};
 
 
+	// Create/destroy window
 	ApplicationWindow* window_create(const WindowCreateInfo* info);
 	void window_destroy(ApplicationWindow* window);
 
+	// surface for the application window, needed for Vulkan
+	VkSurfaceKHR window_create_surface(ApplicationWindow* window, Instance* instance);
+	void window_surface_destroy(VkSurfaceKHR surface, Instance* instance);
+
+
+	// =============================== //
+	// === Basic window management === //
+	// =============================== //
 	void window_poll_events();
 	void window_get_framebuffer_size(
 		ApplicationWindow* window, uint32_t* width, uint32_t* height);
@@ -41,13 +50,30 @@ namespace vtek
 	void window_wait_while_minimized(ApplicationWindow* window);
 
 	bool window_is_resizing(ApplicationWindow* window);
+
+	// Wait while the window is being resized. This should be used as a guard
+	// inside the rendering loop of an application, so the swapchain will _likely_
+	// only be resized when the user has finished resizing the window, and NOT
+	// every frame (which would be expensive!).
+	// NOTE: Current implementation sleeps for 100 milliseconds in-between while
+	// checking a condition.
 	void window_wait_while_resizing(ApplicationWindow* window);
 
-	// surface for the application window, needed for Vulkan
-	VkSurfaceKHR window_create_surface(ApplicationWindow* window, Instance* instance);
-	void window_surface_destroy(VkSurfaceKHR surface, Instance* instance);
 
-	// event handling
+	// ========================= //
+	// === Window attributes === //
+	// ========================= //
+	// Obtain the ratio between the current DPI and the platform's default DPI,
+	// important for scaling text and UI elements. This ensures that the pixel
+	// dimensions of text and UI, scaled by these values, will appear at a
+	// reasonable size on other machines and monitors, regardless of their DPI
+	// and scaling settings.
+	void window_get_content_scale(ApplicationWindow* window, float* scaleX, float* scaleY);
+
+
+	// ====================== //
+	// === Event handling === //
+	// ====================== //
 	typedef std::function<void(KeyboardKey,InputAction)> tKeyCallback;
 	typedef std::function<void(MouseButton,InputAction)> tMouseButtonCallback;
 	typedef std::function<void(double,double)> tMouseMoveCallback;

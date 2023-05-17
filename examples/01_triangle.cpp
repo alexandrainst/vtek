@@ -44,14 +44,22 @@ int main()
 	}
 
 	// Create window
+	constexpr bool kFullscreen = true;
 	vtek::WindowCreateInfo windowInfo{};
 	windowInfo.title = "01_triangle";
-	windowInfo.width = 500;
-	windowInfo.height = 500;
-	windowInfo.maximized = false;
-	windowInfo.resizeable = false;
-	windowInfo.decorated = true;
 	windowInfo.cursorDisabled = false;
+	if (kFullscreen)
+	{
+		windowInfo.fullscreen = true;
+	}
+	else
+	{
+		windowInfo.width = 500;
+		windowInfo.height = 500;
+		windowInfo.maximized = false;
+		windowInfo.resizeable = false;
+		windowInfo.decorated = true;
+	}
 	window = vtek::window_create(&windowInfo);
 	if (window == nullptr)
 	{
