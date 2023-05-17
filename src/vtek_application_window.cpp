@@ -36,7 +36,6 @@ struct vtek::ApplicationWindow
 	tMouseMoveCallback fMouseMoveCallback;
 	tMouseScrollCallback fMouseScrollCallback;
 
-	tFramebufferResizeCallback fFramebufferResizeCallback; // TODO: Needed?
 	bool frameBufferResized {false};
 	bool isMinimized {false};
 };
@@ -559,6 +558,10 @@ void vtek::window_poll_events()
 void vtek::window_get_framebuffer_size(
 	vtek::ApplicationWindow* window, uint32_t* width, uint32_t* height)
 {
+	int w, h;
+	glfwGetFramebufferSize(window->glfwHandle, &w, &h);
+	window->framebufferWidth = static_cast<uint32_t>(w);
+	window->framebufferHeight = static_cast<uint32_t>(h);
 	*width = window->framebufferWidth;
 	*height = window->framebufferHeight;
 }
@@ -640,10 +643,4 @@ void vtek::window_set_mouse_scroll_handler(
 	vtek::ApplicationWindow* window, vtek::tMouseScrollCallback fn)
 {
 	window->fMouseScrollCallback = fn;
-}
-
-void vtek::window_set_framebuffer_resize_handler(
-	vtek::ApplicationWindow* window, vtek::tFramebufferResizeCallback fn)
-{
-	window->fFramebufferResizeCallback = fn;
 }

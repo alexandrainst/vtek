@@ -387,8 +387,7 @@ int main()
 	graphicsPipelineInfo.colorBlendState = &colorBlending;
 	graphicsPipelineInfo.dynamicStateFlags
 		= vtek::PipelineDynamicState::viewport
-		| vtek::PipelineDynamicState::scissor
-		| vtek::PipelineDynamicState::depth_bias;
+		| vtek::PipelineDynamicState::scissor;
 	graphicsPipelineInfo.pushConstantType = vtek::PushConstantType::vec3;
 	graphicsPipelineInfo.pushConstantShaderStages
 		= vtek::ShaderStageGraphics::vertex

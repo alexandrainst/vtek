@@ -88,7 +88,4 @@ namespace vtek
 		ApplicationWindow* window, tMouseMoveCallback fn);
 	void window_set_mouse_scroll_handler(
 		ApplicationWindow* window, tMouseScrollCallback fn);
-
-	void window_set_framebuffer_resize_handler(
-		ApplicationWindow* window, tFramebufferResizeCallback fn);
 }
