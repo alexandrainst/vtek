@@ -327,3 +327,21 @@ namespace vtek
 	VkPipelineLayout graphics_pipeline_get_layout(GraphicsPipeline* pipeline);
 	RenderPassType graphics_pipeline_get_render_pass_type(GraphicsPipeline* pipeline);
 }
+
+
+
+// Bitwise operations for dynamic pipeline state, because it's convenient:
+inline constexpr vtek::EnumBitmask<vtek::PipelineDynamicState> operator| (
+	vtek::PipelineDynamicState s1, vtek::PipelineDynamicState s2)
+{
+	uint32_t flags = static_cast<uint32_t>(s1) | static_cast<uint32_t>(s2);
+	return {flags};
+}
+
+// Same for push constant shader stages:
+inline constexpr vtek::EnumBitmask<vtek::ShaderStageGraphics> operator| (
+	vtek::ShaderStageGraphics s1, vtek::ShaderStageGraphics s2)
+{
+	uint32_t flags = static_cast<uint32_t>(s1) | static_cast<uint32_t>(s2);
+	return {flags};
+}

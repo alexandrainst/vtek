@@ -178,7 +178,7 @@ bool recordCommandBuffer(
 	// 	sizeof(glm::vec3), &pushConstant);
 	vtek::PushConstant_v3 pc{};
 	pc.v1 = glm::vec3(gMoveOffset.x, gMoveOffset.y, gRotateAngle);
-	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	pc.cmdPush(cmdBuf, pipLayout);
 
 	vkCmdDraw(cmdBuf, 3, 1, 0, 0);
@@ -373,26 +373,26 @@ int main()
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
 
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{
-		.renderPassType = vtek::RenderPassType::dynamic,
-		.renderPass = nullptr, // Nice!
-		.pipelineRendering = &pipelineRendering,
-		.shader = shader,
-		.vertexInputType = vtek::VertexType::empty,
-		.instancedRendering = false,
-		.primitiveTopology = vtek::PrimitiveTopology::triangle_list,
-		.enablePrimitiveRestart = false,
-		.viewportState = &viewport,
-		.rasterizationState = &rasterizer,
-		.multisampleState = &multisampling,
-		.depthStencilState = &depthStencil,
-		.colorBlendState = &colorBlending,
-		.dynamicStateFlags = 0U,
-		.pushConstantType = vtek::PushConstantType::vec3
-	};
-	graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::viewport;
-	graphicsPipelineInfo.dynamicStateFlags |= vtek::PipelineDynamicState::scissor;
-	graphicsPipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
+	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	graphicsPipelineInfo.renderPass = nullptr; // Nice!
+	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
+	graphicsPipelineInfo.shader = shader;
+	graphicsPipelineInfo.primitiveTopology = vtek::PrimitiveTopology::triangle_list;
+	graphicsPipelineInfo.enablePrimitiveRestart = false;
+	graphicsPipelineInfo.viewportState = &viewport;
+	graphicsPipelineInfo.rasterizationState = &rasterizer;
+	graphicsPipelineInfo.multisampleState = &multisampling;
+	graphicsPipelineInfo.depthStencilState = &depthStencil;
+	graphicsPipelineInfo.colorBlendState = &colorBlending;
+	graphicsPipelineInfo.dynamicStateFlags
+		= vtek::PipelineDynamicState::viewport
+		| vtek::PipelineDynamicState::scissor
+		| vtek::PipelineDynamicState::depth_bias;
+	graphicsPipelineInfo.pushConstantType = vtek::PushConstantType::vec3;
+	graphicsPipelineInfo.pushConstantShaderStages
+		= vtek::ShaderStageGraphics::vertex
+		| vtek::ShaderStageGraphics::fragment;
 
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);

@@ -67,7 +67,7 @@ namespace vtek
 		using Type = std::underlying_type_t<Enum>;
 
 		inline EnumBitmask() {}
-		inline EnumBitmask(Type _mask) : mask(_mask) {}
+		inline constexpr EnumBitmask(Type _mask) : mask(_mask) {}
 
 		inline Type get() const { return mask; }
 		inline bool has_flag(Enum e) const { return mask & static_cast<Type>(e); }
@@ -81,6 +81,10 @@ namespace vtek
 		inline EnumBitmask& operator|= (Enum e) {
 			mask |= static_cast<Type>(e);
 			return *this;
+		}
+
+		inline EnumBitmask operator| (Enum e) {
+			return EnumBitmask{ mask | static_cast<Type>(e) };
 		}
 
 	private:

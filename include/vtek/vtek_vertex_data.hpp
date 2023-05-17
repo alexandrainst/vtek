@@ -31,7 +31,7 @@ namespace vtek
 	// buffer. When multiple vertex attributes are packed together in the
 	// same vertex buffer, a list of these should be provided to the
 	// `VertexDescription` class when specifying the bindings.
-	enum class VertexAttribute
+	enum class VertexAttributeType
 	{
 		uvec2,
 		ivec2,
@@ -58,13 +58,13 @@ namespace vtek
 	class VertexBufferBindings
 	{
 	public:
-		using VT = VertexType;
+		using VAT = VertexAttributeType;
 		using VIR = VertexInputRate;
 
-		void add_buffer(VT vt, VIR rate);
-		void add_buffer(VT vt1, VT vt2, VIR rate);
-		void add_buffer(VT vt1, VT vt2, VT vt3, VIR rate);
-		void add_buffer(VT vt1, VT vt2, VT vt3, VT vt4, VIR rate);
+		void add_buffer(VAT vt, VIR rate);
+		void add_buffer(VAT vt1, VAT vt2, VIR rate);
+		void add_buffer(VAT vt1, VAT vt2, VAT vt3, VIR rate);
+		void add_buffer(VAT vt1, VAT vt2, VAT vt3, VAT vt4, VIR rate);
 
 		using BindingList = std::vector<VkVertexInputBindingDescription>;
 		using AttributeList = std::vector<VkVertexInputAttributeDescription>;
@@ -90,7 +90,8 @@ namespace vtek
 
 		// descriptions, only static access
 		// TODO: Does this work?
-		static constexpr VertexType kVertexType = VertexType::vec2;
+		static constexpr VertexAttributeType kVertexType =
+			VertexAttributeType::vec2;
 	};
 }
 
@@ -100,9 +101,9 @@ namespace vtek
 // REVIEW: Place in model loading file instead?
 namespace std
 {
-	template<> struct hash<vtek::Vertex_p2>
+	template<> struct hash<vtek::Vertex_v2>
 	{
-		std::size_t operator()(const vtek::Vertex_p2& v) const
+		std::size_t operator()(const vtek::Vertex_v2& v) const
 		{
 			return hash<glm::vec2>()(v.pos);
 		}

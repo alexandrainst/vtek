@@ -184,22 +184,18 @@ int main()
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
 
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{
-		.renderPassType = vtek::RenderPassType::dynamic,
-		.renderPass = nullptr, // Nice!
-		.pipelineRendering = &pipelineRendering,
-		.shader = shader,
-		.vertexInputType = vtek::VertexType::empty,
-		.instancedRendering = false,
-		.primitiveTopology = vtek::PrimitiveTopology::triangle_list,
-		.enablePrimitiveRestart = false,
-		.viewportState = &viewport,
-		.rasterizationState = &rasterizer,
-		.multisampleState = &multisampling,
-		.depthStencilState = &depthStencil,
-		.colorBlendState = &colorBlending,
-		.dynamicStateFlags = 0U
-	};
+	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	graphicsPipelineInfo.renderPass = nullptr; // Nice!
+	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
+	graphicsPipelineInfo.shader = shader;
+	graphicsPipelineInfo.primitiveTopology = vtek::PrimitiveTopology::triangle_list;
+	graphicsPipelineInfo.enablePrimitiveRestart = false;
+	graphicsPipelineInfo.viewportState = &viewport;
+	graphicsPipelineInfo.rasterizationState = &rasterizer;
+	graphicsPipelineInfo.multisampleState = &multisampling;
+	graphicsPipelineInfo.depthStencilState = &depthStencil;
+	graphicsPipelineInfo.colorBlendState = &colorBlending;
 
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
