@@ -512,7 +512,7 @@ static VkShaderModule load_glsl_shader(
 	VkShaderModule module;
 	VkShaderModuleCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.codeSize = spirv.size();
+	createInfo.codeSize = spirv.size() * sizeof(uint32_t);
 	createInfo.pCode = spirv.data();
 	VkResult result = vkCreateShaderModule(dev, &createInfo, nullptr, &module);
 	if (result != VK_SUCCESS)

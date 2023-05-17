@@ -36,7 +36,7 @@ int main()
 	initInfo.disableLogging = false;
 	initInfo.applicationTitle = "triangle";
 	initInfo.useGLFW = true;
-	initInfo.loadShadersFromGLSL = false;
+	initInfo.loadShadersFromGLSL = true;
 	if (!vtek::initialize(&initInfo))
 	{
 		std::cerr << "Failed to initialize vtek!" << std::endl;
@@ -157,7 +157,7 @@ int main()
 	shaderInfo.vertex = true;
 	shaderInfo.fragment = true;
 	vtek::GraphicsShader* shader =
-		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
+		vtek::graphics_shader_load_glsl(&shaderInfo, shaderdir, device);
 	if (shader == nullptr)
 	{
 		log_error("Failed to load graphics shader!");
