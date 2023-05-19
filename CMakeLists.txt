@@ -89,7 +89,9 @@ set (src
     src/impl/vtek_init.hpp
     src/impl/vtek_queue_struct.hpp
     src/impl/vtek_vulkan_helpers.hpp
+    src/glsl/vtek_glsl_shader_utils.hpp
 
+    src/glsl/vtek_glsl_shader_utils.cpp
     src/vtek_application_window.cpp
     src/vtek_command_buffer.cpp
     src/vtek_command_pool.cpp
