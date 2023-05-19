@@ -346,16 +346,6 @@ bool vtek::file_read_into_buffer(vtek::File* file, std::vector<char>& buffer)
 	return true;
 }
 
-bool vtek::file_read_into_string(vtek::File* file, std::string& str)
-{
-	str.reserve(file->size + 1);
-	file->handle.seekg(0);
-	file->handle.read(str.data(), file->size);
-	str[file->size] = '\n'; // ensure proper termination
-	file->handle.seekg(0);
-	return true;
-}
-
 bool vtek::file_read_line_accum(
 	vtek::File* file, std::vector<char>& accumBuffer, std::vector<char>& line)
 {

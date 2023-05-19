@@ -14,7 +14,6 @@
 
 #include <map>
 #include <ranges>
-#include <sstream>
 
 /* File I/O shader includer */
 using IncludeResult = glslang::TShader::Includer::IncludeResult;
@@ -58,12 +57,6 @@ public:
 
 	virtual void releaseInclude(IncludeResult*) override;
 
-	inline const std::map<std::string, std::vector<char>>& GetSources()
-	{
-		return mSources;
-	}
-
-
 private:
 	static inline const std::string sEmpty = "";
 	static inline IncludeResult smFailResult =
@@ -77,10 +70,13 @@ private:
 IncludeResult* GlslShaderIncluder::includeSystem(
 	const char* headerName, const char* includerName, size_t inclusionDepth)
 {
+	// TODO: This should be used if a shader file says "#include <source>",
+	// in which case it includes a "system" file instead of a local file.
+	vtek_log_error("GlslShaderIncluder::includeSystem() is not implemented!");
 	vtek_log_debug("includeSystem({}, {}, {})", headerName, includerName, inclusionDepth);
 	return nullptr;
 }
-#include <iostream>
+
 IncludeResult* GlslShaderIncluder::includeLocal(
 	const char* headerName, const char* includerName, size_t inclusionDepth)
 {
@@ -102,7 +98,6 @@ IncludeResult* GlslShaderIncluder::includeLocal(
 	}
 
 	mSources[resolvedHeaderName] = {}; // insert an empty vector!
-	//std::vector<char> headerContents;
 	vtek::File* file = vtek::file_open(
 		mShaderdir, headerName, vtek::FileModeFlag::read);
 	if (file == nullptr)
@@ -120,31 +115,30 @@ IncludeResult* GlslShaderIncluder::includeLocal(
 		return &smFailResult;
 	}
 
-	//mSources[resolvedHeaderName] = std::move<headerContents>;
-	std::cout << "mSources[resolvedHeaderName].size(): "
-	          << mSources[resolvedHeaderName].size() << '\n';
-
 	IncludeResult* result = new IncludeResult(
 		resolvedHeaderName, mSources[resolvedHeaderName].data(),
 		mSources[resolvedHeaderName].size(), nullptr);
-	vtek_log_debug("8");
 
 	auto [it, b] = mIncludes.emplace(std::make_pair(resolvedHeaderName, result));
-	vtek_log_debug("9");
 	if (!b)
 	{
 		vtek_log_error("Failed to insert IncludeResult into std::map!");
 		return &smFailResult;
 	}
-	vtek_log_debug("10");
-	std::cout << "result->headerName: " << result->headerName << '\n';
-	std::cout << "result->headerData: " << result->headerData << '\n';
 	return it->second;
 }
 
 void GlslShaderIncluder::releaseInclude(IncludeResult* result)
 {
 	vtek_log_debug("releaseInclude(result->headerName: {})", result->headerName);
+	if (auto it = mSources.find(result->headerName); it != mSources.end())
+	{
+		mSources.erase(it);
+	}
+	if (auto it = mIncludes.find(result->headerName); it != mIncludes.end())
+	{
+		mIncludes.erase(it);
+	}
 }
 
 
@@ -415,21 +409,7 @@ std::vector<uint32_t> vtek::glsl_utils_load_shader(
 		vtek_log_error("Failed to preprocess shader: {}", shader.getInfoLog());
 		return {};
 	}
-
-	// =========================== //
-	// === Add shader preamble === //
-	// =========================== //
-	std::stringstream ss;
-	for (auto const& [hname, source] : includer.GetSources() | std::views::reverse)
-	{
-		ss.write(source.data(), source.size());
-	}
-	// std::string preamble = ss.str();
-	// std::cout << "preamble: " << preamble << '\n';
-	// shader.setPreamble(preamble.c_str());
-
 	const char* preprocessedSources[1] = { preprocessedStr.c_str() };
-	std::cout << "preprocessedStr: " << preprocessedStr << '\n';
 	shader.setStrings(preprocessedSources, 1);
 
 	// ======================== //
@@ -441,11 +421,7 @@ std::vector<uint32_t> vtek::glsl_utils_load_shader(
 		vtek_log_error("Failed to parse shader: {}", shader.getInfoLog());
 		return {};
 	}
-	vtek_log_debug("two");
 
-	// NEXT: Now we probably link the shader to create a program
-
-	// TODO: Do we really need to create program and link?? We are doing 1 shader at a time!
 	glslang::TProgram program;
 	program.addShader(&shader);
 	if (!program.link(messageFlags))

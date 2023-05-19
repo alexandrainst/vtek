@@ -132,9 +132,6 @@ namespace vtek
 	// Read the entire contents of the file, and copy it into `buffer`.
 	bool file_read_into_buffer(File* file, std::vector<char>& buffer);
 
-	// Same as above, except contents is stored in an std::string.
-	bool file_read_into_string(File* file, std::string& str);
-
 	// Read the file, line by line, until reaching EOF. The accumulated result
 	// is stored in `accumBuffer`, while each consecutive read replaces the
 	// contents of `line` with the next line.
