@@ -12,8 +12,9 @@
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
 
-#include <forward_list>
-
+#include <map>
+#include <ranges>
+#include <sstream>
 
 /* File I/O shader includer */
 using IncludeResult = glslang::TShader::Includer::IncludeResult;
@@ -21,6 +22,9 @@ using IncludeResult = glslang::TShader::Includer::IncludeResult;
 class GlslShaderIncluder : public glslang::TShader::Includer
 {
 public:
+	explicit GlslShaderIncluder(vtek::Directory* shaderdir)
+		: mShaderdir(shaderdir) {}
+
 	// NOTE: Documentation taken from the file "ShaderLang.h", copy-pasted
 	// here for convenience:
 	//
@@ -42,16 +46,106 @@ public:
 	//
 	// For the "system" or <>-style includes; search the "system" paths.
 	virtual IncludeResult* includeSystem(
-		const char* headerName, const char* includerName, size_t inclusionDepth) override;
+		const char* headerName, const char* includerName, size_t inclusionDepth)
+	override;
 
 	// For the "local"-only aspect of a "" include. Should not search in the
 	// "system" paths, because on returning a failure, the parser will
 	// call includeSystem() to look in the "system" locations.
 	virtual IncludeResult* includeLocal(
-		const char* headerName, const char* includerName, size_t inclusionDepth) override;
+		const char* headerName, const char* includerName, size_t inclusionDepth)
+	override;
 
 	virtual void releaseInclude(IncludeResult*) override;
+
+	inline const std::map<std::string, std::vector<char>>& GetSources()
+	{
+		return mSources;
+	}
+
+
+private:
+	static inline const std::string sEmpty = "";
+	static inline IncludeResult smFailResult =
+		IncludeResult(sEmpty, "Header does not exist!", 0, nullptr);
+
+	const vtek::Directory* mShaderdir {nullptr};
+	std::map<std::string, IncludeResult*> mIncludes;
+	std::map<std::string, std::vector<char>> mSources;
 };
+
+IncludeResult* GlslShaderIncluder::includeSystem(
+	const char* headerName, const char* includerName, size_t inclusionDepth)
+{
+	vtek_log_debug("includeSystem({}, {}, {})", headerName, includerName, inclusionDepth);
+	return nullptr;
+}
+#include <iostream>
+IncludeResult* GlslShaderIncluder::includeLocal(
+	const char* headerName, const char* includerName, size_t inclusionDepth)
+{
+	vtek_log_debug("includeLocal({}, {}, {})", headerName, includerName, inclusionDepth);
+
+	std::string resolvedHeaderName =
+		vtek::directory_get_absolute_path(mShaderdir, headerName);
+	if (auto it = mIncludes.find(resolvedHeaderName); it != mIncludes.end())
+	{
+		// `headerName' was already present, so return that, and probably log about it
+		return it->second;
+	}
+
+	if (!vtek::file_exists(mShaderdir, headerName))
+	{
+		vtek_log_error("#Included GLSL shader file \"{}\" does not exist!",
+		               resolvedHeaderName);
+		return &smFailResult;
+	}
+
+	mSources[resolvedHeaderName] = {}; // insert an empty vector!
+	//std::vector<char> headerContents;
+	vtek::File* file = vtek::file_open(
+		mShaderdir, headerName, vtek::FileModeFlag::read);
+	if (file == nullptr)
+	{
+		vtek_log_error("Failed to open #included GLSL shader file: {}",
+		               resolvedHeaderName);
+		return &smFailResult;
+	}
+
+	if (!vtek::file_read_into_buffer(file, mSources[resolvedHeaderName]))
+	{
+		vtek_log_error("Failed to read #included GLSL shader file: {}",
+		               resolvedHeaderName);
+		vtek::file_close(file);
+		return &smFailResult;
+	}
+
+	//mSources[resolvedHeaderName] = std::move<headerContents>;
+	std::cout << "mSources[resolvedHeaderName].size(): "
+	          << mSources[resolvedHeaderName].size() << '\n';
+
+	IncludeResult* result = new IncludeResult(
+		resolvedHeaderName, mSources[resolvedHeaderName].data(),
+		mSources[resolvedHeaderName].size(), nullptr);
+	vtek_log_debug("8");
+
+	auto [it, b] = mIncludes.emplace(std::make_pair(resolvedHeaderName, result));
+	vtek_log_debug("9");
+	if (!b)
+	{
+		vtek_log_error("Failed to insert IncludeResult into std::map!");
+		return &smFailResult;
+	}
+	vtek_log_debug("10");
+	std::cout << "result->headerName: " << result->headerName << '\n';
+	std::cout << "result->headerData: " << result->headerData << '\n';
+	return it->second;
+}
+
+void GlslShaderIncluder::releaseInclude(IncludeResult* result)
+{
+	vtek_log_debug("releaseInclude(result->headerName: {})", result->headerName);
+}
 
 
 
@@ -249,18 +343,6 @@ std::vector<uint32_t> vtek::glsl_utils_load_shader(
 		return {};
 	}
 
-	// TODO: Read file line by line, necessary to check for shader inclusions
-	// std::vector<char> accumBuffer;
-	// accumBuffer.resize();
-	// std::vector<char> buffer;
-	// bool read = vtek::file_read_into_buffer(file, accumBuffer);
-	// vtek::file_close(file);
-	// if (!read)
-	// {
-	// 	vtek_log_error("Failed to read {} shader file!", type);
-	// 	return VK_NULL_HANDLE;
-	// }
-
 	// Read file into buffer
 	std::vector<char> buffer;
 	bool read = vtek::file_read_into_buffer(file, buffer);
@@ -271,16 +353,8 @@ std::vector<uint32_t> vtek::glsl_utils_load_shader(
 		return {};
 	}
 	buffer.push_back('\0');
-	// std::cout << buffer.data() << '\n';
 
-	// Search for statements that include other shader files, ie `#include <file>`.
-	// TODO: This could be optimized to run _while_ reading the file into buffer.
-
-	// TODO: I might just concur and use the C API, as it seems much more simple:
-	// https://github.com/KhronosGroup/glslang/tree/main#c-functional-interface-new
-
-
-	// NEXT: New, improved usage glslang and proper (recursive) header inclusion!
+	// Create the glslang shader object
 	EShLanguage lang = get_glslang_shader_stage(stage);
 	if (lang < 0)
 	{
@@ -288,20 +362,8 @@ std::vector<uint32_t> vtek::glsl_utils_load_shader(
 		return {};
 	}
 	glslang::TShader shader(lang);
-
-	// TODO: We need an includer for recursive shader inclusion
-	glslang::TShader::ForbidIncluder includer;
-
-	// TODO: Adding sources to the shader
-	std::forward_list<const char*> shaderStringsList;
-	shaderStringsList.push_front(buffer.data());
-
-	std::vector<const char*> shaderStrings;
-	for (const char* str : shaderStringsList)
-	{
-		shaderStrings.push_back(str);
-	}
-	shader.setStrings(shaderStrings.data(), shaderStrings.size());
+	const char* sources[1] = { buffer.data() };
+	shader.setStrings(sources, 1);
 
 	// ======================= //
 	// === Define settings === //
@@ -337,6 +399,11 @@ std::vector<uint32_t> vtek::glsl_utils_load_shader(
 	const EShMessages messageFlags = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 	EProfile defaultProfile = ENoProfile; // NOTE: Only for desktop, before profiles showed up!
 
+	// ===================== //
+	// === GLSL includer === //
+	// ===================== //
+	GlslShaderIncluder includer(shaderdir);
+
 	// ============================= //
 	// === Preprocess the shader === //
 	// ============================= //
@@ -349,14 +416,32 @@ std::vector<uint32_t> vtek::glsl_utils_load_shader(
 		return {};
 	}
 
+	// =========================== //
+	// === Add shader preamble === //
+	// =========================== //
+	std::stringstream ss;
+	for (auto const& [hname, source] : includer.GetSources() | std::views::reverse)
+	{
+		ss.write(source.data(), source.size());
+	}
+	// std::string preamble = ss.str();
+	// std::cout << "preamble: " << preamble << '\n';
+	// shader.setPreamble(preamble.c_str());
+
+	const char* preprocessedSources[1] = { preprocessedStr.c_str() };
+	std::cout << "preprocessedStr: " << preprocessedStr << '\n';
+	shader.setStrings(preprocessedSources, 1);
+
 	// ======================== //
 	// === Parse the shader === //
 	// ======================== //
-	if (!shader.parse(resources, defaultVersion, forwardCompatible, messageFlags, includer))
+	if (!shader.parse(resources, defaultVersion, defaultProfile, false,
+	                  forwardCompatible, messageFlags, includer))
 	{
 		vtek_log_error("Failed to parse shader: {}", shader.getInfoLog());
 		return {};
 	}
+	vtek_log_debug("two");
 
 	// NEXT: Now we probably link the shader to create a program
 
