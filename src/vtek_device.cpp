@@ -6,14 +6,18 @@
 #include <vector>
 
 // vtek
-#include "impl/vtek_host_allocator.h"
-#include "vtek_device.h"
-#include "vtek_logging.h"
-#include "vtek_physical_device.h"
+#include "vtek_device.hpp"
+
+#include "impl/vtek_host_allocator.hpp"
+#include "impl/vtek_init.hpp"
+#include "vtek_instance.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_physical_device.hpp"
+#include "vtek_vulkan_version.hpp"
 
 
 /* queue implementation */
-#include "impl/vtek_queue_struct.h"
+#include "impl/vtek_queue_struct.hpp"
 
 
 /* struct implementation */
@@ -21,6 +25,7 @@ struct vtek::Device
 {
 	uint64_t id {VTEK_INVALID_ID};
 	VkDevice vulkanHandle {VK_NULL_HANDLE};
+	vtek::VulkanVersion vulkanVersion {1, 0, 0};
 
 	VkPhysicalDeviceFeatures enabledFeatures {};
 	vtek::DeviceExtensions enabledExtensions {};
@@ -34,12 +39,17 @@ struct vtek::Device
 	vtek::Queue presentQueue {};
 	std::vector<vtek::Queue> transferQueues {};
 	std::vector<vtek::Queue> computeQueues {};
+
+	VkSampleCountFlagBits msaaColorLimit {VK_SAMPLE_COUNT_1_BIT};
+	VkSampleCountFlagBits msaaDepthLimit {VK_SAMPLE_COUNT_1_BIT};
+	VkSampleCountFlagBits msaaStencilLimit {VK_SAMPLE_COUNT_1_BIT};
 };
 
 
 /* host allocator */
 // TODO: Because of the high memory requirement, perhaps this particular allocator
 //       should store a pointer to a vtek::Device instead, as an optimization.
+// OKAY: This should be done!
 static vtek::HostAllocator<vtek::Device> sAllocator("vtek_device");
 
 
@@ -58,7 +68,7 @@ struct QueueDescription
 	uint32_t familyMaxCount {0};
 	uint32_t queueCount {0};
 	VkQueueFlags queueFlags {0};
-	bool present {false}; // TODO: Needed ?
+	bool present {false};
 };
 
 enum class PresentPlacement
@@ -91,7 +101,7 @@ struct QueueFamilySelections
 
 
 static bool create_queue_infos(
-	const vtek::LogicalDeviceCreateInfo* info,
+	const vtek::DeviceCreateInfo* info,
 	const vtek::PhysicalDevice* physicalDevice,
 	std::vector<VkDeviceQueueCreateInfo>& createInfos,
 	QueueFamilySelections* queueSelections)
@@ -196,7 +206,8 @@ static bool create_queue_infos(
 	// separate compute queue
 	if (doCompute && separateCompute)
 	{
-		const uint32_t maxNum = std::min(support->separateComputeMaxCount, gMaxQueueCount);
+		const uint32_t maxNum =
+			std::min(support->separateComputeMaxCount, gMaxQueueCount);
 		VkDeviceQueueCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		createInfo.pNext = nullptr;
@@ -208,7 +219,8 @@ static bool create_queue_infos(
 		computeDescription.queueFlags = VK_QUEUE_COMPUTE_BIT;
 
 		// We prefer presentation to be inside the compute queue
-		if (doPresent && info->preferPresentInComputeQueue && support->separateComputeHasPresent)
+		if (doPresent && info->preferPresentInComputeQueue
+		    && support->separateComputeHasPresent)
 		{
 			createInfo.queueCount++;
 
@@ -234,8 +246,10 @@ static bool create_queue_infos(
 	}
 
 	// compute, not dedicated, but part of the "graphics" queue.
-	// This should trigger when graphic support was not required but the graphics family supports compute.
-	if (doCompute && graphicsWithCompute && !support->graphicsRequired && !support->hasSeparateComputeFamily)
+	// This should trigger when graphic support was not required but the
+	// graphics family supports compute.
+	if (doCompute && graphicsWithCompute && !support->graphicsRequired
+	    && !support->hasSeparateComputeFamily)
 	{
 		const uint32_t maxNum = std::min(support->graphicsMaxCount, gMaxQueueCount);
 		VkDeviceQueueCreateInfo createInfo{};
@@ -255,8 +269,8 @@ static bool create_queue_infos(
 			createInfo.queueCount += std::max(1U, info->numTransferQueues); // perhaps the user specified 0
 			computeDescription.queueFlags |= VK_QUEUE_TRANSFER_BIT;
 
-			// Technically speaking it's the graphics family, but since graphics is not enabled
-			// we associate transfer with the family used for compute.
+			// Technically speaking it's the graphics family, but since graphics
+			// is not enabled we associate transfer with the family used for compute.
 			queueSelections->transferPlacement = TransferPlacement::compute_family;
 		}
 
@@ -285,7 +299,8 @@ static bool create_queue_infos(
 	// possibly a separate transfer queue that's different from graphics/compute queues
 	if (support->hasSeparateTransferFamily && info->preferSeparateTransferQueue)
 	{
-		const uint32_t maxNum = std::min(gMaxQueueCount, support->separateTransferMaxCount);
+		const uint32_t maxNum =
+			std::min(gMaxQueueCount, support->separateTransferMaxCount);
 		VkDeviceQueueCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		createInfo.pNext = nullptr;
@@ -311,8 +326,6 @@ static bool create_queue_infos(
 		queueSelections->transfer = std::move(transferDescription);
 	}
 
-	// TODO: We could (should?) have some post-condition guards here..
-
 	return true;
 }
 
@@ -320,10 +333,9 @@ static bool create_queue_infos(
 
 // Call this function _after_ device creation to create the queues
 static void create_device_queues(
-	vtek::Device* device, const vtek::LogicalDeviceCreateInfo* info,
+	vtek::Device* device, const vtek::DeviceCreateInfo* info,
 	const QueueFamilySelections* selections)
 {
-	// const vtek::PhysicalDeviceQueueSupport* support = vtek::physical_device_get_queue_support(physicalDevice);
 	VkDevice handle = device->vulkanHandle;
 
 	if (selections->graphics.has_value())
@@ -343,6 +355,7 @@ static void create_device_queues(
 		if (selections->presentPlacement == PresentPlacement::graphics_queue)
 		{
 			device->presentQueue = *queue;
+			queue->presentSupport = true;
 		}
 
 		// set inline compute queue
@@ -455,9 +468,11 @@ static void create_device_queues(
 
 		for (uint32_t i = 0; i < description.queueCount; i++)
 		{
-			if (i >= description.familyMaxCount) // error, this should never happen, but better be safe!
+			// Error. This should never happen, but better be safe.
+			if (i >= description.familyMaxCount)
 			{
-				vtek_log_error("i >= description.familyMaxCount, cannot create enough separate transfer queues!");
+				vtek_log_error("i >= description.familyMaxCount, {}",
+				               "cannot create enough separate transfer queues!");
 				break;
 			}
 
@@ -479,7 +494,8 @@ static void create_device_queues(
 
 		uint32_t numComputeQueues = std::min(1U, info->numComputeQueues);
 		uint32_t numTransferQueues = 0U;
-		bool presentQueue = selections->presentPlacement == PresentPlacement::compute_family;
+		bool presentQueue =
+			selections->presentPlacement == PresentPlacement::compute_family;
 
 		if (selections->transferPlacement == TransferPlacement::compute_family)
 		{
@@ -501,8 +517,10 @@ static void create_device_queues(
 		}
 		else if (num == 2)
 		{
-			// 1 queue dedicated for transfers, 1 for compute(+present?). Just a design choice!
-			// NOTE: We could alternatively decide {compute/present, transfer}, but that's more application specific
+			// 1 queue dedicated for transfers, 1 for compute(+present?).
+			// Just a design choice!
+			// NOTE: We could alternatively decide {compute/present, transfer},
+			//       but that's more application specific.
 			vtek::Queue tQueue{};
 			vkGetDeviceQueue(handle, familyIndex, 0, &tQueue.vulkanHandle);
 			tQueue.familyIndex = familyIndex;
@@ -530,7 +548,7 @@ static void create_device_queues(
 				pQueue.familyIndex = familyIndex;
 				pQueue.queueFlags = description.queueFlags;
 				pQueue.presentSupport = true;
-				device->presentQueue = pQueue; // TODO: std::move ?
+				device->presentQueue = std::move(pQueue);
 				i++;
 			}
 
@@ -559,14 +577,45 @@ static void create_device_queues(
 	} // compute family
 }
 
+static void set_extensions_enabled(
+	vtek::Device* device, const vtek::PhysicalDevice* physicalDevice)
+{
+	auto support = vtek::physical_device_get_extension_support(physicalDevice);
+	device->enabledExtensions.swapchain = support->swapchain;
+	device->enabledExtensions.dynamicRendering = support->dynamicRendering;
+}
+
+static void get_msaa_limits(
+	vtek::Device* device, const VkPhysicalDeviceProperties* properties)
+{
+	const VkPhysicalDeviceLimits* limits = &properties->limits;
+
+	VkSampleCountFlags color = limits->framebufferColorSampleCounts;
+	VkSampleCountFlags depth = limits->framebufferDepthSampleCounts;
+	VkSampleCountFlags stencil = limits->framebufferStencilSampleCounts;
+
+	auto get_max = [](VkSampleCountFlags flags) {
+		if (flags & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+		if (flags & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+		if (flags & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+		if (flags & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+		if (flags & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+		if (flags & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+		return VK_SAMPLE_COUNT_1_BIT;
+	};
+
+	device->msaaColorLimit = get_max(color);
+	device->msaaDepthLimit = get_max(depth);
+	device->msaaStencilLimit = get_max(stencil);
+}
+
 
 
 /* device interface */
 vtek::Device* vtek::device_create(
-	const vtek::LogicalDeviceCreateInfo* info, const vtek::Instance* instance,
+	const vtek::DeviceCreateInfo* info, const vtek::Instance* instance,
 	const vtek::PhysicalDevice* physicalDevice)
 {
-	vtek_log_trace("device_create()");
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
 
 	// Allocate device
@@ -582,49 +631,71 @@ vtek::Device* vtek::device_create(
 	QueueFamilySelections queueSelections{};
 	if (!create_queue_infos(info, physicalDevice, queueCreateInfos, &queueSelections))
 	{
-		vtek_log_error("Failed to get device queue infos! Device creation cannot proceed.");
+		vtek_log_error(
+			"Failed to get device queue infos! Device creation cannot proceed.");
 		return nullptr;
 	}
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pNext = nullptr;
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-	createInfo.pEnabledFeatures = vtek::physical_device_get_required_features(physicalDevice);
+	createInfo.pEnabledFeatures =
+		vtek::physical_device_get_required_features(physicalDevice);
 
-	// Device extensions - support queried for during physical device pick, now we just enable them!
+	// Device extensions - support queried for during physical device pick.
+	// Now we just enable them!
 	const std::vector<const char*>& requiredExtensions =
 		vtek::physical_device_get_required_extensions(physicalDevice);
 	createInfo.enabledExtensionCount = requiredExtensions.size();
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
-	// REVIEW: This should be done when picking physical device, IF at all!
-	// TODO: How best to approach this?
-	// if (info->enableMaintenance1Extension)
-	// {
-	// 	// TODO: If we are using Vulkan 1.1 or later, then this extension is automatically included.
-	// 	enabledDeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-	// }
+	// Fetch supported extensions (different from those _required_)
+	auto supportedExtensions =
+		vtek::physical_device_get_extension_support(physicalDevice);
 
+	// Add dynamic rendering
+	VkPhysicalDeviceDynamicRenderingFeatures dynRenderInfo{};
+	if (supportedExtensions->dynamicRendering)
+	{
+		dynRenderInfo.sType =
+			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+		dynRenderInfo.pNext = nullptr;
+		dynRenderInfo.dynamicRendering = VK_TRUE;
 
-	// Bindless texture support----------------------------------------
+		createInfo.pNext = &dynRenderInfo;
+	};
+
+	// Set the actual Vulkan API version.
+	// This is needed for enabling and querying features and extensions.
+	auto physDevProps = vtek::physical_device_get_properties(physicalDevice);
+	vtek::VulkanVersion physDevVersion(physDevProps->apiVersion);
+	vtek::VulkanVersion instVersion = vtek::instance_get_vulkan_version(instance);
+	if ((instVersion.major() == 1U) && (instVersion.minor() == 0U))
+	{
+		// If instance version == 1.0, then device version must be the same.
+		device->vulkanVersion = instVersion;
+	}
+	else
+	{
+		// Instance version >= 1.1, so device version will be set to the apiVersion
+		// of the physical device, which is the maximum supported version.
+		device->vulkanVersion = physDevVersion;
+	}
+
+	// Bindless texture support---------------------- (Added for legacy reasons)
 	if (info->enableBindlessTextureSupport)
 	{
 		vtek_log_error("Bindless texture support untested/not implemented");
-		/*VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-		  vkGetPhysicalDeviceFeatures2(physicalDevice_, &physicalDeviceFeatures2);
-		  VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr };
-		  createInfo.pNext = &physicalDeviceFeatures2;
-		  indexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
-		  indexingFeatures.runtimeDescriptorArray = VK_TRUE;
-		  physicalDeviceFeatures2.pNext = &indexingFeatures;*/
 		return nullptr;
 	}
 
 	// Validation layers
 	if (vtek::instance_get_validation_enabled(instance))
 	{
-		const std::vector<const char*>& layers = vtek::instance_get_validation_layer_names(instance);
+		const std::vector<const char*>& layers =
+			vtek::instance_get_validation_layer_names(instance);
 		createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
 		createInfo.ppEnabledLayerNames = layers.data();
 	}
@@ -633,7 +704,8 @@ vtek::Device* vtek::device_create(
 		createInfo.enabledLayerCount = 0;
 	}
 
-	if (vkCreateDevice(physDev, &createInfo, nullptr, &device->vulkanHandle) != VK_SUCCESS)
+	if (vkCreateDevice(physDev, &createInfo, nullptr, &device->vulkanHandle)
+	    != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to create logical device!");
 		return nullptr;
@@ -643,7 +715,26 @@ vtek::Device* vtek::device_create(
 	device->queueAllocator = new vtek::HostAllocator<vtek::Queue>("vtek_device_queues");
 	create_device_queues(device, info, &queueSelections);
 
-	// TODO: Optional info logging that a (logical) device was created.
+	// Set extensions as enabled
+	set_extensions_enabled(device, physicalDevice);
+
+	// Set features enabled, which is what was _required_ when picking physical device
+	device->enabledFeatures =
+		*(vtek::physical_device_get_required_features(physicalDevice));
+
+	// If GLSL shader loading was enabled, build resource limits for shader compilation
+	if (vtek::is_glsl_shader_loading_enabled())
+	{
+		vtek::build_glslang_resource_limits(physicalDevice);
+	}
+
+	// Compute limits for multisampling
+	get_msaa_limits(device, physDevProps);
+
+	// Log creation success and Vulkan version
+	auto vs = device->vulkanVersion;
+	vtek_log_info("Created Device with Vulkan v{}.{}.{}", vs.major(), vs.minor(), vs.patch());
+
 	return device;
 }
 
@@ -656,7 +747,6 @@ void vtek::device_destroy(Device* device)
 	vkDestroyDevice(device->vulkanHandle, nullptr);
 	device->vulkanHandle = VK_NULL_HANDLE;
 
-	// TODO: Implement proper cleanup routine inside the vtek::queue_destroy function!
 	if (device->queueAllocator != nullptr)
 	{
 		device->graphicsQueue = {};
@@ -680,19 +770,33 @@ VkDevice vtek::device_get_handle(const vtek::Device* device)
 	return device->vulkanHandle;
 }
 
-const vtek::DeviceExtensions* vtek::device_get_enabled_extensions(const vtek::Device* device)
+const vtek::VulkanVersion* vtek::device_get_vulkan_version(const vtek::Device* device)
+{
+	return &device->vulkanVersion;
+}
+
+const vtek::DeviceExtensions* vtek::device_get_enabled_extensions(
+	const vtek::Device* device)
 {
 	return &device->enabledExtensions;
 }
 
+const VkPhysicalDeviceFeatures* vtek::device_get_enabled_features(
+	const vtek::Device* device)
+{
+	return &device->enabledFeatures;
+}
+
 vtek::Queue* vtek::device_get_graphics_queue(vtek::Device* device)
 {
-	return (device->graphicsQueue.vulkanHandle == VK_NULL_HANDLE) ? nullptr : &device->graphicsQueue;
+	return (device->graphicsQueue.vulkanHandle == VK_NULL_HANDLE)
+		? nullptr : &device->graphicsQueue;
 }
 
 vtek::Queue* vtek::device_get_present_queue(vtek::Device* device)
 {
-	return (device->presentQueue.vulkanHandle == VK_NULL_HANDLE) ? nullptr : &device->presentQueue;
+	return (device->presentQueue.vulkanHandle == VK_NULL_HANDLE)
+		? nullptr : &device->presentQueue;
 }
 
 std::vector<vtek::Queue*> vtek::device_get_transfer_queues(vtek::Device* device)
@@ -704,7 +808,8 @@ std::vector<vtek::Queue*> vtek::device_get_transfer_queues(vtek::Device* device)
 
 std::vector<vtek::Queue*> vtek::device_get_compute_queues(vtek::Device* device)
 {
-	// TODO: When queues are stored as pointers from a queue allocator, this can be greatly simplified!
+	// TODO: When queues are stored as pointers from a queue allocator,
+	// this can be greatly simplified!
 	std::vector<vtek::Queue*> res;
 	for (vtek::Queue& q : device->computeQueues) { res.emplace_back(&q); }
 	return res;
@@ -713,4 +818,20 @@ std::vector<vtek::Queue*> vtek::device_get_compute_queues(vtek::Device* device)
 bool vtek::device_get_graphics_present_same_family(const vtek::Device* device)
 {
 	return device->graphicsQueue.familyIndex == device->presentQueue.familyIndex;
+}
+
+void vtek::device_wait_idle(vtek::Device* device)
+{
+	vkDeviceWaitIdle(device->vulkanHandle);
+}
+
+VkSampleCountFlagBits vtek::device_get_max_sample_count(
+	vtek::Device* device, const vtek::SampleCountQuery* query)
+{
+	VkSampleCountFlagBits maxCount = VK_SAMPLE_COUNT_64_BIT;
+	if (query->color) { maxCount = std::min(maxCount, device->msaaColorLimit); }
+	if (query->depth) { maxCount = std::min(maxCount, device->msaaDepthLimit); }
+	if (query->stencil) { maxCount = std::min(maxCount, device->msaaStencilLimit); }
+
+	return maxCount;
 }

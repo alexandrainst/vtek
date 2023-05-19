@@ -1,16 +1,26 @@
 // glfw
+// NOTE: GLFW must be included before the Vulkan header, so we place it first.
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 // std
+#include <chrono>
+#include <thread>
+#include <unordered_map>
 #include <vector>
 
 // vtek
-#include "impl/vtek_host_allocator.h"
-#include "vtek_application_window.h"
-#include "vtek_input.h"
-#include "vtek_logging.h"
-#include "vtek_main.h"
+#include "vtek_application_window.hpp"
+
+#include "impl/vtek_host_allocator.hpp"
+#include "vtek_input.hpp"
+#include "vtek_instance.hpp"
+#include "vtek_logging.hpp"
+
+
+/* global constants */
+constexpr int kMinWindowWidth = 100;
+constexpr int kMinWindowHeight = 100;
 
 
 /* struct implementation */
@@ -18,22 +28,31 @@ struct vtek::ApplicationWindow
 {
 	uint64_t id {0UL};
 	GLFWwindow* glfwHandle {nullptr};
-	int framebufferWidth {0};
-	int framebufferHeight {0};
+	uint32_t framebufferWidth {0U};
+	uint32_t framebufferHeight {0U};
 
 	tKeyCallback fKeyCallback;
 	tMouseButtonCallback fMouseButtonCallback;
 	tMouseMoveCallback fMouseMoveCallback;
 	tMouseScrollCallback fMouseScrollCallback;
+
+	bool frameBufferResized {false};
+	bool isMinimized {false};
 };
 
 
 /* host allocator */
 static vtek::HostAllocator<vtek::ApplicationWindow> sAllocator("application_window");
 
+// Event mapper: Fetch a complete window context from an opaque GLFW handle.
+// Used for delegating input events and other window-related events, such as
+// minimizing/maximizing the window, resizing the framebuffer, etc.
+static std::unordered_map<GLFWwindow*, vtek::ApplicationWindow*>* spEventMapper = nullptr;
+
 
 /* implementation of GLFW backend */
-#include "impl/vtek_glfw_backend.h"
+#include "vtek_main.hpp"
+#include "impl/vtek_glfw_backend.hpp"
 
 static std::vector<std::string> sRequiredInstanceExtensions {};
 
@@ -50,11 +69,22 @@ bool vtek::glfw_backend_initialize()
 		sRequiredInstanceExtensions.push_back(extensions[i]);
 	}
 
+	// Create the event mapper
+	spEventMapper = new std::unordered_map<GLFWwindow*, vtek::ApplicationWindow*>();
+
 	return true;
 }
 
 void vtek::glfw_backend_terminate()
 {
+	if (spEventMapper->size() > 0)
+	{
+		vtek_log_debug("vtek::glfw_backend_terminate: {}",
+		               "Not all windows were properly destroyed.");
+	}
+	delete spEventMapper;
+	spEventMapper = nullptr;
+
 	glfwTerminate();
 }
 
@@ -215,6 +245,18 @@ static vtek::InputAction get_input_action_from_glfw(int action)
 	}
 }
 
+static vtek::MouseButton get_mouse_button_from_glfw(int button)
+{
+	switch (button)
+	{
+	case GLFW_MOUSE_BUTTON_LEFT:   return vtek::MouseButton::left;
+	case GLFW_MOUSE_BUTTON_MIDDLE: return vtek::MouseButton::middle;
+	case GLFW_MOUSE_BUTTON_RIGHT:  return vtek::MouseButton::right;
+	default:
+		return vtek::MouseButton::ignore;
+	}
+}
+
 static void default_key_callback(vtek::KeyboardKey, vtek::InputAction) {}
 static void default_mouse_button_callback(vtek::MouseButton, vtek::InputAction) {}
 static void default_mouse_move_callback(double, double) {}
@@ -222,11 +264,8 @@ static void default_mouse_scroll_callback(double, double) {}
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-	// TODO: Multiple windows??
-	static const vtek::ApplicationWindow* appWindow =
-		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	// ASSERT_MSG(context != nullptr,
-	//            "key_callback: error fetching GLFW user pointer!");
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
 	vtek::KeyboardKey vKey = get_key_from_glfw(key);
 	vtek::InputAction vAction = get_input_action_from_glfw(action);
@@ -241,35 +280,151 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 static void mouse_move_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	static const vtek::ApplicationWindow* appWindow =
-		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	// ASSERT_MSG(context != nullptr,
-	//            "mouse_move_callback: error fetching GLFW user pointer!");
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
-	// context->windowInterface.fMouseMove(xpos, ypos);
+	appWindow->fMouseMoveCallback(xpos, ypos);
 }
 
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-	static const vtek::ApplicationWindow* appWindow =
-		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	// ASSERT_MSG(context != nullptr,
-	//            "mouse_button_callback: error fetching GLFW user pointer!");
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
-	// vtek::MouseButtonType bt = graphics::get_glfw_mouse_button(button);
+	vtek::MouseButton vButton = get_mouse_button_from_glfw(button);
 	vtek::InputAction vAction = get_input_action_from_glfw(action);
 
-	// context->windowInterface.fMouseButton(bt, at);
+	appWindow->fMouseButtonCallback(vButton, vAction);
 }
 
 static void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	static const vtek::ApplicationWindow* appWindow =
-		static_cast<vtek::ApplicationWindow*>(glfwGetWindowUserPointer(window));
-	// ASSERT_MSG(context != nullptr,
-	//            "mouse_scroll_callback: error fetching GLFW user pointer!");
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
 
-	// context->windowInterface.fMouseScroll(xoffset, yoffset);
+	appWindow->fMouseScrollCallback(xoffset, yoffset);
+}
+
+static void framebuffer_resize_callback(GLFWwindow* window, int width, int height)
+{
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
+
+	appWindow->frameBufferResized = true;
+}
+
+static void window_minimize_callback(GLFWwindow* window, int iconified)
+{
+	auto appWindow = (*spEventMapper)[window];
+	// TODO: VTEK_ASSERT(appWindow != nullptr);
+
+	if (iconified)
+	{
+		// The window was iconified (ie. minimized)
+		vtek_log_debug("window_minimize_callback: minimize");
+		appWindow->isMinimized = true;
+	}
+	else
+	{
+		// The window was restored
+		vtek_log_debug("window_minimize_callback: restore");
+		appWindow->isMinimized = false;
+	}
+}
+
+static void set_window_hints(const vtek::WindowCreateInfo* info)
+{
+	// TODO: Warning because not yet implemented
+	// if (info->fullscreen)
+	// {
+	// 	vtek_log_warn("Fullscreen windows is not implemented in vtek yet!");
+	// }
+
+	// Always disable GL API with Vulkan
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+	// The swap interval indicates how many frames to wait until swapping the
+	// buffers, commonly known as vsync. By default, the swap interval is zero,
+	// meaning buffer swapping will occur immediately. On fast machines, many
+	// of those frames will never be seen, as the screen is still only updated
+	// typically 60-75 times per second, so this wastes a lot of CPU and GPU
+	// cycles. Also, because the buffers will be swapped in the middle the
+	// screen update, leading to screen tearing. For these reasons, applications
+	// will typically want to set the swap interval to one. It can be set to
+	// higher values, but this is usually not recommended, because of the input
+	// latency it leads to.
+	glfwSwapInterval(1);
+
+	if (info->fullscreen)
+	{
+		// RESIZE: Always disabled for fullscreen windows
+		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+	}
+	else
+	{
+		// DECORATE: Default is GLFW_TRUE
+		glfwWindowHint(GLFW_DECORATED, (info->decorated) ? GLFW_TRUE : GLFW_FALSE);
+
+		// RESIZE: Ignored for undecorated or fullscreen windows
+		if (info->decorated)
+		{
+			glfwWindowHint(GLFW_RESIZABLE, (info->resizeable) ? GL_TRUE : GL_FALSE);
+		}
+
+		// MAXIMIZED: Default is GLFW_FALSE
+		glfwWindowHint(GLFW_MAXIMIZED, (info->maximized) ? GLFW_TRUE : GLFW_FALSE);
+	}
+}
+
+static void configure_window(GLFWwindow* window, const vtek::WindowCreateInfo* info)
+{
+	// Raw mouse motion is not affected by the scaling and acceleration applied
+	// to the motion of the desktop cursor, hence more suitable for controlling
+	// a 3D camera.
+	if (info->cursorDisabled)
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		if (glfwRawMouseMotionSupported())
+		{
+			vtek_log_debug("Enabling raw mouse motion.");
+			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+		}
+	}
+
+	// Define window size limits, such that when a window is resized its size
+	// will never be too small. We use `GLFW_DONT_CARE` for maximum width and
+	// height.
+	if (!info->fullscreen)
+	{
+		glfwSetWindowSizeLimits(
+			window, kMinWindowWidth, kMinWindowHeight,
+			GLFW_DONT_CARE, GLFW_DONT_CARE);
+	}
+}
+
+static GLFWwindow* create_fullscreen_window(const vtek::WindowCreateInfo* info)
+{
+	// Quoting GLFW docs:
+	// "Unless you have a way for the user to choose a specific monitor, it is
+	// recommended that you pick the primary monitor."
+	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+	if (monitor == nullptr)
+	{
+		vtek_log_error("Failed to call glfwGetPrimaryMonitor -- {}",
+		               "cannot create GLFW fullscreen window!");
+		return nullptr;
+	}
+
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+	if (mode == nullptr)
+	{
+		vtek_log_error("Failed to call glfwGetVideoMode -- {}",
+		               "cannot create GLFW fullscreen window!");
+		return nullptr;
+	}
+
+	return glfwCreateWindow(
+		mode->width, mode->height, info->title, monitor, nullptr);
 }
 
 
@@ -277,9 +432,6 @@ static void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yof
 /* interface */
 vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 {
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwSwapInterval(1);
-
 	// Allocate window
 	auto [id, appWindow] = sAllocator.alloc();
 	if (appWindow == nullptr)
@@ -289,13 +441,25 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	}
 	appWindow->id = id;
 
-	appWindow->glfwHandle = glfwCreateWindow(
-		info->width, info->height, info->title, NULL, NULL);
+	// Set hints for how GLFW should create the window
+	set_window_hints(info);
+
+	if (info->fullscreen) {
+		appWindow->glfwHandle = create_fullscreen_window(info);
+	}
+	else {
+		appWindow->glfwHandle = glfwCreateWindow(
+			info->width, info->height, info->title, NULL, NULL);
+	}
 	if (appWindow->glfwHandle == nullptr)
 	{
 		vtek_log_error("Failed to create GLFW window!");
+		sAllocator.free(id);
 		return nullptr;
 	}
+
+	// Configure the window after it has been created
+	configure_window(appWindow->glfwHandle, info);
 
 	// Get framebuffer size, needed when creating a swapchain. Description below:
 	//
@@ -305,8 +469,20 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	// So after the window is created, we can query GLFW for the
 	// framebuffer size, which is always in pixels, and use this value
 	// to determine an appropriate swap image size.
-	glfwGetFramebufferSize(
-		appWindow->glfwHandle, &appWindow->framebufferWidth, &appWindow->framebufferHeight);
+	int width, height;
+	glfwGetFramebufferSize(appWindow->glfwHandle, &width, &height);
+	if (width < 0 || height < 0)
+	{
+		vtek_log_error("Invalid framebuffer dimensions retrieved from GLFW!");
+		vtek_log_error("--> Cannot create application window.");
+		sAllocator.free(id);
+		return nullptr;
+	}
+	appWindow->framebufferWidth = static_cast<uint32_t>(width);
+	appWindow->framebufferHeight = static_cast<uint32_t>(height);
+
+	// Add window to the event mapper
+	(*spEventMapper)[appWindow->glfwHandle] = appWindow;
 
 	// Setup default event handlers
 	appWindow->fKeyCallback = default_key_callback;
@@ -314,23 +490,19 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	appWindow->fMouseMoveCallback = default_mouse_move_callback;
 	appWindow->fMouseScrollCallback = default_mouse_scroll_callback;
 
-	glfwSetWindowUserPointer(appWindow->glfwHandle, static_cast<void*>(appWindow));
-
 	glfwSetKeyCallback(appWindow->glfwHandle, key_callback);
 	glfwSetMouseButtonCallback(appWindow->glfwHandle, mouse_button_callback);
 	glfwSetCursorPosCallback(appWindow->glfwHandle, mouse_move_callback);
 	glfwSetScrollCallback(appWindow->glfwHandle, mouse_scroll_callback);
 
-	// TODO: Do this properly.
-	// Raw mouse motion is not affected by the scaling and acceleration applied
-	// to the motion of the desktop cursor, hence more suitable for controlling
-	// a 3D camera.
-	bool cursorDisabled = (glfwGetInputMode(appWindow->glfwHandle, GLFW_CURSOR))
-		== GLFW_CURSOR_DISABLED;
-	if (cursorDisabled && glfwRawMouseMotionSupported())
+	if (!info->fullscreen && info->decorated && info->resizeable)
 	{
-		glfwSetInputMode(appWindow->glfwHandle, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+		glfwSetFramebufferSizeCallback(
+			appWindow->glfwHandle, framebuffer_resize_callback);
 	}
+	glfwSetWindowIconifyCallback(appWindow->glfwHandle, window_minimize_callback);
+
+	// NEXT: Might use other callbacks: maximized, on_close, lose_focus, etc.
 
 	return appWindow;
 }
@@ -339,33 +511,20 @@ void vtek::window_destroy(vtek::ApplicationWindow* window)
 {
 	if (window == nullptr) { return; }
 
+	auto erased = spEventMapper->erase(window->glfwHandle);
+	if (erased == 0)
+	{
+		vtek_log_debug(
+			"vtek::window_destroy(): {}",
+			"Window was not registered in the event mapper - cannot remove!");
+	}
+
 	if (window->glfwHandle != nullptr)
 	{
 		glfwDestroyWindow(window->glfwHandle);
 	}
 
 	sAllocator.free(window->id);
-}
-
-void vtek::window_get_framebuffer_size(vtek::ApplicationWindow* window, int* width, int* height)
-{
-	*width = window->framebufferWidth;
-	*height = window->framebufferHeight;
-}
-
-void vtek::window_poll_events()
-{
-	glfwPollEvents();
-}
-
-bool vtek::window_get_should_close(vtek::ApplicationWindow* window)
-{
-	return !glfwWindowShouldClose(window->glfwHandle);
-}
-
-void vtek::window_set_should_close(vtek::ApplicationWindow* window, bool shouldClose)
-{
-	glfwSetWindowShouldClose(window->glfwHandle, shouldClose ? GLFW_TRUE : GLFW_FALSE);
 }
 
 VkSurfaceKHR vtek::window_create_surface(
@@ -390,6 +549,77 @@ void vtek::window_surface_destroy(VkSurfaceKHR surface, vtek::Instance* instance
 	VkInstance inst = vtek::instance_get_handle(instance);
 	vkDestroySurfaceKHR(inst, surface, nullptr);
 }
+
+void vtek::window_poll_events()
+{
+	glfwPollEvents();
+}
+
+void vtek::window_get_framebuffer_size(
+	vtek::ApplicationWindow* window, uint32_t* width, uint32_t* height)
+{
+	int w, h;
+	glfwGetFramebufferSize(window->glfwHandle, &w, &h);
+	window->framebufferWidth = static_cast<uint32_t>(w);
+	window->framebufferHeight = static_cast<uint32_t>(h);
+	*width = window->framebufferWidth;
+	*height = window->framebufferHeight;
+}
+
+bool vtek::window_get_should_close(vtek::ApplicationWindow* window)
+{
+	return !glfwWindowShouldClose(window->glfwHandle);
+}
+
+void vtek::window_set_should_close(vtek::ApplicationWindow* window, bool shouldClose)
+{
+	glfwSetWindowShouldClose(window->glfwHandle, shouldClose ? GLFW_TRUE : GLFW_FALSE);
+}
+
+void vtek::window_wait_while_minimized(vtek::ApplicationWindow* window)
+{
+	int width = 0;
+	int height = 0;
+	glfwGetFramebufferSize(window->glfwHandle, &width, &height);
+	while(width == 0 || height == 0)
+	{
+		glfwGetFramebufferSize(window->glfwHandle, &width, &height);
+		glfwWaitEvents();
+	}
+	if (width < 0 || height < 0)
+	{
+		vtek_log_error("Invalid framebuffer dimensions retrieved from GLFW!");
+		vtek_log_error("--> Cannot properly wait while minimized.");
+		window->framebufferWidth = 0U;
+		window->framebufferHeight = 0U;
+		return;
+	}
+
+	window->framebufferWidth = static_cast<uint32_t>(width);
+	window->framebufferHeight = static_cast<uint32_t>(height);
+}
+
+bool vtek::window_is_resizing(vtek::ApplicationWindow* window)
+{
+	return window->frameBufferResized;
+}
+
+void vtek::window_wait_while_resizing(vtek::ApplicationWindow* window)
+{
+	while (window->frameBufferResized)
+	{
+		window->frameBufferResized = false;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+}
+
+void vtek::window_get_content_scale(
+	vtek::ApplicationWindow* window, float* scaleX, float* scaleY)
+{
+	glfwGetWindowContentScale(window->glfwHandle, scaleX, scaleY);
+}
+
+
 
 void vtek::window_set_key_handler(
 	vtek::ApplicationWindow* window, vtek::tKeyCallback fn)

@@ -4,17 +4,24 @@
 #include <vulkan/vulkan.h>
 
 // vtek
-#include "impl/vtek_host_allocator.h"
-#include "vtek_device.h"
-#include "vtek_logging.h"
-#include "vtek_physical_device.h"
-#include "vtek_swapchain.h"
-#include "vtek_vulkan_helpers.h"
+#include "vtek_swapchain.hpp"
+
+#include "impl/vtek_host_allocator.hpp"
+#include "impl/vtek_vulkan_helpers.hpp"
+#include "vtek_device.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_physical_device.hpp"
+#include "vtek_queue.hpp"
+#include "vtek_submit_info.hpp"
+
 
 
 /* struct implementation */
 struct vtek::Swapchain
 {
+	// ============================ //
+	// === Swapchain properties === //
+	// ============================ //
 	uint64_t id {VTEK_INVALID_ID};
 	VkSwapchainKHR vulkanHandle {VK_NULL_HANDLE};
 	uint32_t length {0};
@@ -27,6 +34,42 @@ struct vtek::Swapchain
 	uint32_t currentImageIndex {0};
 
 	bool isInvalidated {false};
+
+	VkQueue presentQueue {VK_NULL_HANDLE};
+
+	// ============================ //
+	// === Frame syncronization === //
+	// ============================ //
+	uint32_t numFramesInFlight {0U};
+	uint32_t currentFrameIndex {0U};
+
+	// Semaphores that will be signaled once a swapchain image becomes ready.
+	// Used for acquiring swapchain images.
+	VkSemaphore imageAvailableSemaphores[vtek::kMaxFramesInFlight];
+
+	// Semaphores that will be signaled once rendering of a frame has completed.
+	// Used for releasing swapchain images to the presentation queue.
+	VkSemaphore renderFinishedSemaphores[vtek::kMaxFramesInFlight];
+
+	// Before we can start drawing a frame, the CPU needs to wait for
+	// the swapchain image to become ready. This is accomplished by
+	// having this list of frames which guard the current frame
+	// Before we can draw, we need to wait for fences guarding the current
+	// swap chain image.
+	VkFence inFlightFences[vtek::kMaxFramesInFlight];
+
+	// This vector will be created to the length of the swapchain,
+	// and for each swapchain image hold a pointer to a fence in
+	// `inFlightFences`. Used for signalling when it's possible to
+	// render to a swapchain image.
+	std::vector<VkFence> imagesInFlight;
+
+	// ====================== //
+	// === Swapchain info === //
+	// ====================== //
+	bool vsync {false};
+	bool prioritizeLowLatency {false};
+	VkPhysicalDevice physDev {VK_NULL_HANDLE};
 };
 
 
@@ -80,7 +123,7 @@ struct PresentModeOptions
 
 
 /* helper functions */
-static VkSurfaceFormatKHR chooseSurfaceFormat(
+static VkSurfaceFormatKHR choose_surface_format(
 	const std::vector<VkSurfaceFormatKHR>& supportedFormats)
 {
 	// If none of our criteria were met, we can "settle" for the first format
@@ -122,7 +165,7 @@ static VkSurfaceFormatKHR chooseSurfaceFormat(
 	return chosenFormat;
 }
 
-static VkPresentModeKHR choosePresentMode(
+static VkPresentModeKHR choose_present_mode(
 	const std::vector<VkPresentModeKHR>& supportedPresentModes,
 	const PresentModeOptions& options)
 {
@@ -212,9 +255,9 @@ static VkPresentModeKHR choosePresentMode(
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-static VkExtent2D chooseImageExtent(
+static VkExtent2D choose_image_extent(
 	const VkSurfaceCapabilitiesKHR& capabilities,
-	const vtek::SwapchainCreateInfo* info)
+	uint32_t framebufferWidth, uint32_t framebufferHeight)
 {
 	// The swap extent is the resolution of the swapchain images, and is
 	// almost always equal to the window resolution in pixels.
@@ -234,10 +277,7 @@ static VkExtent2D chooseImageExtent(
 		// So after the window is created, we should query the window library
 		// for the framebuffer size, which is always in pixels, and use this
 		// value to determine an appropriate swap image size.
-		VkExtent2D actualExtent = {
-			static_cast<uint32_t>(info->framebufferWidth),
-			static_cast<uint32_t>(info->framebufferHeight)
-		};
+		VkExtent2D actualExtent = { framebufferWidth, framebufferHeight };
 
 		// Clamp the swap extent within the mininum and maximum allowed
 		// image extents.
@@ -256,7 +296,7 @@ static VkExtent2D chooseImageExtent(
 	}
 }
 
-static bool createImageViews(vtek::Swapchain* swapchain, VkDevice dev)
+static bool create_image_views(vtek::Swapchain* swapchain, VkDevice dev)
 {
 	swapchain->imageViews.resize(swapchain->length, VK_NULL_HANDLE);
 
@@ -268,10 +308,10 @@ static bool createImageViews(vtek::Swapchain* swapchain, VkDevice dev)
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		createInfo.format = swapchain->imageFormat;
 		// We don't need to swizzle (swap around) any of the color channels
-		createInfo.components.r = VK_COMPONENT_SWIZZLE_R;
-		createInfo.components.g = VK_COMPONENT_SWIZZLE_G;
-		createInfo.components.b = VK_COMPONENT_SWIZZLE_B;
-		createInfo.components.a = VK_COMPONENT_SWIZZLE_A;
+		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_R;
+		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_G;
+		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_B;
+		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_A;
 		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		// No mipmapping for the swapchain images.
 		createInfo.subresourceRange.baseMipLevel = 0;
@@ -315,7 +355,7 @@ static void destroy_swapchain_handle(vtek::Swapchain* swapchain, VkDevice dev)
 	}
 }
 
-static uint32_t chooseSwapchainLength(bool mayTripleBuffer, VkSurfaceCapabilitiesKHR& capabilities)
+static uint32_t choose_swapchain_length(bool mayTripleBuffer, VkSurfaceCapabilitiesKHR& capabilities)
 {
 	const uint32_t minImageCount = capabilities.minImageCount;
 	const uint32_t maxImageCount = capabilities.maxImageCount;
@@ -342,7 +382,7 @@ static uint32_t chooseSwapchainLength(bool mayTripleBuffer, VkSurfaceCapabilitie
 	return length;
 }
 
-static VkSurfaceTransformFlagBitsKHR choosePreTransform(VkSurfaceCapabilitiesKHR& capabilities)
+static VkSurfaceTransformFlagBitsKHR choose_pre_transform(VkSurfaceCapabilitiesKHR& capabilities)
 {
 	// We can specify that a certain transformation should be applied to
 	// swapchain images, if it is supported (`supportedTransforms` in
@@ -350,7 +390,8 @@ static VkSurfaceTransformFlagBitsKHR choosePreTransform(VkSurfaceCapabilitiesKHR
 	// flip. If no such transformation is desired specify the current one.
 	VkSurfaceTransformFlagBitsKHR current = capabilities.currentTransform;
 
-	// TODO: Could be fun to try out some of the options available:
+	// NOTE: Alternative options, which may only be picked if the are supported,
+	// as queried for by `vkGetPhysicalDeviceSurfaceCapabilitiesKHR`.
 	// VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
 	// VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR
 	// VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR
@@ -382,7 +423,7 @@ static VkSurfaceTransformFlagBitsKHR choosePreTransform(VkSurfaceCapabilitiesKHR
 	}
 }
 
-VkSurfaceCapabilitiesKHR getSurfaceCapabilities(
+static VkSurfaceCapabilitiesKHR get_surface_capabilities(
 	VkPhysicalDevice physicalDevice, const VkSurfaceKHR& surface)
 {
 	VkSurfaceCapabilitiesKHR capabilities;
@@ -391,7 +432,7 @@ VkSurfaceCapabilitiesKHR getSurfaceCapabilities(
 	return capabilities;
 }
 
-std::vector<VkSurfaceFormatKHR> getSupportedSurfaceFormats(
+static std::vector<VkSurfaceFormatKHR> get_supported_surface_formats(
 	VkPhysicalDevice physicalDevice, const VkSurfaceKHR& surface)
 {
 	uint32_t count;
@@ -409,7 +450,7 @@ std::vector<VkSurfaceFormatKHR> getSupportedSurfaceFormats(
 	return formats;
 }
 
-std::vector<VkPresentModeKHR> getSupportedPresentModes(
+static std::vector<VkPresentModeKHR> get_supported_present_modes(
 	VkPhysicalDevice physicalDevice, const VkSurfaceKHR& surface)
 {
 	uint32_t count;
@@ -427,6 +468,88 @@ std::vector<VkPresentModeKHR> getSupportedPresentModes(
 	return modes;
 }
 
+static bool create_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
+{
+	const uint32_t numFrames = std::clamp(swapchain->length - 1, 1U, vtek::kMaxFramesInFlight);
+	swapchain->numFramesInFlight = numFrames;
+	swapchain->imagesInFlight.resize(swapchain->length, VK_NULL_HANDLE);
+	swapchain->currentFrameIndex = 0U;
+
+	const VkSemaphoreCreateInfo semInfo {
+		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0U // reserved for future use
+	};
+
+	// All fences are created in signaled state, to avoid initial wait before any rendering.
+	const VkFenceCreateInfo fenceInfo {
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = VK_FENCE_CREATE_SIGNALED_BIT
+	};
+
+	for (uint32_t i = 0; i < vtek::kMaxFramesInFlight; i++)
+	{
+		vkCreateSemaphore(dev, &semInfo, nullptr, &swapchain->imageAvailableSemaphores[i]);
+		vkCreateSemaphore(dev, &semInfo, nullptr, &swapchain->renderFinishedSemaphores[i]);
+		vkCreateFence(dev, &fenceInfo, nullptr, &swapchain->inFlightFences[i]);
+	}
+
+	return true;
+}
+
+static void destroy_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
+{
+	for (uint32_t i = 0; i < vtek::kMaxFramesInFlight; i++)
+	{
+		vkDestroySemaphore(dev, swapchain->imageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(dev, swapchain->renderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(dev, swapchain->inFlightFences[i], nullptr);
+	}
+
+	for (auto& fence : swapchain->imagesInFlight)
+	{
+		fence = VK_NULL_HANDLE;
+	}
+	swapchain->imagesInFlight.clear();
+
+	swapchain->numFramesInFlight = 0U;
+	swapchain->currentFrameIndex = 0U;
+}
+
+static void reset_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
+{
+	for (uint32_t i = 0; i < vtek::kMaxFramesInFlight; i++)
+	{
+		VkFence fence = swapchain->inFlightFences[i];
+		VkResult waitResult = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
+		if (waitResult == VK_TIMEOUT)
+		{
+			vkResetFences(dev, 1, &fence);
+		}
+	}
+
+	const uint32_t numFrames = std::clamp(swapchain->length - 1, 1U, vtek::kMaxFramesInFlight);
+	swapchain->numFramesInFlight = numFrames;
+	swapchain->imagesInFlight.resize(numFrames, VK_NULL_HANDLE);
+	swapchain->currentFrameIndex = 0U;
+
+	// TODO: Should we signal the semaphores?
+}
+
+static void set_image_in_use(
+	vtek::Swapchain* swapchain, VkDevice dev, uint32_t frameIndex)
+{
+	// Mark the image fence as in-use by this frame
+	uint32_t currentFrame = swapchain->currentFrameIndex;
+	VkFence targetFence = swapchain->inFlightFences[currentFrame];
+
+	swapchain->imagesInFlight[frameIndex] = targetFence;
+
+	// Reset the fence for use on the next frame
+	vkResetFences(dev, 1, &targetFence);
+}
+
 
 
 /* swapchain interface */
@@ -437,6 +560,23 @@ vtek::Swapchain* vtek::swapchain_create(
 	VkDevice dev = vtek::device_get_handle(device);
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
 
+
+	// ========================= //
+	// === Swapchain support === //
+	// ========================= //
+	auto extensions = vtek::device_get_enabled_extensions(device);
+	if (!extensions->swapchain)
+	{
+		vtek_log_error("Swapchain extension not enabled during device creation.");
+		vtek_log_error("--> Cannot create swapchain!");
+		return nullptr;
+	}
+
+
+	// =============================== //
+	// === Swapchain configuration === //
+	// =============================== //
+
 	// Simply checking if the swapchain extension is available is not
 	// sufficient, because it may not be compatible with the window surface.
 	// We need to check for the following 3 kinds of properties:
@@ -444,16 +584,16 @@ vtek::Swapchain* vtek::swapchain_create(
 	//   min/max width and height of images).
 	// - Surface formats (pixel format, color space)
 	// - Available presentation modes
-	auto capabilities = getSurfaceCapabilities(physDev, surface);
-	auto formats = getSupportedSurfaceFormats(physDev, surface);
-	auto presentModes = getSupportedPresentModes(physDev, surface);
+	auto capabilities = get_surface_capabilities(physDev, surface);
+	auto formats = get_supported_surface_formats(physDev, surface);
+	auto presentModes = get_supported_present_modes(physDev, surface);
 	if ((formats.size() == 0) || (presentModes.size() == 0))
 	{
 		return nullptr;
 	}
 
 	// 1) choose swapchain surface format
-	VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(formats);
+	VkSurfaceFormatKHR surfaceFormat = choose_surface_format(formats);
 
 	// 2) choose swapchain present mode
 	PresentModeOptions options{};
@@ -462,14 +602,15 @@ vtek::Swapchain* vtek::swapchain_create(
 		(info->prioritizeLowLatency)
 		? QueueFullPolicyType::ReplaceQueuedImage
 		: QueueFullPolicyType::WaitForImage;
-	VkPresentModeKHR presentMode = choosePresentMode(presentModes, options);
+	VkPresentModeKHR presentMode = choose_present_mode(presentModes, options);
 
 	// 3) choose swapchain image extent
-	VkExtent2D imageExtent = chooseImageExtent(capabilities, info);
+	VkExtent2D imageExtent = choose_image_extent(
+		capabilities, info->framebufferWidth, info->framebufferHeight);
 
 	// Choose swapchain length
 	bool mayTripleBuffer = (presentMode == VK_PRESENT_MODE_MAILBOX_KHR);
-	uint32_t swapchainLength = chooseSwapchainLength(mayTripleBuffer, capabilities);
+	uint32_t swapchainLength = choose_swapchain_length(mayTripleBuffer, capabilities);
 
 	// Create info struct
 	VkSwapchainCreateInfoKHR createInfo{};
@@ -512,7 +653,18 @@ vtek::Swapchain* vtek::swapchain_create(
 	//     explicit transferring of ownership.
 	// TODO: What to do if we don't use graphics but instead present from compute queue?? baaaaah
 	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
+	if (graphicsQueue == nullptr)
+	{
+		vtek_log_error("Failed to retrieve graphics queue, cannot create swapchain!");
+		return nullptr;
+	}
 	vtek::Queue* presentQueue = vtek::device_get_present_queue(device);
+	if (presentQueue == nullptr)
+	{
+		vtek_log_error("Failed to retrieve present queue, cannot create swapchain!");
+		return nullptr;
+	}
+
 	uint32_t qf_indices[2] = {
 		vtek::queue_get_family_index(graphicsQueue),
 		vtek::queue_get_family_index(presentQueue)
@@ -534,7 +686,7 @@ vtek::Swapchain* vtek::swapchain_create(
 		createInfo.pQueueFamilyIndices = qf_indices;
 	}
 
-	createInfo.preTransform = choosePreTransform(capabilities);
+	createInfo.preTransform = choose_pre_transform(capabilities);
 
 	// The `compositeAlpha` field specifies if the alpha channel should be
 	// used for blending with other windows in the window system. We leave
@@ -556,7 +708,10 @@ vtek::Swapchain* vtek::swapchain_create(
 	// and a reference to the old one must be specified in this field.
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	// Create the swap chain.
+
+	// ========================= //
+	// === Create swap chain === //
+	// ========================= //
 	auto [id, swapchain] = sAllocator.alloc();
 	if (swapchain == nullptr)
 	{
@@ -586,13 +741,24 @@ vtek::Swapchain* vtek::swapchain_create(
 	swapchain->imageExtent = imageExtent;
 	swapchain->length = swapchainLength;
 	swapchain->isInvalidated = false;
+	swapchain->presentQueue = vtek::queue_get_handle(presentQueue);
+	swapchain->vsync = info->vsync;
+	swapchain->prioritizeLowLatency = info->prioritizeLowLatency;
+	swapchain->physDev = physDev;
 
-	// Create image views
-	if (!createImageViews(swapchain, dev))
+	// ========================== //
+	// === Create image views === //
+	// ========================== //
+	if (!create_image_views(swapchain, dev))
 	{
 		vtek_log_error("Failed to create swapchain image views!");
 		return nullptr;
 	}
+
+
+	// =========================== //
+	// === Depth buffer format === //
+	// =========================== //
 
 	// Determine image format for framebuffer depth attachments.
 	// Even though depth images are not used by the swapchain, they are
@@ -613,14 +779,158 @@ vtek::Swapchain* vtek::swapchain_create(
 		return nullptr;
 	}
 
+
+	// ================================= //
+	// === Create frame sync objects === //
+	// ================================= //
+	if (!create_frame_sync_objects(swapchain, dev))
+	{
+		vtek_log_error("Failed to create swapchain frame sync objects!");
+		return nullptr;
+	}
+
 	// All done
 	return swapchain;
 }
 
-bool vtek::swapchain_recreate(vtek::Swapchain* swapchain)
+bool vtek::swapchain_recreate(
+	vtek::Swapchain* swapchain, vtek::Device* device, VkSurfaceKHR surface,
+	uint32_t framebufferWidth, uint32_t framebufferHeight)
 {
-	vtek_log_error("vtek::swapchain_recreate(): Not implemented!");
-	return false;
+	vtek_log_trace("vtek::swapchain_recreate()");
+	VkDevice dev = vtek::device_get_handle(device);
+	VkPhysicalDevice physDev = swapchain->physDev;
+
+	// =============================== //
+	// === Swapchain configuration === //
+	// =============================== //
+
+	auto capabilities = get_surface_capabilities(physDev, surface);
+	auto formats = get_supported_surface_formats(physDev, surface);
+	auto presentModes = get_supported_present_modes(physDev, surface);
+	if ((formats.size() == 0) || (presentModes.size() == 0))
+	{
+		return false;
+	}
+
+	// 1) choose swapchain surface format
+	VkSurfaceFormatKHR surfaceFormat = choose_surface_format(formats);
+
+	// 2) choose swapchain present mode
+	PresentModeOptions options{};
+	options.AllowScreenTearing = !(swapchain->vsync);
+	options.QueueFullPolicy =
+		(swapchain->prioritizeLowLatency)
+		? QueueFullPolicyType::ReplaceQueuedImage
+		: QueueFullPolicyType::WaitForImage;
+	VkPresentModeKHR presentMode = choose_present_mode(presentModes, options);
+
+	// 3) choose swapchain image extent
+	VkExtent2D imageExtent = choose_image_extent(
+		capabilities, framebufferWidth, framebufferHeight);
+
+	// Choose swapchain length
+	bool mayTripleBuffer = (presentMode == VK_PRESENT_MODE_MAILBOX_KHR);
+	uint32_t swapchainLength = choose_swapchain_length(mayTripleBuffer, capabilities);
+
+	// Create info struct
+	VkSwapchainCreateInfoKHR createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	createInfo.surface = surface;
+	createInfo.minImageCount = swapchainLength;
+	createInfo.imageFormat = surfaceFormat.format;
+	createInfo.imageColorSpace = surfaceFormat.colorSpace;
+	createInfo.imageExtent = imageExtent;
+	createInfo.imageArrayLayers = 1;
+	// TODO: This needs to be modifiable!
+	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	if (capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+	{
+		// The swapchain will have support for screenshot capture
+		// TODO: Probably create a flag for this so clients can know!
+		createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	}
+	createInfo.presentMode = presentMode;
+
+	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
+	vtek::Queue* presentQueue = vtek::device_get_present_queue(device);
+
+	uint32_t qf_indices[2] = {
+		vtek::queue_get_family_index(graphicsQueue),
+		vtek::queue_get_family_index(presentQueue)
+	};
+	if (vtek::queue_is_same_family(graphicsQueue, presentQueue))
+	{
+		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		createInfo.queueFamilyIndexCount = 0;
+		createInfo.pQueueFamilyIndices = nullptr;
+	}
+	else
+	{
+		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		createInfo.queueFamilyIndexCount = 2;
+		createInfo.pQueueFamilyIndices = qf_indices;
+	}
+
+	createInfo.preTransform = choose_pre_transform(capabilities);
+	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	createInfo.clipped = VK_TRUE;
+	createInfo.oldSwapchain = swapchain->vulkanHandle;
+
+	// (re-)Create the swapchain
+	VkSwapchainKHR newSwapchain;
+	VkResult result = vkCreateSwapchainKHR(
+		dev, &createInfo, nullptr, &newSwapchain);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to re-create swapchain!");
+		return false;
+	}
+
+	// Cleanup the old swapchain images and handle
+	destroy_swapchain_image_views(swapchain, dev);
+	destroy_swapchain_handle(swapchain, dev);
+
+	vkGetSwapchainImagesKHR(dev, newSwapchain, &swapchainLength, nullptr);
+	swapchain->images.resize(swapchainLength, VK_NULL_HANDLE);
+	vkGetSwapchainImagesKHR(
+		dev, newSwapchain, &swapchainLength, swapchain->images.data());
+
+	// Fill out the data members of the swapchain struct
+	swapchain->vulkanHandle = newSwapchain;
+	swapchain->imageFormat = surfaceFormat.format;
+	swapchain->imageExtent = imageExtent;
+	swapchain->length = swapchainLength;
+	swapchain->isInvalidated = false;
+
+	// Create image views
+	if (!create_image_views(swapchain, dev))
+	{
+		vtek_log_error("Failed to re-create swapchain image views!");
+		return false;
+	}
+
+	// Depth buffer format
+	std::vector<VkFormat> depthFormatCandidates = {
+		VK_FORMAT_D32_SFLOAT,
+		VK_FORMAT_D32_SFLOAT_S8_UINT,
+		VK_FORMAT_D24_UNORM_S8_UINT
+	};
+	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+	VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+	if (!findSupportedImageFormat(
+		    physDev, depthFormatCandidates, tiling, features, &swapchain->depthImageFormat))
+	{
+		vtek_log_error("Failed to find supported depth image format!");
+		return false;
+	}
+
+	// Reset frame sync objects
+	reset_frame_sync_objects(swapchain, dev);
+
+	// All done
+	return true;
 }
 
 void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* device)
@@ -628,6 +938,8 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	if (swapchain == nullptr || swapchain->vulkanHandle == VK_NULL_HANDLE) return;
 
 	VkDevice dev = vtek::device_get_handle(device);
+
+	destroy_frame_sync_objects(swapchain, dev);
 
 	destroy_swapchain_image_views(swapchain, dev);
 	destroy_swapchain_handle(swapchain, dev);
@@ -637,12 +949,164 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	swapchain->id = VTEK_INVALID_ID;
 }
 
-bool vtek::swapchain_acquire_next_image_index(vtek::Swapchain* swapchain, uint32_t* outImageIndex)
+uint32_t vtek::swapchain_get_length(vtek::Swapchain* swapchain)
 {
-	return false;
+	return swapchain->length;
 }
 
-bool vtek::swapchain_present_image(vtek::Swapchain* swapchain, uint32_t presentImageIndex)
+VkImage vtek::swapchain_get_image(vtek::Swapchain* swapchain, uint32_t index)
 {
-	return false;
+	return swapchain->images[index];
+}
+
+VkImageView vtek::swapchain_get_image_view(vtek::Swapchain* swapchain, uint32_t index)
+{
+	return swapchain->imageViews[index];
+}
+
+VkFormat vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
+{
+	return swapchain->imageFormat;
+}
+
+vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
+	vtek::Swapchain* swapchain, vtek::Device* device, uint64_t timeout)
+{
+	// In here, we wait for the fence guarding the current frame index to be in
+	// signaled state, after which the frame may commence.
+
+	VkDevice dev = vtek::device_get_handle(device);
+	uint32_t index = swapchain->currentFrameIndex;
+	VkFence fence = swapchain->inFlightFences[index];
+
+	// Quoting the spec:
+	// If timeout is zero, then vkWaitForFences does not wait, but simply returns
+	// the current state of the fences. VK_TIMEOUT will be returned in this case
+	// if the condition is not satisfied, even though no actual wait was performed.
+	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
+	if (test == VK_SUCCESS) { return vtek::SwapchainStatus::ok; }
+
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
+	switch (result)
+	{
+	case VK_SUCCESS: return vtek::SwapchainStatus::ok;
+	case VK_TIMEOUT: return vtek::SwapchainStatus::timeout;
+	default:
+		return vtek::SwapchainStatus::error;
+	}
+}
+
+vtek::SwapchainStatus vtek::swapchain_acquire_next_image(
+	vtek::Swapchain* swapchain, vtek::Device* device,
+	uint32_t* frameIndex, uint64_t timeout)
+{
+	VkDevice dev = vtek::device_get_handle(device);
+	uint32_t currentFrame = swapchain->currentFrameIndex;
+	VkSemaphore semaphore = swapchain->imageAvailableSemaphores[currentFrame];
+
+	VkResult result = vkAcquireNextImageKHR(
+		dev, swapchain->vulkanHandle, timeout, semaphore, VK_NULL_HANDLE, frameIndex);
+
+	// NOTE: For optimal rendering efficiency, Nvidia developers give this advice:
+	// "Handle both out-of-date and suboptimal swapchains to re-create stale
+	//  swapchains when windows resize".
+	// https://developer.nvidia.com/blog/advanced-api-performance-vulkan-clearing-and-presenting/
+	switch (result)
+	{
+	case VK_SUCCESS:
+	case VK_SUBOPTIMAL_KHR:
+		return vtek::SwapchainStatus::ok;
+
+	case VK_ERROR_OUT_OF_DATE_KHR:
+		return vtek::SwapchainStatus::outofdate;
+
+	default:
+		return vtek::SwapchainStatus::error;
+	}
+}
+
+vtek::SwapchainStatus vtek::swapchain_wait_image_ready(
+	vtek::Swapchain* swapchain, vtek::Device* device,
+	uint32_t frameIndex, uint64_t timeout)
+{
+	VkDevice dev = vtek::device_get_handle(device);
+	VkFence fence = swapchain->imagesInFlight[frameIndex];
+
+	// Check if a previous frame is using this image, ie. if there is a fence
+	// to wait on.
+	if (fence == VK_NULL_HANDLE)
+	{
+		set_image_in_use(swapchain, dev, frameIndex);
+		return vtek::SwapchainStatus::ok;
+	}
+
+	// Is the fence already signaled, then return immediately without waiting:
+	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
+	if (test == VK_SUCCESS)
+	{
+		set_image_in_use(swapchain, dev, frameIndex);
+		return vtek::SwapchainStatus::ok;
+	}
+
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
+	switch (result)
+	{
+	case VK_SUCCESS:
+		set_image_in_use(swapchain, dev, frameIndex);
+		return vtek::SwapchainStatus::ok;
+	case VK_TIMEOUT:
+		return vtek::SwapchainStatus::timeout;
+	default:
+		return vtek::SwapchainStatus::error;
+	}
+}
+
+void vtek::swapchain_fill_queue_submit_info(
+	vtek::Swapchain* swapchain, vtek::SubmitInfo* submitInfo)
+{
+	uint32_t currentIndex = swapchain->currentFrameIndex;
+
+	submitInfo->AddSignalSemaphore(
+		swapchain->renderFinishedSemaphores[currentIndex]);
+	submitInfo->AddWaitSemaphore(
+		swapchain->imageAvailableSemaphores[currentIndex],
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submitInfo->SetPostSignalFence(swapchain->inFlightFences[currentIndex]);
+}
+
+vtek::SwapchainStatus vtek::swapchain_present_frame(
+	vtek::Swapchain* swapchain, uint32_t frameIndex)
+{
+	uint32_t currentFrame = swapchain->currentFrameIndex;
+
+	const VkPresentInfoKHR info{
+		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+		.pNext = nullptr,
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &swapchain->renderFinishedSemaphores[currentFrame],
+		.swapchainCount = 1,
+		.pSwapchains = &swapchain->vulkanHandle,
+		.pImageIndices = &frameIndex,
+		.pResults = nullptr
+	};
+
+	// Submit frame to present queue
+	VkResult result = vkQueuePresentKHR(swapchain->presentQueue, &info);
+	switch (result)
+	{
+	case VK_SUCCESS:
+		{
+			// Advance to next frame
+			uint32_t& curFrame = swapchain->currentFrameIndex;
+			curFrame = (curFrame + 1) % swapchain->numFramesInFlight;
+		}
+		return vtek::SwapchainStatus::ok;
+
+	case VK_ERROR_OUT_OF_DATE_KHR:
+	case VK_SUBOPTIMAL_KHR:
+		return vtek::SwapchainStatus::outofdate;
+
+	default:
+		return vtek::SwapchainStatus::error;
+	}
 }

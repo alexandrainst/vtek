@@ -1,7 +1,10 @@
-#include "vtek_logging.h"
+#include "vtek_logging.hpp"
+
+#include "impl/vtek_init.hpp"
+#include "vtek_main.hpp"
 
 #include <spdlog/sinks/daily_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h> // TODO: In source file?
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 
 /* helper functions*/
@@ -61,7 +64,6 @@ void vtek::initialize_logging(const vtek::InitInfo* info)
 
 void vtek::terminate_logging()
 {
-	// TODO: Log a message saying that log is terminating
 	vtek_log_trace("Terminating logger...");
 
 	vtek::LogContainer::sVtekLogger->flush();

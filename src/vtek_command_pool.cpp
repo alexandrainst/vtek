@@ -1,14 +1,17 @@
-// vtek
-#include "impl/vtek_host_allocator.h"
-#include "vtek_command_pool.h"
-#include "vtek_logging.h"
+#include "vtek_command_pool.hpp"
+
+#include "impl/vtek_host_allocator.hpp"
+#include "vtek_device.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_queue.hpp"
 
 
 /* struct implementation */
 struct vtek::CommandPool
 {
 	uint64_t id {VTEK_INVALID_ID};
-	VkCommandPool vulkanHandle;
+	VkCommandPool vulkanHandle {VK_NULL_HANDLE};
+	bool allowIndividualBufferReset {false};
 };
 
 
@@ -16,6 +19,7 @@ struct vtek::CommandPool
 static vtek::HostAllocator<vtek::CommandPool> sAllocator("vtek_command_pool");
 
 
+/* interface */
 vtek::CommandPool* vtek::command_pool_create(
 	const vtek::CommandPoolCreateInfo* info, const vtek::Device* device, const vtek::Queue* queue)
 {
@@ -44,6 +48,7 @@ vtek::CommandPool* vtek::command_pool_create(
 	if (info->allowIndividualBufferReset)
 	{
 		createInfo.flags |= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		commandPool->allowIndividualBufferReset = true;
 	}
 	if (info->hintRerecordOften)
 	{
@@ -75,4 +80,14 @@ void vtek::command_pool_destroy(vtek::CommandPool* commandPool, const vtek::Devi
 
 	sAllocator.free(commandPool->id);
 	commandPool->id = VTEK_INVALID_ID;
+}
+
+VkCommandPool vtek::command_pool_get_handle(vtek::CommandPool* commandPool)
+{
+	return commandPool->vulkanHandle;
+}
+
+bool vtek::command_pool_allow_individual_reset(vtek::CommandPool* commandPool)
+{
+	return commandPool->allowIndividualBufferReset;
 }

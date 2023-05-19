@@ -7,9 +7,12 @@
 #include <vector>
 
 // vtek
-#include "impl/vtek_host_allocator.h"
-#include "vtek_logging.h"
-#include "vtek_physical_device.h"
+#include "vtek_physical_device.hpp"
+
+#include "impl/vtek_host_allocator.hpp"
+#include "vtek_instance.hpp"
+#include "vtek_logging.hpp"
+
 
 
 /* struct implementation */
@@ -256,6 +259,27 @@ static bool has_required_extension_support(
 		// NOTE: This is also dependent upon available Vulkan instance version, so likely not needed!
 
 		support->raytracing = true;
+	}
+
+	// dynamic rendering
+	if (info->requireDynamicRendering)
+	{
+		// NOTE: Dynamic rendering is core in >= Vulkan 1.3, before that KHR extension.
+#if defined(VK_API_VERSION_1_3)
+		const char* extName = VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME;
+#else
+		const char* extName = VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME_KHR;
+#endif
+
+		bool hasDynRender = my_find_if(extName);
+		if (!hasDynRender)
+		{
+			vtek_log_error("Dynamic rendering extension not supported!");
+			return false;
+		}
+		requiredExtRef.push_back(extName);
+
+		support->dynamicRendering = true;
 	}
 
 	// NEXT: More extension checks may be added here..
@@ -523,7 +547,6 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 vtek::PhysicalDevice* vtek::physical_device_pick(
 	const PhysicalDeviceInfo* info, const vtek::Instance* instance, VkSurfaceKHR surface)
 {
-	vtek_log_trace("physical_device_pick()");
 	VkInstance inst = vtek::instance_get_handle(instance);
 
 	// Enumerate physical devices
@@ -548,9 +571,6 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 
 		switch (choice.properties.deviceType)
 		{
-		case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-			weight = 254;
-			break;
 		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
 			weight = 1;
 			break;
@@ -562,6 +582,11 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 			break;
 		case VK_PHYSICAL_DEVICE_TYPE_CPU:
 			weight = 3;
+			break;
+
+		case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+		default:
+			weight = 254;
 			break;
 		}
 

@@ -4,12 +4,12 @@
 #include <vulkan/vk_enum_string_helper.h> // string_VkObjectType(VkObjectType input_value)
 
 // vtek
-#include "impl/vtek_glfw_backend.h"
-#include "impl/vtek_host_allocator.h"
-#include "version.h"
-#include "vtek_instance.h"
-#include "vtek_logging.h"
-#include "vtek_vulkan_version.h"
+#include "impl/vtek_glfw_backend.hpp"
+#include "impl/vtek_host_allocator.hpp"
+#include "version.hpp"
+#include "vtek_instance.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_vulkan_version.hpp"
 
 
 /* Validation layers, more can be added if desired */
@@ -94,13 +94,12 @@ static bool checkInstanceExtensionSupport(const std::vector<const char*>& extens
 
 static uint32_t get_vulkan_instance_version()
 {
-	// TODO: Check documentation for VkApplicationInfo - it answers how to handle instance version.
 	auto vkEnumerateInstanceVersion =
 		reinterpret_cast<PFN_vkEnumerateInstanceVersion>(vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion"));
 	if (vkEnumerateInstanceVersion == nullptr)
 	{
 		// NOTE: This is a Vulkan 1.0 implementation!
-		// TODO: As long as the instance supports at least Vulkan 1.1, an application can use different
+		// NOTE: As long as the instance supports at least Vulkan 1.1, an application can use different
 		//       versions of Vulkan with an instance than it does with a device or physical device.
 		return VK_API_VERSION_1_0;
 	}
@@ -146,7 +145,7 @@ static uint32_t get_vtek_vulkan_version()
 		VTEK_VERSION_MINOR,
 		VTEK_VERSION_PATCH);
 
-	return v.getVulkan();
+	return v.apiVersion();
 }
 
 static VkResult createVulkanDebugMessenger(
@@ -231,7 +230,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
 /* instance functions */
 vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 {
-	vtek_log_trace("instance_create()");
 	if (info->enableValidationLayers && !checkValidationLayerSupport())
 	{
 		vtek_log_error("Unsupported validation layer(s)");
@@ -249,7 +247,7 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = info->applicationName;
-	appInfo.applicationVersion = info->applicationVersion.getVulkan();
+	appInfo.applicationVersion = info->applicationVersion.apiVersion();
 	// NOTE: Here we extract version from vtek itself
 	appInfo.pEngineName = "vtek";
 	appInfo.engineVersion = get_vtek_vulkan_version();
@@ -415,6 +413,11 @@ void vtek::instance_destroy(vtek::Instance* instance)
 VkInstance vtek::instance_get_handle(const vtek::Instance* instance)
 {
 	return instance->vulkanHandle;
+}
+
+vtek::VulkanVersion vtek::instance_get_vulkan_version(const vtek::Instance* instance)
+{
+	return instance->vulkanVersion;
 }
 
 bool vtek::instance_get_raytracing_enabled(const vtek::Instance* instance)
