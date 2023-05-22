@@ -55,7 +55,26 @@ if(VTEK_CREATE_EXAMPLES)
     find_package(glfw3 REQUIRED)
 endif()
 
+# Vulkan Memory Allocator (vma) as independent static lib
+set (vma_src
+    external/vma/vk_mem_alloc.h
+    external/vma/vk_mem_alloc.cpp
+    )
 
+add_library(vma STATIC ${vma_src})
+set_target_properties(vma PROPERTIES CXX_STANDARD 20)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # NOTE: building vma yields some warnings, just disable them here because they
+    # are annoying to look at, and because the devs _probably_ know what they are doing.
+    target_compile_options(
+        vma PRIVATE -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter
+        -Wno-unused-variable -ggdb3)
+endif()
+
+
+# --------------------------------------------------------------------------------
+# Source files and build configuration for vtek
+# --------------------------------------------------------------------------------
 set (src
     external/spirv_reflect/spirv_reflect.h
     external/spirv_reflect/spirv_reflect.cpp
@@ -123,6 +142,7 @@ add_library(vtek::vtek ALIAS vtek)
 set_target_properties(vtek PROPERTIES CXX_STANDARD 20)
 target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/include/vtek)
 target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/external/spirv_reflect)
+target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/external/vma)
 target_include_directories(vtek PUBLIC
     external/spdlog/include ${PROJECT_SOURCE_DIR}/include ${Vulkan_INCLUDE_DIRS})
 target_compile_definitions(vtek PRIVATE SPDLOG_COMPILED_LIB)
@@ -134,7 +154,7 @@ if(VTEK_BUILD_WARNINGS)
 endif()
 
 target_link_libraries(vtek LINK_PUBLIC
-    spdlog::spdlog glfw Vulkan::Vulkan
+    spdlog::spdlog glfw Vulkan::Vulkan vma
     glslang::glslang glslang::SPIRV glslang::glslang-default-resource-limits)
 
 
