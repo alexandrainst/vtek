@@ -25,6 +25,7 @@ struct vtek::Device
 {
 	uint64_t id {VTEK_INVALID_ID};
 	VkDevice vulkanHandle {VK_NULL_HANDLE};
+	VkPhysicalDevice physicalHandle {VK_NULL_HANDLE};
 	vtek::VulkanVersion vulkanVersion {1, 0, 0};
 
 	VkPhysicalDeviceFeatures enabledFeatures {};
@@ -731,9 +732,13 @@ vtek::Device* vtek::device_create(
 	// Compute limits for multisampling
 	get_msaa_limits(device, physDevProps);
 
+	// Store physical device handle (might be needed later for various purposes)
+	device->physicalHandle = physDev;
+
 	// Log creation success and Vulkan version
 	auto vs = device->vulkanVersion;
-	vtek_log_info("Created Device with Vulkan v{}.{}.{}", vs.major(), vs.minor(), vs.patch());
+	vtek_log_info("Created Device with Vulkan v{}.{}.{}",
+	              vs.major(), vs.minor(), vs.patch());
 
 	return device;
 }
@@ -768,6 +773,11 @@ void vtek::device_destroy(Device* device)
 VkDevice vtek::device_get_handle(const vtek::Device* device)
 {
 	return device->vulkanHandle;
+}
+
+VkPhysicalDevice vtek::device_get_physical_handle(const vtek::Device* device)
+{
+	return device->physicalHandle;
 }
 
 const vtek::VulkanVersion* vtek::device_get_vulkan_version(const vtek::Device* device)
