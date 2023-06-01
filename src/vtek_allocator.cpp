@@ -2,6 +2,17 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #include "vk_mem_alloc.h"
 
+/* internal helper types */
+enum class MemoryProperty : uint32_t
+{
+	device_local     = 0x0001U,
+	host_visible     = 0x0002U,
+	host_coherent    = 0x0004U,
+	host_cached      = 0x0008U,
+	lazily_allocated = 0x0010U,
+	memory_protected = 0x0020U
+};
+
 /* struct implementation */
 struct vtek::Allocator
 {
@@ -10,7 +21,8 @@ struct vtek::Allocator
 struct vtek::Buffer
 {
 	VkBuffer vulkanHandle {VK_NULL_HANDLE};
-	VmaAllocation allocationHandle {nullptr};
+	VmaAllocation allocation {nullptr};
+	EnumBitmask<MemoryProperty> memoryProperties;
 };
 
 
@@ -163,10 +175,29 @@ void destroy_allocator(vtek::Allocator* allocator)
 
 void destroy_buffer(vtek::Buffer* buffer, vtek::Allocator* allocator)
 {
-	vmaDestroyBuffer(allocator->vmaHandle, buffer->vulkanHandle, allocationHandle);
+	vmaDestroyBuffer(allocator->vmaHandle, buffer->vulkanHandle, buffer->allocation);
 }
 
 bool vtek::buffer_write_data(Buffer* buffer, void* data, uint64_t size, Device* device)
 {
 
+}
+
+bool vtek::buffer_read_data(Buffer* buffer, std::vector<char>& dest, Device* device)
+{
+	if (buffer->memoryProperties.has_flag(MemoryProperty::host_visible))
+	{
+		// map/unmap
+		void* mappedData;
+		vmaMapMemory(allocator, buffer->allocation, &mappedData);
+		const size_t bufferSize = buffer->size; // TODO: Maybe vma knows?
+
+		dest.resize(bufferSize);
+		memcpy(dest.data(), mappedData, bufferSize);
+
+		vmaUnmapMemory(buffer->allocator, buffer->allocation);
+
+		// potentially flush if not HOST_COHERENT
+
+	}
 }
