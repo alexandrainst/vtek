@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <cstddef>
+#include <vector>
 
 #include "vtek_types.hpp"
 #include "vtek_vulkan_handles.hpp"
@@ -79,7 +81,7 @@ namespace vtek
 
 	// Read contents from buffer info `dest` std::vector. Again, we don't care how
 	// this gets done, just that it works and that we call the function now.
-	bool buffer_read_data(Buffer* buffer, std::vector<char>& dest, Device* device);
+	bool buffer_read_data(Buffer* buffer, std::vector<std::byte>& dest, Device* device);
 
 	struct BufferRegion
 	{

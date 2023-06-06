@@ -82,6 +82,7 @@ set (src
     include/vtek/version.hpp
     include/vtek/vtek.hpp
     include/vtek/vtek_application_window.hpp
+    include/vtek/vtek_buffer.hpp
     include/vtek/vtek_command_buffer.hpp
     include/vtek/vtek_command_pool.hpp
     include/vtek/vtek_device.hpp
@@ -112,6 +113,7 @@ set (src
 
     src/glsl/vtek_glsl_shader_utils.cpp
     src/vtek_application_window.cpp
+    src/vtek_buffer.cpp
     src/vtek_command_buffer.cpp
     src/vtek_command_pool.cpp
     src/vtek_device.cpp

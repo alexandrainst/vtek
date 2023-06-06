@@ -1,5 +1,12 @@
 #include "vtek_buffer.hpp"
 
+#include "vtek_logging.hpp"
+
+// VMA library
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#include "vk_mem_alloc.h"
+
 
 /* internal helper types */
 // TODO: Do we want this?
@@ -31,7 +38,8 @@ struct vtek::Buffer
 /* interface */
 vtek::Buffer* vtek::buffer_create(const vtek::BufferInfo* info)
 {
-
+	vtek_log_error("vtek::buffer_create: Not implemented!");
+	return nullptr;
 }
 
 void vtek::buffer_destroy(vtek::Buffer* buffer)
