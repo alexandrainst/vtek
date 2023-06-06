@@ -867,6 +867,8 @@ bool vtek::swapchain_recreate(
 	}
 	else
 	{
+		// NOTE: We should prefer exclusive sharing mode whenever possible,
+		// becuase concurrent mode disables DCC compression.
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
 		createInfo.pQueueFamilyIndices = qf_indices;

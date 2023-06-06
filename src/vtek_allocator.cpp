@@ -2,28 +2,35 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #include "vk_mem_alloc.h"
 
-/* internal helper types */
-enum class MemoryProperty : uint32_t
+
+/* buffer allocator (NOT NEEDED) */
+struct BufferAllocator;
+
+enum class BufferAllocatorType
 {
-	device_local     = 0x0001U,
-	host_visible     = 0x0002U,
-	host_coherent    = 0x0004U,
-	host_cached      = 0x0008U,
-	lazily_allocated = 0x0010U,
-	memory_protected = 0x0020U
+	linear,
+	circular,
+	pool,
+	heap // TODO: vma supports this?
 };
+
+struct BufferAllocatorInfo
+{
+	BufferAllocatorType type {BufferAllocatorType::linear};
+	uint64_t poolSize {0UL}; // Ignored when type is not pool.
+};
+
+BufferAllocator* buffer_allocator_create();
+void buffer_allocator_destroy();
+
+
 
 /* struct implementation */
 struct vtek::Allocator
 {
 	VmaAllocator vmaHandle {nullptr};
 };
-struct vtek::Buffer
-{
-	VkBuffer vulkanHandle {VK_NULL_HANDLE};
-	VmaAllocation allocation {nullptr};
-	EnumBitmask<MemoryProperty> memoryProperties;
-};
+
 
 
 void specify_memory_requirements()

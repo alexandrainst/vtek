@@ -165,6 +165,7 @@ if(VTEK_CREATE_EXAMPLES)
     set(examples
         examples/01_triangle.cpp
         examples/02_triangle_move.cpp
+        examples/03_vertex_buffer.cpp
         )
 
     foreach(expath ${examples})

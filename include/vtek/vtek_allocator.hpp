@@ -16,10 +16,4 @@ namespace vtek
 		frequently
 	};
 
-	struct BufferOptions
-	{
-		// NOTE: If host mapping should be enabled and the buffer update policy is
-		// set to "frequently", then the buffer should manage its own staging memory ?
-		bool enableHostMapping {false};
-	};
 }

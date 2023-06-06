@@ -8,15 +8,52 @@
 
 namespace vtek
 {
-	struct BufferCreateInfo
+	enum class BufferUsage
 	{
-		VkDeviceSize bufferSize {0UL};
+		// Content of the buffer is set once and then never changed.
+		overwrite_once,
+		// Contents will be changed on occasion, which will hint at internally
+		// managed staging memory.
+		overwrite_sometimes,
+		// Contents will be changed often or every frame, which will probably
+		// result in a buffer created without DEVICE_LOCAL bit, to minimize
+		// copying.
+		// NOTE: This is not recommended for larger buffers.
+		overwrite_often
+	};
+
+	struct BufferInfo
+	{
+		VkDeviceSize size {0UL};
 		// TODO: stride, view, usage flags, memory properties, mappable
+
+		// If the buffer should reside on system memory, or on GPU memory
+		// accessible by the CPU. This supports memory mapping between
+		// CPU/GPU, but is slower for the GPU to read.
+		bool requireHostVisibleStorage {false};
+
+		// If set, the buffer will not internally create a staging buffer, even
+		// when its contents is overwritten often. This may be used to prevent
+		// additional staging memory usage, or if several buffers share the same
+		// staging memory - which must be synchronized externally!
+		bool disallowInternalStagingBuffer {false};
+
+		// Some resources, e.g. render targets, depth-stencil, UAV, very large
+		// buffers and images, or large allocations that need dynamic resizing,
+		// can be given a dedicated allocation, instead of being suballocated
+		// from a bigger block.
+		bool requireDedicatedAllocation {false};
+
+		// How often the contents of the buffer is overwritten. If this happens
+		// often, the buffer will maintain an additional staging buffer
+		// internally.
+		BufferUsage usage {BufferUsage::overwrite_once};
 	};
 
 	struct Buffer; // opaque handle
 
-	Buffer* buffer_create();
+
+	Buffer* buffer_create(const BufferInfo* info);
 	void buffer_destroy(Buffer* buffer);
 
 	// If a buffer is host visible it can be directly memory-mapped.
@@ -29,24 +66,6 @@ namespace vtek
 	// ==================== //
 	// === Proposed API === //
 	// ==================== //
-	struct BufferAllocator;
-
-	enum class BufferAllocatorType
-	{
-		linear,
-		circular,
-		pool,
-		heap // TODO: vma supports this?
-	};
-
-	struct BufferAllocatorInfo
-	{
-		BufferAllocatorType type {BufferAllocatorType::linear};
-		uint64_t poolSize {0UL}; // Ignored when type is not pool.
-	};
-
-	BufferAllocator* buffer_allocator_create();
-	void buffer_allocator_destroy();
 
 	// Maybe the buffer maintains its own staging buffer, or maybe the buffer can be
 	// host-mapped because that was specified at buffer creation.
@@ -74,19 +93,6 @@ namespace vtek
 	bool buffer_copy(Buffer* src, BufferRegion* srcRegion, Buffer* dest, uint64_t destOffset);
 
 
-	enum class BufferUsage
-	{
-		// Content of the buffer is set once and then never changed.
-		static_usage,
-	};
-
-	struct BufferInfo
-	{
-		EnumBitmask usageFlags {};
-	};
-
-	buffer_create_uniforms(
-		size, int numBuffers, std /* uniform (std 140) ?*/ );
-
-
+	// buffer_create_uniforms(
+	// 	size, int numBuffers, std /* uniform (std 140) ?*/ );
 }
