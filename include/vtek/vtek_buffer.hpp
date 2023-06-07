@@ -49,7 +49,9 @@ namespace vtek
 		// How often the contents of the buffer is overwritten. If this happens
 		// often, the buffer will maintain an additional staging buffer
 		// internally.
-		BufferUsage usage {BufferUsage::overwrite_once};
+		BufferUsage writePolicy {BufferUsage::overwrite_once};
+
+		EnumBitmask<> usageFlags;
 	};
 
 	struct Buffer; // opaque handle

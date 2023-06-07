@@ -28,6 +28,10 @@ namespace vtek
 	void terminate_glsl_shader_loading();
 	void build_glslang_resource_limits(const PhysicalDevice* physicalDevice);
 
+	/* VMA device allocator */
+	bool initialize_vma_allocator(const Instance* instance, const Device* device);
+	void terminate_vma_allocator();
+
 	/* allocators for basic Vulkan types */
 	// TODO: We could place initialization functions here and make everyting better.
 

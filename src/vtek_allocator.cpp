@@ -124,37 +124,10 @@ void create_host_visible_and_more(vtek::Allocator* a)
 }
 
 
-vtek::Allocator* create_allocator(vtek::Device* device, vtek::Instance* instance)
+vtek::Allocator* allocator_create(vtek::Device* device, vtek::Instance* instance)
 {
-	VkInstance inst = vtek::instance_get_handle(instance);
-	VkDevice dev = vtek::device_get_handle(device);
-	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
-
-	const vtek::VulkanVersion* vv = device_get_vulkan_version(device);
-
-	VmaVulkanFunctions vulkanFunctions{};
-	vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
-	vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
-
-	VmaAllocatorCreateInfo createInfo{};
-
-#if defined(VK_API_VERSION_1_3)
-	if (vv.minor >= 3) createInfo.vulkanApiVersion = VK_API_VERSION_1_3;
-#elif defined(VK_API_VERSION_1_2)
-	if (vv.minor == 2) createInfo.vulkanApiVersion = VK_API_VERSION_1_2;
-#elif defined(VK_API_VERSION_1_1)
-	if (vv.minor == 1) createInfo.vulkanApiVersion = VK_API_VERSION_1_1;
-#else
-	createInfo.vulkanApiVersion = VK_API_VERSION_1_0;
-#endif
-
-	createInfo.physicalDevice = physDev;
-	createInfo.device = dev;
-	createInfo.instance = inst;
-	createInfo.pVulkanFunctions = &vulkanFunctions;
-
-	VmaAllocator allocator;
-	vmaCreateAllocator(&allocatorCreateInfo, &allocator);
+	vtek_log_error("vtek::allocator_create: Not implemented!");
+	return nullptr;
 }
 
 

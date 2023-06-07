@@ -21,6 +21,38 @@ enum class MemoryProperty : uint32_t
 };
 
 
+/* VMA library */
+#include "impl/vtek_init.hpp"
+bool vtek::initialize_vma_allocator(const Instance* instance, const Device* device)
+{
+	VkInstance inst = vtek::instance_get_handle(instance);
+	VkDevice dev = vtek::device_get_handle(device);
+	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
+
+	const vtek::VulkanVersion* vv = device_get_vulkan_version(device);
+
+	VmaVulkanFunctions vulkanFunctions{};
+	vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+	vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+
+	VmaAllocatorCreateInfo createInfo{};
+	createInfo.vulkanApiVersion = vv->apiVersion();
+	createInfo.physicalDevice = physDev;
+	createInfo.device = dev;
+	createInfo.instance = inst;
+	createInfo.pVulkanFunctions = &vulkanFunctions;
+
+	VmaAllocator allocator;
+	vmaCreateAllocator(&allocatorCreateInfo, &allocator);
+}
+
+void vtek::terminate_vma_allocator()
+{
+
+}
+
+
+
 /* struct implementation */
 struct vtek::Buffer
 {

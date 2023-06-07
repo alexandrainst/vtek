@@ -735,6 +735,13 @@ vtek::Device* vtek::device_create(
 	// Store physical device handle (might be needed later for various purposes)
 	device->physicalHandle = physDev;
 
+	// Create device allocator for buffers and images
+	if (initialize_vma_allocator(instance, device))
+	{
+		vtek_log_error("Failed to create logical device!");
+		return nullptr;
+	}
+
 	// Log creation success and Vulkan version
 	auto vs = device->vulkanVersion;
 	vtek_log_info("Created Device with Vulkan v{}.{}.{}",
