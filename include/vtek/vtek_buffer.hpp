@@ -52,8 +52,8 @@ namespace vtek
 		BufferUsage writePolicy {BufferUsage::overwrite_once};
 
 		EnumBitmask<> usageFlags;
-	};
-
+	}
+;
 	struct Buffer; // opaque handle
 
 
