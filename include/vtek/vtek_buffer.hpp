@@ -10,10 +10,10 @@
 
 namespace vtek
 {
-	enum class BufferUsage
+	enum class BufferWritePolicy
 	{
 		// Content of the buffer is set once and then never changed.
-		overwrite_once,
+		write_once,
 		// Contents will be changed on occasion, which will hint at internally
 		// managed staging memory.
 		overwrite_sometimes,
@@ -22,6 +22,20 @@ namespace vtek
 		// copying.
 		// NOTE: This is not recommended for larger buffers.
 		overwrite_often
+	};
+
+	enum class BufferUsageFlag
+	{
+		transfer_src          = 0x0001u,
+		transfer_dst          = 0x0002u,
+		uniform_texel_buffer  = 0x0004u,
+		storage_texel_buffer  = 0x0008u,
+		uniform_buffer        = 0x0010u,
+		storage_buffer        = 0x0020u,
+		index_buffer          = 0x0040u,
+		vertex_buffer         = 0x0080u,
+		indirect_buffer       = 0x0100u,
+		shader_device_address = 0x0200u,
 	};
 
 	struct BufferInfo
@@ -49,9 +63,10 @@ namespace vtek
 		// How often the contents of the buffer is overwritten. If this happens
 		// often, the buffer will maintain an additional staging buffer
 		// internally.
-		BufferUsage writePolicy {BufferUsage::overwrite_once};
+		BufferWritePolicy writePolicy {BufferWritePolicy::overwrite_once};
 
-		EnumBitmask<> usageFlags;
+		// Specify how the buffer should be used. At least one flag must be set.
+		EnumBitmask<BufferUsageFlag> usageFlags {};
 	}
 ;
 	struct Buffer; // opaque handle

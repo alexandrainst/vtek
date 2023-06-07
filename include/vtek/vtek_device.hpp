@@ -43,6 +43,11 @@ namespace vtek
 
 		// Features
 		bool enableBindlessTextureSupport {false};
+
+		// If this is set to false, an allocator must be manually created
+		// aftwerwards and passed on to functions that create buffers and images.
+		// NOTE: It is recommended to just leave this as is for simplicity.
+		bool createDefaultAllocator {true};
 	};
 
 	struct DeviceExtensions

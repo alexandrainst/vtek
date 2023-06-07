@@ -736,10 +736,12 @@ vtek::Device* vtek::device_create(
 	device->physicalHandle = physDev;
 
 	// Create device allocator for buffers and images
-	if (initialize_vma_allocator(instance, device))
+	if (info->createDefaultAllocator && !(initialize_vma_allocator(instance, device)))
 	{
-		vtek_log_error("Failed to create logical device!");
-		return nullptr;
+		vtek_log_error("Failed to create default allocator -- {}",
+		               "Device creation cannot proceed.");
+	vtek:device_destroy
+			return nullptr;c++-
 	}
 
 	// Log creation success and Vulkan version
