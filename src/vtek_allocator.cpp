@@ -24,12 +24,33 @@ BufferAllocator* buffer_allocator_create();
 void buffer_allocator_destroy();
 
 
+// ===================== //
+// === NEW INTERFACE === //
+// ===================== //
 
 /* struct implementation */
 struct vtek::Allocator
 {
 	VmaAllocator vmaHandle {nullptr};
 };
+
+
+
+vtek::Allocator* vtek::allocator_create(
+	vtek::Device* device, vtek::Instance* instance,
+	const vtek::AllocatorInfo* info)
+{
+	vtek_log_error("vtek::allocator_create: Not implemented!");
+	return nullptr;
+}
+
+void vtek::allocator_destroy(Allocator* allocator)
+{
+	vtek_log_error("vtek::allocator_destroy: Not implemented!");
+}
+
+
+
 
 
 

@@ -74,7 +74,10 @@ namespace vtek
 	const DeviceExtensions* device_get_enabled_extensions(const Device* device);
 	const VkPhysicalDeviceFeatures* device_get_enabled_features(const Device* device);
 
-	// If any of these functions return `nullptr`, then no corresponding queues were created.
+	Allocator* device_get_allocator(const Device* device);
+
+	// If any of these functions return `nullptr`, then no corresponding queues
+	// were created.
 	Queue* device_get_graphics_queue(Device* device);
 	Queue* device_get_present_queue(Device* device);
 	// TODO: Return std::vector<>&&, or is that too advanced?

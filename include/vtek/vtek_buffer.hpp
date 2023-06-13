@@ -72,8 +72,11 @@ namespace vtek
 	struct Buffer; // opaque handle
 
 
-	Buffer* buffer_create(const BufferInfo* info);
+	Buffer* buffer_create(const BufferInfo* info, Device* device);
 	void buffer_destroy(Buffer* buffer);
+
+	// TODO: Alternative buffer creation, using a specific allocator
+	Buffer* buffer_create(const BufferInfo* info, Allocator* allocator);
 
 	// If a buffer is host visible it can be directly memory-mapped.
 	bool buffer_is_host_visible(Buffer* buffer);
@@ -82,9 +85,9 @@ namespace vtek
 	void buffer_get_view_for_binding_purposes();
 
 
-	// ==================== //
-	// === Proposed API === //
-	// ==================== //
+	// ========================= //
+	// === Buffer operations === //
+	// ========================= //
 
 	// Maybe the buffer maintains its own staging buffer, or maybe the buffer can be
 	// host-mapped because that was specified at buffer creation.

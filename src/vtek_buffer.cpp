@@ -57,19 +57,26 @@ void vtek::terminate_vma_allocator()
 struct vtek::Buffer
 {
 	VkBuffer vulkanHandle {VK_NULL_HANDLE};
-	VmaAllocation allocation {nullptr};
+
 	EnumBitmask<MemoryProperty> memoryProperties {};
 
 	// If host mapping should be enabled and the buffer update policy is set
 	// to "frequently", then the buffer should manage its own staging memory.
 	vtek::Buffer* stagingBuffer {nullptr};
+
+	vtek::Allocator* allocator {nullptr};
 };
 
 
 
 /* interface */
-vtek::Buffer* vtek::buffer_create(const vtek::BufferInfo* info)
+vtek::Buffer* vtek::buffer_create(
+	const vtek::BufferInfo* info, vtek::Device* device)
 {
+	
+
+
+
 	vtek_log_error("vtek::buffer_create: Not implemented!");
 	return nullptr;
 }

@@ -6,6 +6,7 @@ namespace vtek
 	// ============================= //
 	// === Opaque vulkan handles === //
 	// ============================= //
+	struct Allocator;
 	struct ApplicationWindow;
 	struct CommandBuffer;
 	struct CommandPool;

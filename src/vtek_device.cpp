@@ -44,6 +44,8 @@ struct vtek::Device
 	VkSampleCountFlagBits msaaColorLimit {VK_SAMPLE_COUNT_1_BIT};
 	VkSampleCountFlagBits msaaDepthLimit {VK_SAMPLE_COUNT_1_BIT};
 	VkSampleCountFlagBits msaaStencilLimit {VK_SAMPLE_COUNT_1_BIT};
+
+	vtek::Allocator* allocator {nullptr};
 };
 
 
@@ -736,12 +738,13 @@ vtek::Device* vtek::device_create(
 	device->physicalHandle = physDev;
 
 	// Create device allocator for buffers and images
-	if (info->createDefaultAllocator && !(initialize_vma_allocator(instance, device)))
+	device->allocator = vtek::allocator_create_default(device, instance);
+	if (device->allocator == nullptr)
 	{
 		vtek_log_error("Failed to create default allocator -- {}",
 		               "Device creation cannot proceed.");
-	vtek:device_destroy
-			return nullptr;c++-
+		vtek::device_destroy(device);
+		return nullptr;
 	}
 
 	// Log creation success and Vulkan version
@@ -804,6 +807,11 @@ const VkPhysicalDeviceFeatures* vtek::device_get_enabled_features(
 	const vtek::Device* device)
 {
 	return &device->enabledFeatures;
+}
+
+vtek::Allocator* vtek::device_get_allocator(const vtek::Device* device)
+{
+	return device->allocator;
 }
 
 vtek::Queue* vtek::device_get_graphics_queue(vtek::Device* device)
