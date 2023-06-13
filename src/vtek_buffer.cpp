@@ -3,9 +3,7 @@
 #include "vtek_logging.hpp"
 
 // VMA library
-#define VMA_STATIC_VULKAN_FUNCTIONS 0
-#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
-#include "vk_mem_alloc.h"
+#include "impl/vtek_vma_helpers.hpp"
 
 
 /* internal helper types */
@@ -53,19 +51,6 @@ void vtek::terminate_vma_allocator()
 
 
 
-/* struct implementation */
-struct vtek::Buffer
-{
-	VkBuffer vulkanHandle {VK_NULL_HANDLE};
-
-	EnumBitmask<MemoryProperty> memoryProperties {};
-
-	// If host mapping should be enabled and the buffer update policy is set
-	// to "frequently", then the buffer should manage its own staging memory.
-	vtek::Buffer* stagingBuffer {nullptr};
-
-	vtek::Allocator* allocator {nullptr};
-};
 
 
 
@@ -73,17 +58,24 @@ struct vtek::Buffer
 vtek::Buffer* vtek::buffer_create(
 	const vtek::BufferInfo* info, vtek::Device* device)
 {
-	
+	vtek::Allocator* allocator = vtek::device_get_allocator(device);
+	VkBuffer handle = allocator_create_buffer(allocator, info);
+	if (handle == VK_NULL_HANDLE)
+	{
+		vtek_log_error("Failed to create buffer!");
+		return nullptr;
+	}
 
+	auto buffer = new vtek::Buffer;
+	buffer->vulkanHandle = handle;
+	buffer->allocator = allocator;
 
-
-	vtek_log_error("vtek::buffer_create: Not implemented!");
-	return nullptr;
+	return buffer;
 }
 
 void vtek::buffer_destroy(vtek::Buffer* buffer)
 {
-
+	vtek::allocator_buffer_destroy(buffer);
 }
 
 

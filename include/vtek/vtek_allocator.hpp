@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <vulkan/vulkan.h>
+
 #include "vtek_buffer.hpp"
 #include "vtek_vulkan_handles.hpp"
 
@@ -11,8 +14,6 @@ namespace vtek
 		int dummyMember;
 	};
 
-	struct Allocator; // opaque handle
-
 
 	Allocator* allocator_create(
 		Device* device, Instance* instance, const AllocatorInfo* info);
@@ -21,14 +22,4 @@ namespace vtek
 	// This function is called when the device is created so that each
 	// device manages its own allocator.
 	Allocator* allocator_create_default(Device* device, Instance* instance);
-
-
-	// ========================= //
-	// === Buffer management === //
-	// ========================= //
-
-	allocator_create_buffer();
-
-
-
 }

@@ -1,6 +1,5 @@
-#define VMA_STATIC_VULKAN_FUNCTIONS 0
-#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
-#include "vk_mem_alloc.h"
+#include "vtek_allocator.hpp"
+#include "impl/vtek_vma_helpers.hpp"
 
 
 /* buffer allocator (NOT NEEDED) */
@@ -49,7 +48,31 @@ void vtek::allocator_destroy(Allocator* allocator)
 	vtek_log_error("vtek::allocator_destroy: Not implemented!");
 }
 
+vtek::Allocator* vtek::allocator_create_default(
+	vtek::Device* device, vtek::Instance* instance)
+{
+	VkInstance inst = vtek::instance_get_handle(instance);
+	VkDevice dev = vtek::device_get_handle(device);
+	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
 
+	const vtek::VulkanVersion* vv = device_get_vulkan_version(device);
+
+	VmaVulkanFunctions vulkanFunctions{};
+	vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+	vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+
+	VmaAllocatorCreateInfo createInfo{};
+	createInfo.vulkanApiVersion = vv->apiVersion();
+	createInfo.physicalDevice = physDev;
+	createInfo.device = dev;
+	createInfo.instance = inst;
+	createInfo.pVulkanFunctions = &vulkanFunctions;
+
+	VmaAllocator allocator;
+	vmaCreateAllocator(&allocatorCreateInfo, &allocator);
+}
+
+VkBuffer
 
 
 

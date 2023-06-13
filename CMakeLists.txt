@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10...3.21)
+cmake_minimum_required(VERSION 3.16...3.21)
 project(vtek CXX)
 
 
@@ -142,11 +142,20 @@ endif()
 add_library(vtek::vtek ALIAS vtek)
 
 set_target_properties(vtek PROPERTIES CXX_STANDARD 20)
-target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/include/vtek)
-target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/external/spirv_reflect)
-target_include_directories(vtek PRIVATE ${PROJECT_SOURCE_DIR}/external/vma)
+target_include_directories(vtek PRIVATE
+	${PROJECT_SOURCE_DIR}/include/vtek
+    ${PROJECT_SOURCE_DIR}/external/spirv_reflect
+    ${PROJECT_SOURCE_DIR}/external/vma
+    ${PROJECT_SOURCE_DIR}/pchs
+)
 target_include_directories(vtek PUBLIC
-    external/spdlog/include ${PROJECT_SOURCE_DIR}/include ${Vulkan_INCLUDE_DIRS})
+    ${PROJECT_SOURCE_DIR}/external/spdlog/include
+    ${PROJECT_SOURCE_DIR}/include
+    ${Vulkan_INCLUDE_DIRS}
+)
+target_precompile_headers(vtek PRIVATE
+    ${PROJECT_SOURCE_DIR}/pchs/vtek_vulkan.pch
+)
 target_compile_definitions(vtek PRIVATE SPDLOG_COMPILED_LIB)
 
 if(VTEK_BUILD_WARNINGS)
