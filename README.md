@@ -27,6 +27,7 @@ scripts located in `examples/` which demonstrate how to use `vtek`.
 `vtek` depends on a number of third-party libraries for utilities. These are listed below:
 
 - **Vulkan-Sdk:** May be dowloaded from LunarG's website.
+- **vulkan-validationlayers-dev:** Maybe included in the `Vulkan-Sdk` package, maybe separate install.
 - **SPIRV-Tools:** Maybe included in the `Vulkan-Sdk` package, maybe separate install.
 - **glslang:** Front-end for generating SPIR-V bytecode from GLSL.
 - **GLFW:** Open-source cross-platform window abstraction library. TODO: How to include this?
