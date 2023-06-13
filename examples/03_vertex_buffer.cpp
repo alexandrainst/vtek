@@ -100,8 +100,11 @@ int main()
 	// vertex buffer
 	vtek::BufferInfo bufferInfo{};
 	bufferInfo.size = sizeof(Vertex2D) * vertices.size();
-	bufferInfo.usage = vtek::BufferUsage::overwrite_once;
-	vtek::Buffer* buffer = vtek::buffer_create(&bufferInfo);
+	bufferInfo.writePolicy = vtek::BufferWritePolicy::write_once;
+	bufferInfo.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::vertex_buffer;
+	vtek::Buffer* buffer = vtek::buffer_create(&bufferInfo, device);
 	if (buffer == nullptr)
 	{
 		log_error("Failed to create vertex buffer!");

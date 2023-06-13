@@ -55,12 +55,21 @@ namespace vtek
 		bool b;
 	};
 
+	// NOTE: The addition of `std::is_convertible` is a hack necessary because
+	// the bitwise OR-operator defined at the end of this file would otherwise
+	// override the default-implementations of bitwise OR for regular enum
+	// types, which then breaks compilation.
+	// NOTE: This would be trivially fixed by upgrading to C++23 and then using
+	// `std::is_scoped_enum` instead when defining this concept.
+	template<typename Enum>
+	concept enum_type = std::is_unsigned_v<std::underlying_type_t<Enum>> &&
+		!std::is_convertible_v<Enum, uint32_t>;
+
 	// This class can be used to perform bitwise operations on the values
 	// inside an enumeration, and removes the need for filling up the code
 	// base with calls to `static_cast`. It provides a clean interface with
 	// the member functions `get()`, `has_flag()`, and `clear()`.
-	template<typename Enum>
-	requires std::is_unsigned_v<std::underlying_type_t<Enum>>
+	template<enum_type Enum>
 	class EnumBitmask
 	{
 	public:
@@ -90,4 +99,13 @@ namespace vtek
 	private:
 		Type mask {Type{0}};
 	};
+}
+
+
+// Bitwise OR-operation which creates an `EnumBitmask`:
+template<vtek::enum_type Enum>
+inline constexpr vtek::EnumBitmask<Enum> operator| (Enum s1, Enum s2)
+{
+	uint32_t flags = static_cast<uint32_t>(s1) | static_cast<uint32_t>(s2);
+	return {flags};
 }

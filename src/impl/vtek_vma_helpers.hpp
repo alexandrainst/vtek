@@ -7,6 +7,18 @@
 
 namespace vtek
 {
+	/* internal helper types */
+	// TODO: Do we want this?
+	enum class MemoryProperty : uint32_t
+	{
+		device_local     = 0x0001U,
+		host_visible     = 0x0002U,
+		host_coherent    = 0x0004U,
+		host_cached      = 0x0008U,
+		lazily_allocated = 0x0010U,
+		memory_protected = 0x0020U
+	};
+
 	struct Buffer
 	{
 		VkBuffer vulkanHandle {VK_NULL_HANDLE};
@@ -22,6 +34,9 @@ namespace vtek
 		// Will be used for all subsequent operations on the buffer, including
 		// its deletion.
 		vtek::Allocator* allocator {nullptr};
+
+		bool hostMappingEnabled {false};
+		bool hostCoherent {false};
 	};
 
 	// ========================= //
@@ -30,5 +45,5 @@ namespace vtek
 
 	std::pair<VkBuffer, VmaAllocation> allocator_buffer_create(
 		Allocator* allocator, const BufferInfo* info);
-	void allocator_buffer_destroy(Allocator* allocator);
+	void allocator_buffer_destroy(Allocator* allocator, Buffer* buffer);
 }

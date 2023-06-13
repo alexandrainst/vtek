@@ -10,6 +10,7 @@
 
 #include "impl/vtek_host_allocator.hpp"
 #include "impl/vtek_init.hpp"
+#include "vtek_allocator.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_physical_device.hpp"

@@ -24,7 +24,7 @@ namespace vtek
 		overwrite_often
 	};
 
-	enum class BufferUsageFlag
+	enum class BufferUsageFlag : uint32_t
 	{
 		transfer_src          = 0x0001u,
 		transfer_dst          = 0x0002u,
@@ -63,12 +63,12 @@ namespace vtek
 		// How often the contents of the buffer is overwritten. If this happens
 		// often, the buffer will maintain an additional staging buffer
 		// internally.
-		BufferWritePolicy writePolicy {BufferWritePolicy::overwrite_once};
+		BufferWritePolicy writePolicy {BufferWritePolicy::write_once};
 
 		// Specify how the buffer should be used. At least one flag must be set.
-		EnumBitmask<BufferUsageFlag> usageFlags {};
-	}
-;
+		EnumBitmask<BufferUsageFlag> usageFlags {0U};
+	};
+
 	struct Buffer; // opaque handle
 
 
@@ -89,14 +89,14 @@ namespace vtek
 	// === Buffer operations === //
 	// ========================= //
 
-	// Maybe the buffer maintains its own staging buffer, or maybe the buffer can be
-	// host-mapped because that was specified at buffer creation.
-	// In any case, we should not care about _how_ the contents get updated, just when
-	// and what we update it with.
-	// The "how" should be cared about, and specified, when the buffer is created, by
-	// specifying flags and options for its usage.
-	// And if the buffer does not support the desired update, then contents are not
-	// updated, and an error is returned.
+	// Maybe the buffer maintains its own staging buffer, or maybe the buffer
+	// can be host-mapped because that was specified at buffer creation.
+	// In any case, we should not care about _how_ the contents get updated,
+	// just when and what we update it with.
+	// The "how" should be cared about, and specified, when the buffer is
+	// created, by specifying flags and options for its usage.
+	// And if the buffer does not support the desired update, then contents
+	// are not updated, and an error is returned.
 	bool buffer_write_data(Buffer* buffer, void* data, uint64_t size, Device* device);
 
 	// Read contents from buffer info `dest` std::vector. Again, we don't care how

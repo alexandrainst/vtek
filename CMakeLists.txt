@@ -81,6 +81,7 @@ set (src
 
     include/vtek/version.hpp
     include/vtek/vtek.hpp
+    include/vtek/vtek_allocator.hpp
     include/vtek/vtek_application_window.hpp
     include/vtek/vtek_buffer.hpp
     include/vtek/vtek_command_buffer.hpp
@@ -108,10 +109,12 @@ set (src
     src/impl/vtek_host_allocator.hpp
     src/impl/vtek_init.hpp
     src/impl/vtek_queue_struct.hpp
+    src/impl/vtek_vma_helpers.hpp
     src/impl/vtek_vulkan_helpers.hpp
     src/glsl/vtek_glsl_shader_utils.hpp
 
     src/glsl/vtek_glsl_shader_utils.cpp
+    src/vtek_allocator.cpp
     src/vtek_application_window.cpp
     src/vtek_buffer.cpp
     src/vtek_command_buffer.cpp

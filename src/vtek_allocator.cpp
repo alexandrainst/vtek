@@ -1,31 +1,11 @@
 #include "vtek_allocator.hpp"
+
 #include "impl/vtek_vma_helpers.hpp"
+#include "vtek_device.hpp"
+#include "vtek_instance.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_vulkan_version.hpp"
 
-
-/* buffer allocator (NOT NEEDED) */
-struct BufferAllocator;
-
-enum class BufferAllocatorType
-{
-	linear,
-	circular,
-	pool,
-	heap // TODO: vma supports this?
-};
-
-struct BufferAllocatorInfo
-{
-	BufferAllocatorType type {BufferAllocatorType::linear};
-	uint64_t poolSize {0UL}; // Ignored when type is not pool.
-};
-
-BufferAllocator* buffer_allocator_create();
-void buffer_allocator_destroy();
-
-
-// ===================== //
-// === NEW INTERFACE === //
-// ===================== //
 
 /* struct implementation */
 struct vtek::Allocator
@@ -34,9 +14,9 @@ struct vtek::Allocator
 };
 
 
-
+/* PUBLIC interface */
 vtek::Allocator* vtek::allocator_create(
-	vtek::Device* device, vtek::Instance* instance,
+	vtek::Device* device, const vtek::Instance* instance,
 	const vtek::AllocatorInfo* info)
 {
 	vtek_log_error("vtek::allocator_create: Not implemented!");
@@ -49,7 +29,7 @@ void vtek::allocator_destroy(Allocator* allocator)
 }
 
 vtek::Allocator* vtek::allocator_create_default(
-	vtek::Device* device, vtek::Instance* instance)
+	vtek::Device* device, const vtek::Instance* instance)
 {
 	VkInstance inst = vtek::instance_get_handle(instance);
 	VkDevice dev = vtek::device_get_handle(device);
@@ -68,15 +48,38 @@ vtek::Allocator* vtek::allocator_create_default(
 	createInfo.instance = inst;
 	createInfo.pVulkanFunctions = &vulkanFunctions;
 
-	VmaAllocator allocator;
-	vmaCreateAllocator(&allocatorCreateInfo, &allocator);
+	auto allocator = new vtek::Allocator;
+	vmaCreateAllocator(&createInfo, &allocator->vmaHandle);
+	if (allocator->vmaHandle == VK_NULL_HANDLE)
+	{
+		vtek_log_error("Failed to create default (vma) allocator!");
+		delete allocator;
+		return nullptr;
+	}
+
+	return allocator;
 }
 
-VkBuffer
+
+
+/* INTERNAL interface */
+std::pair<VkBuffer, VmaAllocation> vtek::allocator_buffer_create(
+	vtek::Allocator* allocator, const vtek::BufferInfo* info)
+{
+	vtek_log_error("vtek::allocator_buffer_create: Not implemented!");
+	return { VK_NULL_HANDLE, VK_NULL_HANDLE };
+}
+
+void vtek::allocator_buffer_destroy(
+	vtek::Allocator* allocator, vtek::Buffer* buffer)
+{
+	vtek_log_error("vtek::allocator_buffer_destroy: Not implemented!");
+}
 
 
 
 
+/*
 void specify_memory_requirements()
 {
 	// Fill usage
@@ -225,3 +228,4 @@ bool vtek::buffer_read_data(Buffer* buffer, std::vector<char>& dest, Device* dev
 
 	}
 }
+*/

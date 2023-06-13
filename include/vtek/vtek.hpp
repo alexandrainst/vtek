@@ -23,6 +23,7 @@
 #include "vtek_vulkan_version.hpp"
 
 #include "vtek_application_window.hpp"
+#include "vtek_allocator.hpp"
 #include "vtek_buffer.hpp"
 #include "vtek_command_buffer.hpp"
 #include "vtek_command_pool.hpp"
