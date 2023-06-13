@@ -1,6 +1,5 @@
 #pragma once
 
-#include <utility>
 #include <vulkan/vulkan.h>
 
 #include "vtek_buffer.hpp"

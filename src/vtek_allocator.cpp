@@ -61,13 +61,134 @@ vtek::Allocator* vtek::allocator_create_default(
 }
 
 
+/* helper functions */
+using BUFlag = vtek::BufferUsageFlag;
+
+static VkBufferUsageFlags get_buffer_usage_flags(vtek::EnumBitmask<BUFlag> mask)
+{
+	VkBufferUsageFlags flags {0};
+
+	if (mask.has_flag(BUFlag::transfer_src)) {
+		flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	}
+	if (mask.has_flag(BUFlag::transfer_dst)) {
+		flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	}
+	if (mask.has_flag(BUFlag::uniform_texel_buffer)) {
+		flags |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+	}
+	if (mask.has_flag(BUFlag::storage_texel_buffer)) {
+		flags |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+	}
+	if (mask.has_flag(BUFlag::uniform_buffer)) {
+		flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	}
+	if (mask.has_flag(BUFlag::storage_buffer)) {
+		flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	}
+	if (mask.has_flag(BUFlag::index_buffer)) {
+		flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+	}
+	if (mask.has_flag(BUFlag::vertex_buffer)) {
+		flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	}
+	if (mask.has_flag(BUFlag::indirect_buffer)) {
+		flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+	}
+	if (mask.has_flag(BUFlag::shader_device_address)) {
+		flags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	}
+
+	return flags;
+}
+
+static void createinfo_stagingbuffer(VmaAllocationCreateInfo* info)
+{
+	// When using VMA_MEMORY_USAGE_AUTO* while wanting to map the allocated
+	// memory, then specify one of the following host access flags:
+	// VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+	// VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
+	// This will help vma decide about preferred memory type to _ensure_ it has
+	// VM_MEMORY_PROPERTY_HOST_VISIBLE_BIT, so it can be mapped.
+
+	info->usage = VMA_MEMORY_USAGE_AUTO;
+	info->flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	info->preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // TODO: ?
+}
+
+static void createinfo_devicelocal(VmaAllocationCreateInfo* info)
+{
+	info->usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+	info->preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+}
+
+
 
 /* INTERNAL interface */
-std::pair<VkBuffer, VmaAllocation> vtek::allocator_buffer_create(
-	vtek::Allocator* allocator, const vtek::BufferInfo* info)
+bool vtek::allocator_buffer_create(
+	vtek::Allocator* allocator, const vtek::BufferInfo* info,
+	vtek::Buffer* outBuffer)
 {
-	vtek_log_error("vtek::allocator_buffer_create: Not implemented!");
-	return { VK_NULL_HANDLE, VK_NULL_HANDLE };
+	VkBufferCreateInfo bufferInfo{};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = info->size; // TODO: Bump up to power of two?
+	bufferInfo.usage = get_buffer_usage_flags(info->usageFlags);
+
+	VmaAllocationCreateInfo allocInfo{};
+	if (info->requireHostVisibleStorage) {
+		createinfo_stagingbuffer(&allocInfo);
+	}
+	else {
+		createinfo_devicelocal(&allocInfo);
+	}
+
+	if (info->requireDedicatedAllocation)
+	{
+		allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+	}
+
+	VkBuffer buffer;
+	VmaAllocation allocation;
+	vmaCreateBuffer(allocator->vmaHandle, &bufferInfo, &allocInfo, &buffer,
+		&allocation, nullptr);
+	if (buffer == VK_NULL_HANDLE || allocation == VK_NULL_HANDLE)
+	{
+		// TODO: Leaks ?
+		vtek_log_error("Failed to create buffer with vma!");
+		return false;
+	}
+
+	VkMemoryPropertyFlags memFlags{0};
+	vmaGetAllocationMemoryProperties(allocator->vmaHandle, allocation, &memFlags);
+	vtek::EnumBitmask<vtek::MemoryProperty> mask{};
+
+	if (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+		mask.add_flag(vtek::MemoryProperty::device_local);
+	}
+	if (memFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+		mask.add_flag(vtek::MemoryProperty::host_visible);
+	}
+	if (memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+		mask.add_flag(vtek::MemoryProperty::host_coherent);
+	}
+	if (memFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) {
+		mask.add_flag(vtek::MemoryProperty::host_cached);
+	}
+	if (memFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
+		mask.add_flag(vtek::MemoryProperty::lazily_allocated);
+	}
+#if defined(VK_API_VERSION_1_1)
+	if (memFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT) {
+		mask.add_flag(vtek::MemoryProperty::memory_protected);
+	}
+#endif
+
+	outBuffer->vulkanHandle = buffer;
+	outBuffer->vmaHandle = allocation;
+	outBuffer->allocator = allocator;
+	outBuffer->memoryProperties = mask;
+
+	return true;
 }
 
 void vtek::allocator_buffer_destroy(

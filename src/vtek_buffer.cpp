@@ -9,17 +9,22 @@
 vtek::Buffer* vtek::buffer_create(
 	const vtek::BufferInfo* info, vtek::Device* device)
 {
+	auto buffer = new vtek::Buffer;
 	vtek::Allocator* allocator = vtek::device_get_allocator(device);
-	auto [bufHandle, vmaHandle] = vtek::allocator_buffer_create(allocator, info);
-	if (bufHandle == VK_NULL_HANDLE || vmaHandle == VK_NULL_HANDLE)
+	if (allocator == nullptr)
 	{
-		vtek_log_error("Failed to create buffer!");
+		vtek_log_error("Device does not have a default allocator -- {}",
+		               "cannot create buffer!");
+		delete buffer;
 		return nullptr;
 	}
 
-	auto buffer = new vtek::Buffer;
-	buffer->vulkanHandle = bufHandle;
-	buffer->vmaHandle = vmaHandle;
+	if (!vtek::allocator_buffer_create(allocator, info, buffer))
+	{
+		vtek_log_error("Failed to create buffer!");
+		delete buffer;
+		return nullptr;
+	}
 
 	bool createStagingBuffer
 		= !info->disallowInternalStagingBuffer
@@ -27,19 +32,19 @@ vtek::Buffer* vtek::buffer_create(
 		& (info->writePolicy != vtek::BufferWritePolicy::write_once);
 	if (createStagingBuffer)
 	{
+		buffer->stagingBuffer = new vtek::Buffer;
+
 		vtek::BufferInfo stagingInfo{};
 		stagingInfo.size = info->size;
 		stagingInfo.requireHostVisibleStorage = true;
 		stagingInfo.usageFlags = vtek::BufferUsageFlag::transfer_src;
-		auto [stBufHdl, stVmaHdl] =
-			vtek::allocator_buffer_create(allocator, info);
 
-		buffer->stagingBuffer = new vtek::Buffer;
-		buffer->stagingBuffer->vulkanHandle = stBufHdl;
-		buffer->stagingBuffer->vmaHandle = stVmaHdl;
-		buffer->stagingBuffer->allocator = allocator;
-		buffer->stagingBuffer->hostMappingEnabled = true;
-		// TODO: How do we know if it is HOST_COHERENT ?
+		if (!vtek::allocator_buffer_create(allocator, info, buffer->stagingBuffer))
+		{
+			vtek_log_error("Failed to create staging buffer for buffer!");
+			delete buffer->stagingBuffer;
+			buffer->stagingBuffer = nullptr;
+		}
 	}
 
 	buffer->allocator = allocator;

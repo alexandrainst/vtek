@@ -16,6 +16,7 @@ namespace vtek
 		host_coherent    = 0x0004U,
 		host_cached      = 0x0008U,
 		lazily_allocated = 0x0010U,
+		// Supported by >= Vulkan 1.1
 		memory_protected = 0x0020U
 	};
 
@@ -34,16 +35,13 @@ namespace vtek
 		// Will be used for all subsequent operations on the buffer, including
 		// its deletion.
 		vtek::Allocator* allocator {nullptr};
-
-		bool hostMappingEnabled {false};
-		bool hostCoherent {false};
 	};
 
 	// ========================= //
 	// === Buffer management === //
 	// ========================= //
 
-	std::pair<VkBuffer, VmaAllocation> allocator_buffer_create(
-		Allocator* allocator, const BufferInfo* info);
+	bool allocator_buffer_create(
+		Allocator* allocator, const BufferInfo* info, Buffer* outBuffer);
 	void allocator_buffer_destroy(Allocator* allocator, Buffer* buffer);
 }
