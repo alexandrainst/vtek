@@ -134,22 +134,22 @@ bool vtek::allocator_buffer_create(
 	bufferInfo.size = info->size; // TODO: Bump up to power of two?
 	bufferInfo.usage = get_buffer_usage_flags(info->usageFlags);
 
-	VmaAllocationCreateInfo allocInfo{};
+	VmaAllocationCreateInfo createInfo{};
 	if (info->requireHostVisibleStorage) {
-		createinfo_stagingbuffer(&allocInfo);
+		createinfo_stagingbuffer(&createInfo);
 	}
 	else {
-		createinfo_devicelocal(&allocInfo);
+		createinfo_devicelocal(&createInfo);
 	}
 
 	if (info->requireDedicatedAllocation)
 	{
-		allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+		createInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 	}
 
 	VkBuffer buffer;
 	VmaAllocation allocation;
-	vmaCreateBuffer(allocator->vmaHandle, &bufferInfo, &allocInfo, &buffer,
+	vmaCreateBuffer(allocator->vmaHandle, &bufferInfo, &createInfo, &buffer,
 		&allocation, nullptr);
 	if (buffer == VK_NULL_HANDLE || allocation == VK_NULL_HANDLE)
 	{
@@ -183,8 +183,12 @@ bool vtek::allocator_buffer_create(
 	}
 #endif
 
+	VmaAllocationInfo allocInfo{};
+	vmaGetAllocationInfo(allocator->vmaHandle, allocation, &allocInfo);
+
 	outBuffer->vulkanHandle = buffer;
 	outBuffer->vmaHandle = allocation;
+	outBuffer->size = allocInfo.size;
 	outBuffer->allocator = allocator;
 	outBuffer->memoryProperties = mask;
 

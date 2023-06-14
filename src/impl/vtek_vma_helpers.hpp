@@ -24,6 +24,7 @@ namespace vtek
 	{
 		VkBuffer vulkanHandle {VK_NULL_HANDLE};
 		VmaAllocation vmaHandle {VK_NULL_HANDLE};
+		VkDeviceSize size {0U};
 
 		EnumBitmask<MemoryProperty> memoryProperties {};
 

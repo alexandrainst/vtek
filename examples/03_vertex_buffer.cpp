@@ -100,6 +100,9 @@ int main()
 	// vertex buffer
 	vtek::BufferInfo bufferInfo{};
 	bufferInfo.size = sizeof(Vertex2D) * vertices.size();
+	//bufferInfo.requireHostVisibleStorage = true;
+	//bufferInfo.disallowInternalStagingBuffer = true;
+	//bufferInfo.requireDedicatedAllocation = true;
 	bufferInfo.writePolicy = vtek::BufferWritePolicy::write_once;
 	bufferInfo.usageFlags
 		= vtek::BufferUsageFlag::transfer_dst
@@ -111,5 +114,16 @@ int main()
 		return -1;
 	}
 
+	if (!vtek::buffer_write_data(
+		    buffer, vertices.data(), vertices.size()*sizeof(Vertex2D), device))
+	{
+		log_error("Failed to write data to vertex buffer!");
+		return -1;
+	}
+
+
+
+
+	log_info("Program Success!");
 	return 0;
 }
