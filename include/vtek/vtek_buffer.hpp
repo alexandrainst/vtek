@@ -89,6 +89,12 @@ namespace vtek
 	// === Buffer operations === //
 	// ========================= //
 
+	struct BufferRegion
+	{
+		VkDeviceSize offset {0UL};
+		VkDeviceSize size {VK_WHOLE_SIZE};
+	};
+
 	// Maybe the buffer maintains its own staging buffer, or maybe the buffer
 	// can be host-mapped because that was specified at buffer creation.
 	// In any case, we should not care about _how_ the contents get updated,
@@ -97,17 +103,13 @@ namespace vtek
 	// created, by specifying flags and options for its usage.
 	// And if the buffer does not support the desired update, then contents
 	// are not updated, and an error is returned.
-	bool buffer_write_data(Buffer* buffer, void* data, uint64_t size, Device* device);
+	bool buffer_write_data(
+		Buffer* buffer, void* data, const BufferRegion* region, Device* device);
 
 	// Read contents from buffer info `dest` std::vector. Again, we don't care how
 	// this gets done, just that it works and that we call the function now.
-	bool buffer_read_data(Buffer* buffer, std::vector<std::byte>& dest, Device* device);
-
-	struct BufferRegion
-	{
-		uint64_t offset {0UL};
-		uint64_t size {0UL};
-	};
+	bool buffer_read_data(
+		Buffer* buffer, std::vector<std::byte>& dest, Device* device);
 
 	// Copy the contents of one buffer into another buffer. No memory mapping is required,
 	// instead a single-use transfer command buffer is queued.

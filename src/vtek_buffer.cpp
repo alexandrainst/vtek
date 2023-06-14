@@ -33,7 +33,9 @@ vtek::Buffer* vtek::buffer_create(
 		& (info->writePolicy != vtek::BufferWritePolicy::write_once);
 	if (createStagingBuffer)
 	{
+		vtek_log_trace("create staging buffer...");
 		buffer->stagingBuffer = new vtek::Buffer;
+		buffer->stagingBuffer->stagingBuffer = nullptr;
 
 		vtek::BufferInfo stagingInfo{};
 		stagingInfo.size = info->size;
@@ -65,9 +67,12 @@ void vtek::buffer_destroy(vtek::Buffer* buffer)
 }
 
 bool vtek::buffer_write_data(
-	vtek::Buffer* buffer, void* data, uint64_t size, vtek::Device* device)
+	vtek::Buffer* buffer, void* data, const vtek::BufferRegion* region,
+	vtek::Device* device)
 {
-	VkDeviceSize writeSize = size;
+	VkDeviceSize writeOffset = region->offset;
+	VkDeviceSize writeSize =
+		(region->size == VK_WHOLE_SIZE) ? buffer->size : region->size;
 	if (writeSize > buffer->size)
 	{
 		vtek_log_warn("vtek::buffer_write_data: {} -- {}",
@@ -75,15 +80,48 @@ bool vtek::buffer_write_data(
 		              "output will be clamped!");
 		writeSize = buffer->size;
 	}
+	if (writeOffset >= buffer->size)
+	{
+		vtek_log_error("vtek::buffer_write_data: {} -- {}"
+		              "Offset is outside the boundaries of the buffer",
+		              "no data will be written!");
+		return false;
+	}
+	if (writeSize + region->offset > buffer->size)
+	{
+		vtek_log_warn("vtek::buffer_write_data: {} -- {}",
+		              "Region size+offset exceeds the buffer boundaries",
+		              "output will be clamped!");
+		writeSize = buffer->size - writeOffset;
+	}
 
 	// Now for choices...
+	auto memProps = buffer->memoryProperties;
+	vtek::BufferRegion finalRegion{ writeOffset, writeSize }; // possibly corrected
 
 	// 1) Buffer is HOST_VISIBLE - just map directly.
-	if (buffer->memoryProperties.has_flag(vtek::MemoryProperty::host_visible))
+	if (memProps.has_flag(vtek::MemoryProperty::host_visible))
 	{
 		vtek_log_trace("Buffer is HOST_VISIBLE - map to it directly!");
 
-		return false;
+		void* mappedPtr = vtek::allocator_buffer_map(buffer); // TODO: Offset!
+		if (mappedPtr == nullptr)
+		{
+			vtek_log_error("Failed to map the buffer -- cannot write data!");
+			return false;
+		}
+
+		memcpy(mappedPtr, data, finalRegion.size);
+
+		// Flush if the buffer is not HOST_COHERENT
+		if (!memProps.has_flag(vtek::MemoryProperty::host_coherent))
+		{
+			vtek::allocator_buffer_flush(buffer, &finalRegion);
+		}
+
+		vtek::allocator_buffer_unmap(buffer);
+
+		return true;
 	}
 
 	// 2) Buffer has a staging buffer - map to that, then transfer queue.

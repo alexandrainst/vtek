@@ -213,8 +213,6 @@ int main()
 		return -1;
 	}
 
-	// REVIEW: geometry ?
-
 	// Command buffers
 	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
 	vtek::CommandBufferCreateInfo commandBufferInfo{};

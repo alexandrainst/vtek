@@ -2,6 +2,8 @@
 
 // VMA include
 #include "vtek_vulkan.pch"
+
+#include "vtek_buffer.hpp"
 #include "vtek_vulkan_handles.hpp"
 
 
@@ -45,4 +47,8 @@ namespace vtek
 	bool allocator_buffer_create(
 		Allocator* allocator, const BufferInfo* info, Buffer* outBuffer);
 	void allocator_buffer_destroy(Allocator* allocator, Buffer* buffer);
+
+	void* allocator_buffer_map(Buffer* buffer);
+	void allocator_buffer_unmap(Buffer* buffer);
+	void allocator_buffer_flush(Buffer* buffer, const BufferRegion* region);
 }

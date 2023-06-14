@@ -201,6 +201,36 @@ void vtek::allocator_buffer_destroy(
 	vtek_log_error("vtek::allocator_buffer_destroy: Not implemented!");
 }
 
+void* vtek::allocator_buffer_map(vtek::Buffer* buffer)
+{
+	VmaAllocator alloc = buffer->allocator->vmaHandle;
+
+	void* mappedData;
+	vmaMapMemory(alloc, buffer->vmaHandle, &mappedData);
+	return mappedData;
+}
+
+void vtek::allocator_buffer_unmap(vtek::Buffer* buffer)
+{
+	VmaAllocator alloc = buffer->allocator->vmaHandle;
+
+	vmaUnmapMemory(alloc, buffer->vmaHandle);
+}
+
+void vtek::allocator_buffer_flush(
+	vtek::Buffer* buffer, const vtek::BufferRegion* region)
+{
+	VmaAllocator alloc = buffer->allocator->vmaHandle;
+
+	VkResult result = vmaFlushAllocation(
+		alloc, buffer->vmaHandle, region->offset, region->size);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to flush buffer from allocator -- {}",
+		               "data will likely not be visible!");
+	}
+}
+
 
 
 

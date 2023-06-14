@@ -272,8 +272,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	}
 	else
 	{
-		auto bindings = vertexBindings->GetBindingDescriptions();
-		auto attributes = vertexBindings->GetAttributeDescriptions();
+		auto& bindings = vertexBindings->GetBindingDescriptions();
+		auto& attributes = vertexBindings->GetAttributeDescriptions();
 		vertexInfo.vertexBindingDescriptionCount = bindings.size();
 		vertexInfo.pVertexBindingDescriptions = bindings.data();
 		vertexInfo.vertexAttributeDescriptionCount = attributes.size();
