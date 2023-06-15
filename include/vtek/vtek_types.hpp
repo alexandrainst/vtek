@@ -25,21 +25,42 @@ namespace vtek
 		float fmin, fmax;
 	};
 
-	// This class is used to clamp a value within a certain range, e.g.
-	// when a queue's priority must be a number between 0 and 1, this
-	// class can be templated as <0.0f, 1.0f>, and will then automatically
-	// clamp its value inside this range.
-	template<float Min, float Max>
-	class FloatClamp
+
+	// This class is used to clamp a value within a certain range. Templated
+	// so that instantiations may efficiently be created for various types
+	// that support comparison operations.
+	// When this object is constructed, given a value, it will automatically
+	// clamp that value inside its templated boundaries, to ensure complete
+	// run-time safety with no explicit bounds checking in applications.
+	template<class Type, Type Min, Type Max, Type Default>
+	class ValueClamp
 	{
 	public:
-		FloatClamp(float _val) {
+		inline ValueClamp() { Assign(Default); }
+		inline ValueClamp(Type _val) { Assign(_val); }
+		inline ValueClamp& operator= (Type _val) { Assign(_val); return *this; }
+		inline ValueClamp& operator= (const ValueClamp& _vc) {
+			Assign(_vc.val);
+			return *this;
+		}
+		inline const Type& operator()() const { return val; }
+		inline constexpr const Type& get() const { return val; }
+
+	private:
+		constexpr void Assign(Type _val) {
 			val = (_val < Min) ? Min : (_val > Max) ? Max : _val;
 		}
-		float get() const { return val; }
-	private:
-		float val;
+		Type val;
 	};
+
+	// Template specializations for `ValueClamp`:
+	template<float Min, float Max>
+	using FloatClamp = ValueClamp<float, Min, Max, 0.0f>;
+
+	template<class Type, Type Min, Type Max>
+	requires std::is_integral_v<Type>
+	using IntClamp = ValueClamp<Type, Min, Max, Type{0}>;
+
 
 	// Short wrapper for the conversion from C++ `bool` to an untyped
 	// raw integer alias `VkBool32`, which many Vulkan functions and structs
@@ -109,4 +130,36 @@ inline constexpr vtek::EnumBitmask<Enum> operator| (Enum s1, Enum s2)
 {
 	uint32_t flags = static_cast<uint32_t>(s1) | static_cast<uint32_t>(s2);
 	return {flags};
+}
+
+
+// Increment(++) operators for `IntClamp`:
+template<class Type, Type Min, Type Max>
+vtek::IntClamp<Type, Min, Max>& operator++(vtek::IntClamp<Type, Min, Max>& ic)
+{
+	ic = ic.get() + 1; return ic;
+}
+
+template<class Type, Type Min, Type Max>
+vtek::IntClamp<Type, Min, Max>& operator++(
+	vtek::IntClamp<Type, Min, Max>& ic, auto)
+{
+	ic = ic.get() + 1; return ic;
+}
+
+// Decrement(--) operators for `IntClamp`:
+template<class Type, Type Min, Type Max>
+vtek::IntClamp<Type, Min, Max>& operator--(vtek::IntClamp<Type, Min, Max>& ic)
+{
+	if constexpr(std::is_unsigned_v<Type>) { // guard against overflow
+		if (ic.get() == static_cast<Type>(0U)) { return ic; }
+	}
+	ic = ic.get() - 1; return ic;
+}
+
+template<class Type, Type Min, Type Max>
+vtek::IntClamp<Type, Min, Max>& operator--(
+	vtek::IntClamp<Type, Min, Max>& ic, auto)
+{
+	ic = ic.get() - 1; return ic;
 }

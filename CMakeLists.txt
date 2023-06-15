@@ -180,6 +180,7 @@ if(VTEK_CREATE_EXAMPLES)
         examples/01_triangle.cpp
         examples/02_triangle_move.cpp
         examples/03_vertex_buffer.cpp
+        examples/04_dynamic_circle.cpp
         )
 
     foreach(expath ${examples})
