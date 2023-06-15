@@ -66,6 +66,11 @@ void vtek::buffer_destroy(vtek::Buffer* buffer)
 	delete buffer;
 }
 
+VkBuffer vtek::buffer_get_handle(const vtek::Buffer* buffer)
+{
+	return buffer->vulkanHandle;
+}
+
 bool vtek::buffer_write_data(
 	vtek::Buffer* buffer, void* data, const vtek::BufferRegion* region,
 	vtek::Device* device)

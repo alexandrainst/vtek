@@ -78,11 +78,13 @@ namespace vtek
 	// TODO: Alternative buffer creation, using a specific allocator
 	Buffer* buffer_create(const BufferInfo* info, Allocator* allocator);
 
-	// If a buffer is host visible it can be directly memory-mapped.
+	// TODO: If a buffer is host visible it can be directly memory-mapped.
 	bool buffer_is_host_visible(Buffer* buffer);
 
 	// TODO: View into the buffer for binding purposes (SRV,UAV,VB,etc.)
 	void buffer_get_view_for_binding_purposes();
+
+	VkBuffer buffer_get_handle(const Buffer* buffer);
 
 
 	// ========================= //

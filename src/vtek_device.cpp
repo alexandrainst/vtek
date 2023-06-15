@@ -762,6 +762,12 @@ void vtek::device_destroy(Device* device)
 {
 	if (device == nullptr || device->vulkanHandle == VK_NULL_HANDLE) return;
 
+	if (device->allocator != nullptr)
+	{
+		vtek::allocator_destroy(device->allocator);
+		device->allocator = nullptr;
+	}
+
 	vkDestroyDevice(device->vulkanHandle, nullptr);
 	device->vulkanHandle = VK_NULL_HANDLE;
 
