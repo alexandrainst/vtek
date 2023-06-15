@@ -125,7 +125,7 @@ int main()
 	}
 
 	// Shader
-	const char* shaderdirstr = "../shaders/simple_vertex_plain_color/";
+	const char* shaderdirstr = "../shaders/simple_vertex/";
 	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
 	if (shaderdir == nullptr)
 	{

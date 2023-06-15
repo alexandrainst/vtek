@@ -46,7 +46,7 @@ namespace vtek
 
 	bool allocator_buffer_create(
 		Allocator* allocator, const BufferInfo* info, Buffer* outBuffer);
-	void allocator_buffer_destroy(Allocator* allocator, Buffer* buffer);
+	void allocator_buffer_destroy(Buffer* buffer);
 
 	void* allocator_buffer_map(Buffer* buffer);
 	void allocator_buffer_unmap(Buffer* buffer);

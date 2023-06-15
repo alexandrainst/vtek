@@ -25,7 +25,12 @@ vtek::Allocator* vtek::allocator_create(
 
 void vtek::allocator_destroy(Allocator* allocator)
 {
-	vtek_log_error("vtek::allocator_destroy: Not implemented!");
+	if (allocator == nullptr) return;
+
+	vmaDestroyAllocator(allocator->vmaHandle);
+	allocator->vmaHandle = VK_NULL_HANDLE;
+
+	delete allocator;
 }
 
 vtek::Allocator* vtek::allocator_create_default(
@@ -195,10 +200,11 @@ bool vtek::allocator_buffer_create(
 	return true;
 }
 
-void vtek::allocator_buffer_destroy(
-	vtek::Allocator* allocator, vtek::Buffer* buffer)
+void vtek::allocator_buffer_destroy(vtek::Buffer* buffer)
 {
-	vtek_log_error("vtek::allocator_buffer_destroy: Not implemented!");
+	VmaAllocator alloc = buffer->allocator->vmaHandle;
+
+	vmaDestroyBuffer(alloc, buffer->vulkanHandle, buffer->vmaHandle);
 }
 
 void* vtek::allocator_buffer_map(vtek::Buffer* buffer)

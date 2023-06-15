@@ -59,7 +59,7 @@ void vtek::buffer_destroy(vtek::Buffer* buffer)
 {
 	if (buffer == nullptr) return;
 
-	vtek::allocator_buffer_destroy(buffer->allocator, buffer);
+	vtek::allocator_buffer_destroy(buffer);
 	buffer->allocator = nullptr;
 	buffer->stagingBuffer = nullptr;
 
