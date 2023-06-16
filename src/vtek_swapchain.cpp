@@ -971,6 +971,11 @@ VkFormat vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
 	return swapchain->imageFormat;
 }
 
+VkExtent2D vtek::swapchain_get_image_extent(const vtek::Swapchain* swapchain)
+{
+	return swapchain->imageExtent;
+}
+
 vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 	vtek::Swapchain* swapchain, vtek::Device* device, uint64_t timeout)
 {

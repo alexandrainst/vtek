@@ -8,19 +8,60 @@ constexpr uint32_t kVertMax = 33;
 vtek::IntClamp<uint32_t, 3, kVertMax-1> numCircleVertices = 32;
 std::vector<glm::vec2> vertices;
 glm::vec2 circleCenter{0.0f, 0.0f};
+float circleMoveSpeed = 0.05f;
 float circleRadius = 0.5f;
+bool recreateVertexBuffer = false;
+bool recreateUniformBuffer = false;
 
 
-void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
+/*
+ * Use arrow keys on keyboard to move the circle.
+ * Use keys 'i' and 'd', respectively, to increase/decrese the number of
+ * vertices on the circle's edge.
+ * Press 'escape' to close the window.
+ */
+
+void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 {
-	if ((action == vtek::InputAction::release) &&
-	    (key == vtek::KeyboardKey::escape))
+	if (action == vtek::InputAction::release)
 	{
-		vtek::window_set_should_close(window, true);
+		switch (key)
+		{
+		case vtek::KeyboardKey::escape:
+			vtek::window_set_should_close(window, true);
+			break;
+		case vtek::KeyboardKey::i:
+			numCircleVertices++;
+			recreateVertexBuffer = true;
+			break;
+		case vtek::KeyboardKey::d:
+			numCircleVertices--;
+			recreateVertexBuffer = true;
+			break;
+		case vtek::KeyboardKey::up:
+			circleCenter.y -= circleMoveSpeed;
+			recreateUniformBuffer = true;
+			break;
+		case vtek::KeyboardKey::down:
+			circleCenter.y += circleMoveSpeed;
+			recreateUniformBuffer = true;
+			break;
+		case vtek::KeyboardKey::left:
+			circleCenter.x -= circleMoveSpeed;
+			recreateUniformBuffer = true;
+			break;
+		case vtek::KeyboardKey::right:
+			circleCenter.x += circleMoveSpeed;
+			recreateUniformBuffer = true;
+			break;
+
+		default:
+			break;
+		}
 	}
 }
 
-bool fill_buffer(vtek::Buffer* buffer, vtek::Device* device)
+bool update_vertex_buffer(vtek::Buffer* buffer, vtek::Device* device)
 {
 	vertices.clear();
 	vertices.resize(numCircleVertices.get());
@@ -41,217 +82,23 @@ bool fill_buffer(vtek::Buffer* buffer, vtek::Device* device)
 	return vtek::buffer_write_data(buffer, vertices.data(), &region, device);
 }
 
-
-int main()
+bool update_uniform_buffer()
 {
-	// Initialize vtek
-	vtek::InitInfo initInfo{};
-	initInfo.disableLogging = false;
-	initInfo.applicationTitle = "04_dynamic_circle";
-	initInfo.useGLFW = true;
-	if (!vtek::initialize(&initInfo))
-	{
-		std::cerr << "Failed to initialize vtek!" << std::endl;
-		return -1;
-	}
+	return false;
+}
 
-	// Create window
-	vtek::WindowCreateInfo windowInfo{};
-	windowInfo.title = "vtek example 04: Dynamic Circle";
-	window = vtek::window_create(&windowInfo);
-	if (window == nullptr)
-	{
-		log_error("Failed to create window!");
-		return -1;
-	}
-	vtek::window_set_key_handler(window, keyCallback);
+bool record_command_buffers(
+	vtek::GraphicsPipeline* pipeline, vtek::Queue* queue,
+	std::vector<vtek::CommandBuffer*> commandBuffers, vtek::Swapchain* swapchain,
+	vtek::Buffer* vertexBuffer)
+{
+	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
+	uint32_t queueIndex = vtek::queue_get_family_index(queue);
+	uint32_t commandBufferCount = commandBuffers.size();
+	VkExtent2D swapchainExtent = vtek::swapchain_get_image_extent(swapchain);
+	const uint32_t width = swapchainExtent.width;
+	const uint32_t height = swapchainExtent.height;
 
-	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
-	instanceInfo.applicationName = "dynamic_circle";
-	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
-	instanceInfo.enableValidationLayers = true;
-	auto instance = vtek::instance_create(&instanceInfo);
-	if (instance == nullptr)
-	{
-		log_error("Failed to create Vulkan instance!");
-		return -1;
-	}
-
-	// Surface
-	VkSurfaceKHR surface = vtek::window_create_surface(window, instance);
-	if (surface == VK_NULL_HANDLE)
-	{
-		log_error("Failed to create Vulkan window surface!");
-		return -1;
-	}
-
-	// Physical device
-	vtek::PhysicalDeviceInfo physicalDeviceInfo{};
-	physicalDeviceInfo.requireGraphicsQueue = true;
-	physicalDeviceInfo.requirePresentQueue = true;
-	physicalDeviceInfo.requireSwapchainSupport = true;
-	physicalDeviceInfo.requireDynamicRendering = true;
-	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
-		&physicalDeviceInfo, instance, surface);
-	if (physicalDevice == nullptr)
-	{
-		log_error("Failed to pick physical device!");
-		return -1;
-	}
-
-	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
-	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
-	if (device == nullptr)
-	{
-		log_error("Failed to create device!");
-		return -1;
-	}
-
-	// Graphics queue
-	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
-	if (graphicsQueue == nullptr)
-	{
-		log_error("Failed to get graphics queue!");
-		return -1;
-	}
-
-	// Graphics command pool
-	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
-	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
-		&commandPoolCreateInfo, device, graphicsQueue);
-	if (graphicsCommandPool == nullptr)
-	{
-		log_error("Failed to create graphics command pool!");
-		return -1;
-	}
-
-	// Swapchain
-	vtek::SwapchainCreateInfo swapchainCreateInfo{};
-	swapchainCreateInfo.vsync = true;
-	swapchainCreateInfo.prioritizeLowLatency = false;
-	vtek::window_get_framebuffer_size(
-		window, &swapchainCreateInfo.framebufferWidth,
-		&swapchainCreateInfo.framebufferHeight);
-	vtek::Swapchain* swapchain = vtek::swapchain_create(
-		&swapchainCreateInfo, surface, physicalDevice, device);
-	if (swapchain == nullptr)
-	{
-		log_error("Failed to create swapchain!");
-		return -1;
-	}
-
-	// Command buffers
-	log_trace("Command buffers");
-	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
-	vtek::CommandBufferCreateInfo commandBufferInfo{};
-	commandBufferInfo.isSecondary = false;
-	std::vector<vtek::CommandBuffer*> commandBuffers = vtek::command_buffer_create(
-		&commandBufferInfo, commandBufferCount, graphicsCommandPool, device);
-	if (commandBuffers.empty())
-	{
-		log_error("Failed to create command buffer!");
-		return -1;
-	}
-	if (commandBufferCount != commandBuffers.size())
-	{
-		log_error("Number of command buffers created not same as number asked!");
-		return -1;
-	}
-
-	// Shader
-	const char* shaderdirstr = "../shaders/dynamic_circle/";
-	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
-	if (shaderdir == nullptr)
-	{
-		log_error("Failed to open shader directory!");
-		return -1;
-	}
-	vtek::GraphicsShaderInfo shaderInfo{};
-	shaderInfo.vertex = true;
-	shaderInfo.fragment = true;
-	vtek::GraphicsShader* shader =
-		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
-	if (shader == nullptr)
-	{
-		log_error("Failed to load graphics shader!");
-		return -1;
-	}
-
-	// Vertex buffer
-	log_trace("Vertex buffer");
-	vtek::BufferInfo bufferInfo{};
-	bufferInfo.size = 2* sizeof(glm::vec2) * kVertMax;
-	bufferInfo.requireHostVisibleStorage = true; // NOTE: Easy for now.
-	//bufferInfo.disallowInternalStagingBuffer = true;
-	//bufferInfo.requireDedicatedAllocation = true;
-	bufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
-	bufferInfo.usageFlags
-		= vtek::BufferUsageFlag::transfer_dst
-		| vtek::BufferUsageFlag::vertex_buffer;
-	vtek::Buffer* buffer = vtek::buffer_create(&bufferInfo, device);
-	if (buffer == nullptr)
-	{
-		log_error("Failed to create vertex buffer!");
-		return -1;
-	}
-	if (!fill_buffer(buffer, device))
-	{
-		log_error("Failed to fill vertex buffer!");
-		return -1;
-	}
-
-	// Vulkan graphics pipeline
-	log_trace("Vulkan graphics pipeline");
-	const uint32_t width = swapchainCreateInfo.framebufferWidth;
-	const uint32_t height = swapchainCreateInfo.framebufferHeight;
-	vtek::ViewportState viewport{
-		.viewportRegion = {
-			.offset = {0U, 0U},
-			.extent = {width, height}
-		},
-	};
-	vtek::VertexBufferBindings bindings{};
-	bindings.add_buffer(
-		vtek::VertexAttributeType::vec2, vtek::VertexInputRate::per_vertex);
-	vtek::RasterizationState rasterizer{};
-	vtek::MultisampleState multisampling{};
-	vtek::DepthStencilState depthStencil{}; // No depth testing!
-	vtek::ColorBlendState colorBlending{};
-	colorBlending.attachments.emplace_back(
-		vtek::ColorBlendAttachment::GetDefault());
-	vtek::PipelineRendering pipelineRendering{};
-	pipelineRendering.colorAttachmentFormats.push_back(
-		vtek::swapchain_get_image_format(swapchain));
-
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
-	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
-	graphicsPipelineInfo.renderPass = nullptr; // Nice!
-	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
-	graphicsPipelineInfo.shader = shader;
-	// TODO: Rename to `vertexBufferBindings`
-	graphicsPipelineInfo.vertexInputBindings = &bindings;
-	graphicsPipelineInfo.primitiveTopology = vtek::PrimitiveTopology::triangle_fan;
-	graphicsPipelineInfo.enablePrimitiveRestart = false;
-	graphicsPipelineInfo.viewportState = &viewport;
-	graphicsPipelineInfo.rasterizationState = &rasterizer;
-	graphicsPipelineInfo.multisampleState = &multisampling;
-	graphicsPipelineInfo.depthStencilState = &depthStencil;
-	graphicsPipelineInfo.colorBlendState = &colorBlending;
-
-	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
-		&graphicsPipelineInfo, device);
-	if (graphicsPipeline == nullptr)
-	{
-		log_error("Failed to create graphics pipeline!");
-		return -1;
-	}
-
-	// Command buffer recording
-	VkPipeline pipl = vtek::graphics_pipeline_get_handle(graphicsPipeline);
-	uint32_t queueIndex = vtek::queue_get_family_index(graphicsQueue);
 	for (uint32_t i = 0; i < commandBufferCount; i++)
 	{
 		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
@@ -260,7 +107,7 @@ int main()
 		if (!vtek::command_buffer_begin(commandBuffer))
 		{
 			log_error("Failed to begin command buffer {} recording!", i);
-			return -1;
+			return false;
 		}
 
 		// NEXT: Cleanup a bit
@@ -326,7 +173,7 @@ int main()
 		vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 
 		// Bind vertex buffer
-		VkBuffer buffers[1] = { vtek::buffer_get_handle(buffer) };
+		VkBuffer buffers[1] = { vtek::buffer_get_handle(vertexBuffer) };
 		VkDeviceSize offsets[1] = { 0 };
 		vkCmdBindVertexBuffers(cmdBuf, 0, 1, buffers, offsets);
 
@@ -364,8 +211,229 @@ int main()
 		if (!vtek::command_buffer_end(commandBuffer))
 		{
 			log_error("Failed to end command buffer {} recording!", i);
-			return -1;
+			return false;
 		}
+	}
+
+	return true;
+}
+
+
+
+int main()
+{
+	// Initialize vtek
+	vtek::InitInfo initInfo{};
+	initInfo.disableLogging = false;
+	initInfo.applicationTitle = "04_dynamic_circle";
+	initInfo.useGLFW = true;
+	if (!vtek::initialize(&initInfo))
+	{
+		std::cerr << "Failed to initialize vtek!" << std::endl;
+		return -1;
+	}
+
+	// Create window
+	vtek::WindowCreateInfo windowInfo{};
+	windowInfo.title = "vtek example 04: Dynamic Circle";
+	windowInfo.resizeable = false;
+	window = vtek::window_create(&windowInfo);
+	if (window == nullptr)
+	{
+		log_error("Failed to create window!");
+		return -1;
+	}
+	vtek::window_set_key_handler(window, key_callback);
+
+	// Vulkan instance
+	vtek::InstanceCreateInfo instanceInfo{};
+	instanceInfo.applicationName = "dynamic_circle";
+	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
+	instanceInfo.enableValidationLayers = true;
+	auto instance = vtek::instance_create(&instanceInfo);
+	if (instance == nullptr)
+	{
+		log_error("Failed to create Vulkan instance!");
+		return -1;
+	}
+
+	// Surface
+	VkSurfaceKHR surface = vtek::window_create_surface(window, instance);
+	if (surface == VK_NULL_HANDLE)
+	{
+		log_error("Failed to create Vulkan window surface!");
+		return -1;
+	}
+
+	// Physical device
+	vtek::PhysicalDeviceInfo physicalDeviceInfo{};
+	physicalDeviceInfo.requireGraphicsQueue = true;
+	physicalDeviceInfo.requirePresentQueue = true;
+	physicalDeviceInfo.requireSwapchainSupport = true;
+	physicalDeviceInfo.requireDynamicRendering = true;
+	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
+		&physicalDeviceInfo, instance, surface);
+	if (physicalDevice == nullptr)
+	{
+		log_error("Failed to pick physical device!");
+		return -1;
+	}
+
+	// Device
+	vtek::DeviceCreateInfo deviceCreateInfo{};
+	vtek::Device* device = vtek::device_create(
+		&deviceCreateInfo, instance, physicalDevice);
+	if (device == nullptr)
+	{
+		log_error("Failed to create device!");
+		return -1;
+	}
+
+	// Graphics queue
+	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
+	if (graphicsQueue == nullptr)
+	{
+		log_error("Failed to get graphics queue!");
+		return -1;
+	}
+
+	// Graphics command pool
+	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
+	commandPoolCreateInfo.allowIndividualBufferReset = true;
+	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
+		&commandPoolCreateInfo, device, graphicsQueue);
+	if (graphicsCommandPool == nullptr)
+	{
+		log_error("Failed to create graphics command pool!");
+		return -1;
+	}
+
+	// Swapchain
+	vtek::SwapchainCreateInfo swapchainCreateInfo{};
+	swapchainCreateInfo.vsync = true;
+	swapchainCreateInfo.prioritizeLowLatency = false;
+	vtek::window_get_framebuffer_size(
+		window, &swapchainCreateInfo.framebufferWidth,
+		&swapchainCreateInfo.framebufferHeight);
+	vtek::Swapchain* swapchain = vtek::swapchain_create(
+		&swapchainCreateInfo, surface, physicalDevice, device);
+	if (swapchain == nullptr)
+	{
+		log_error("Failed to create swapchain!");
+		return -1;
+	}
+
+	// Command buffers
+	log_trace("Command buffers");
+	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
+	vtek::CommandBufferCreateInfo commandBufferInfo{};
+	commandBufferInfo.isSecondary = false;
+	std::vector<vtek::CommandBuffer*> commandBuffers = vtek::command_buffer_create(
+		&commandBufferInfo, commandBufferCount, graphicsCommandPool, device);
+	if (commandBuffers.empty())
+	{
+		log_error("Failed to create command buffer!");
+		return -1;
+	}
+	if (commandBufferCount != commandBuffers.size())
+	{
+		log_error("Number of command buffers created not same as number asked!");
+		return -1;
+	}
+
+	// Shader
+	const char* shaderdirstr = "../shaders/dynamic_circle/";
+	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
+	if (shaderdir == nullptr)
+	{
+		log_error("Failed to open shader directory!");
+		return -1;
+	}
+	vtek::GraphicsShaderInfo shaderInfo{};
+	shaderInfo.vertex = true;
+	shaderInfo.fragment = true;
+	vtek::GraphicsShader* shader =
+		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
+	if (shader == nullptr)
+	{
+		log_error("Failed to load graphics shader!");
+		return -1;
+	}
+
+	// Vertex buffer
+	vtek::BufferInfo bufferInfo{};
+	bufferInfo.size = 2* sizeof(glm::vec2) * kVertMax;
+	bufferInfo.requireHostVisibleStorage = true; // NOTE: Easy for now.
+	//bufferInfo.disallowInternalStagingBuffer = true;
+	//bufferInfo.requireDedicatedAllocation = true;
+	bufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
+	bufferInfo.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::vertex_buffer;
+	vtek::Buffer* vertexBuffer = vtek::buffer_create(&bufferInfo, device);
+	if (vertexBuffer == nullptr)
+	{
+		log_error("Failed to create vertex buffer!");
+		return -1;
+	}
+	if (!update_vertex_buffer(vertexBuffer, device))
+	{
+		log_error("Failed to fill vertex buffer!");
+		return -1;
+	}
+
+	// Vulkan graphics pipeline
+	const uint32_t width = swapchainCreateInfo.framebufferWidth;
+	const uint32_t height = swapchainCreateInfo.framebufferHeight;
+	vtek::ViewportState viewport{
+		.viewportRegion = {
+			.offset = {0U, 0U},
+			.extent = {width, height}
+		},
+	};
+	vtek::VertexBufferBindings bindings{};
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec2, vtek::VertexInputRate::per_vertex);
+	vtek::RasterizationState rasterizer{};
+	vtek::MultisampleState multisampling{};
+	vtek::DepthStencilState depthStencil{}; // No depth testing!
+	vtek::ColorBlendState colorBlending{};
+	colorBlending.attachments.emplace_back(
+		vtek::ColorBlendAttachment::GetDefault());
+	vtek::PipelineRendering pipelineRendering{};
+	pipelineRendering.colorAttachmentFormats.push_back(
+		vtek::swapchain_get_image_format(swapchain));
+
+	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	graphicsPipelineInfo.renderPass = nullptr; // Nice!
+	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
+	graphicsPipelineInfo.shader = shader;
+	// TODO: Rename to `vertexBufferBindings`
+	graphicsPipelineInfo.vertexInputBindings = &bindings;
+	graphicsPipelineInfo.primitiveTopology = vtek::PrimitiveTopology::triangle_fan;
+	graphicsPipelineInfo.enablePrimitiveRestart = false;
+	graphicsPipelineInfo.viewportState = &viewport;
+	graphicsPipelineInfo.rasterizationState = &rasterizer;
+	graphicsPipelineInfo.multisampleState = &multisampling;
+	graphicsPipelineInfo.depthStencilState = &depthStencil;
+	graphicsPipelineInfo.colorBlendState = &colorBlending;
+
+	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
+		&graphicsPipelineInfo, device);
+	if (graphicsPipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline!");
+		return -1;
+	}
+
+	// Command buffer recording
+	if (!record_command_buffers(
+		    graphicsPipeline, graphicsQueue, commandBuffers,
+		    swapchain, vertexBuffer))
+	{
+		log_error("Failed to record command buffers!");
+		return -1;
 	}
 
 
@@ -377,6 +445,34 @@ int main()
 	{
 		// React to incoming input events
 		vtek::window_poll_events();
+
+		// When the circle parameters change, the vertex buffer needs to be
+		// overwritten, and the command buffers re-recorded.
+		// If the circle should move, only the uniform buffer needs updating,
+		// as the position is added as an offset in the vertex shader.
+		if (recreateVertexBuffer)
+		{
+			vtek::device_wait_idle(device); // important
+
+			if (!update_vertex_buffer(vertexBuffer, device))
+			{
+				log_error("Failed to update vertex buffer!");
+				return -1;
+			}
+			if (!record_command_buffers(
+				    graphicsPipeline, graphicsQueue, commandBuffers,
+				    swapchain, vertexBuffer))
+			{
+				log_error("Failed to re-record command buffers!");
+				return -1;
+			}
+			recreateVertexBuffer = false;
+		}
+		if (recreateUniformBuffer)
+		{
+			update_uniform_buffer();
+			recreateUniformBuffer = false;
+		}
 
 		// To avoid excessive GPU work we wait until we may begin the frame
 		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
@@ -451,7 +547,7 @@ int main()
 	vtek::device_wait_idle(device);
 
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
-	vtek::buffer_destroy(buffer);
+	vtek::buffer_destroy(vertexBuffer);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);

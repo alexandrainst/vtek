@@ -51,6 +51,7 @@ namespace vtek
 	VkImage swapchain_get_image(Swapchain* swapchain, uint32_t index);
 	VkImageView swapchain_get_image_view(Swapchain* swapchain, uint32_t index);
 	VkFormat swapchain_get_image_format(Swapchain* swapchain);
+	VkExtent2D swapchain_get_image_extent(const Swapchain* swapchain);
 
 
 	// A status enum, returned by the frame functions below, to keep a client
