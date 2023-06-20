@@ -183,3 +183,8 @@ void vtek::descriptor_pool_destroy(
 
 	delete pool;
 }
+
+VkDescriptorPool vtek::descriptor_pool_get_handle(vtek::DescriptorPool* pool)
+{
+	return pool->vulkanHandle;
+}

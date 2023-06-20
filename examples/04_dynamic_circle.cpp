@@ -362,14 +362,14 @@ int main()
 
 	// Descriptor pool
 	vtek::DescriptorPoolInfo descriptorPoolInfo{};
-	descriptorPoolInfo.descriptorTypes.push_back(
-		{ vtek::DescriptorType::uniform_buffer, 1 });
-	vtek::DescriptorPool* descriptorPool =
-		vtek::descriptor_pool_create(&descriptorPoolInfo, device);
-	if (descriptorPool == nullptr)
-	{
-		log_error("Failed to create descriptor pool!");
-		return -1;
+	descriptorPoolInfo.descriptorTypes.// push_back(
+	// 	{ vtek::DescriptorType::uniform_buffer, 1 });
+	// vtek::DescriptorPool* descriptorPool =
+	// 	vtek::descriptor_pool_create(&descriptorPoolInfo, device);
+	// if (descriptorPool == nullptr)
+	// {
+	// 	log_error("Failed to create descriptor pool!");
+	// 	return -1;
 	}
 
 	// Descriptor layout

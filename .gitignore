@@ -33,3 +33,9 @@
 build/
 shaders/**/*.spv
 captures/
+
+# GNU Global tagging database
+GPATH
+GRTAGS
+GTAGS
+.dir-locals.el

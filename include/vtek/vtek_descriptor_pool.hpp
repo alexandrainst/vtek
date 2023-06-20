@@ -47,4 +47,6 @@ namespace vtek
 	DescriptorPool* descriptor_pool_create(
 		DescriptorPoolInfo* info, Device* device);
 	void descriptor_pool_destroy(DescriptorPool* pool, Device* device);
+
+	VkDescriptorPool descriptor_pool_get_handle(DescriptorPool* pool);
 }
