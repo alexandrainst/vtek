@@ -362,7 +362,7 @@ int main()
 
 	// Descriptor pool
 	vtek::DescriptorPoolInfo descriptorPoolInfo{};
-	descriptorPoolInfo.descriptorTypes.emplace_back(
+	descriptorPoolInfo.descriptorTypes.push_back(
 		{ vtek::DescriptorType::uniform_buffer, 1 });
 	vtek::DescriptorPool* descriptorPool =
 		vtek::descriptor_pool_create(&descriptorPoolInfo, device);
@@ -564,6 +564,7 @@ int main()
 
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
 	vtek::buffer_destroy(vertexBuffer);
+	vtek::descriptor_pool_destroy(descriptorPool, device);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);

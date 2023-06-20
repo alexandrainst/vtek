@@ -1,8 +1,8 @@
 #pragma once
 
+#include <vulkan/vulkan.h>
 #include <vector>
 
-#include "vtek_vulkan.pch"
 #include "vtek_vulkan_handles.hpp"
 
 
@@ -40,17 +40,7 @@ namespace vtek
 		bool allowIndividualFree {false};
 		bool allowUpdateAfterBind {false};
 
-		std::vector<DescriptorType> descriptorTypes;
-
-		// NOTE: From VV:
-		// static constexpr uint32_t kMaxTypes = 4;
-		// uint32_t numTypes {0};
-		// DescriptorPoolType types[kMaxTypes];
-
-		// NOTE: And then initializing in context:
-		// info.numTypes = 1;
-		// info.types[0].type = DescriptorType::uniform_buffer;
-		// info.types[0].count = vtek::swapchain_get_num_frames_in_flight();
+		std::vector<DescriptorPoolType> descriptorTypes;
 	};
 
 

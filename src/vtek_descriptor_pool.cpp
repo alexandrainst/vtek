@@ -1,3 +1,4 @@
+#include "vtek_vulkan.pch"
 #include "vtek_descriptor_pool.hpp"
 
 #include "vtek_device.hpp"
@@ -127,18 +128,16 @@ vtek::DescriptorPool* vtek::descriptor_pool_create(
 	}
 
 	// NOTE: Specify descriptor pool sizes (??)
-	constexpr uint32_t maxPoolSizes = 4;
-	VkDescriptorPoolSize poolSizes[maxPoolSizes];
-	for (uint32_t i = 0; i < maxPoolSizes; i++)
-	{
-		poolSizes[i] = {}; // REVIEW: This is probably not necessary.
-	}
+	std::vector<VkDescriptorPoolSize> poolSizes;
+	const uint32_t numTypes = info->descriptorTypes.size();
+	uint32_t maxSets = 0U;
 
-	uint32_t numPoolTypes = 2; // TODO: Specify in `DescriptorPoolInfo` ?
-	for (uint32_t i = 0; i < numPoolTypes; i++)
+	for (uint32_t i = 0; i < numTypes; i++)
 	{
-		std::optional<VkDescriptorType> opt_type = get_descriptor_type(...);
-		if (!opt_type.has_value())
+		vtek::DescriptorPoolType poolType = info->descriptorTypes[i];
+		std::optional<VkDescriptorType> typeOpt =
+			get_descriptor_type(poolType.type, device);
+		if (!typeOpt.has_value())
 		{
 			vtek_log_error("Failed to get descriptor type -- {}",
 			               "cannot create descriptor pool!");
@@ -146,20 +145,19 @@ vtek::DescriptorPool* vtek::descriptor_pool_create(
 			return nullptr;
 		}
 
-		poolSizes[i].type = opt_type.value();
+		poolSizes.push_back({ typeOpt.value(), poolType.count });
+		maxSets += poolType.count;
 	}
 
-
 	// Maximum number of descriptor sets that CAN be allocated from the pool.
-	createInfo.maxSets;
+	// TODO: Should we add margin for safety?
+	createInfo.maxSets = maxSets;
 
-	// The number of elements in `pPoolSizes`.
-	createInfo.poolSizeCount;
-
-	// A pointer to an array of `VkDescriptorPoolSize` structures, each
-	// containing a descriptor type and number of descriptors of that type
-	// to be allocated in the pool.
-	createInfo.pPoolSizes;
+	// An array of `VkDescriptorPoolSize` structures, each containing a
+	// descriptor type and number of descriptors of that type to be allocated
+	// in the pool.
+	createInfo.poolSizeCount = poolSizes.size();
+	createInfo.pPoolSizes = poolSizes.data();
 
 	VkDevice dev = vtek::device_get_handle(device);
 	VkResult result = vkCreateDescriptorPool(
@@ -177,5 +175,11 @@ vtek::DescriptorPool* vtek::descriptor_pool_create(
 void vtek::descriptor_pool_destroy(
 	vtek::DescriptorPool* pool, vtek::Device* device)
 {
-	vtek_log_error("vtek::descriptor_pool_destroy(): Not implemented!");
+	if (pool == nullptr) return;
+	VkDevice dev = vtek::device_get_handle(device);
+
+	vkDestroyDescriptorPool(dev, pool->vulkanHandle, nullptr);
+	pool->vulkanHandle = VK_NULL_HANDLE;
+
+	delete pool;
 }
