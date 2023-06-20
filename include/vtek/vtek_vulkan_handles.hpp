@@ -10,6 +10,7 @@ namespace vtek
 	struct ApplicationWindow;
 	struct CommandBuffer;
 	struct CommandPool;
+	struct DescriptorPool;
 	struct Device;
 	struct GraphicsPipeline;
 	struct GraphicsShader;

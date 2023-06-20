@@ -19,9 +19,6 @@ namespace vtek
 		bool hintRerecordOften {false}; // TODO: Better name?
 	};
 
-	struct CommandPool; // opaque handle
-
-
 
 	CommandPool* command_pool_create(
 		const CommandPoolCreateInfo* info, const Device* device, const Queue* queue);

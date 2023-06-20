@@ -360,6 +360,22 @@ int main()
 		return -1;
 	}
 
+	// Descriptor pool
+	vtek::DescriptorPoolInfo descriptorPoolInfo{};
+	descriptorPoolInfo.descriptorTypes.emplace_back(
+		{ vtek::DescriptorType::uniform_buffer, 1 });
+	vtek::DescriptorPool* descriptorPool =
+		vtek::descriptor_pool_create(&descriptorPoolInfo, device);
+	if (descriptorPool == nullptr)
+	{
+		log_error("Failed to create descriptor pool!");
+		return -1;
+	}
+
+	// Descriptor layout
+
+
+
 	// Vertex buffer
 	vtek::BufferInfo bufferInfo{};
 	bufferInfo.size = 2* sizeof(glm::vec2) * kVertMax;
