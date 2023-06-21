@@ -277,10 +277,11 @@ VkShaderStageFlagBits vtek::get_shader_stage(SStage stage)
 #if defined(VK_VERSION_1_1) && defined(VK_EXT_MESH_SHADER_EXTENSION_NAME)
 	case SStage::task:         return VK_SHADER_STAGE_TASK_BIT_EXT;
 	case SStage::mesh:         return VK_SHADER_STAGE_MESH_BIT_EXT;
+#endif
 
 	case SStage::all_graphics: return VK_SHADER_STAGE_ALL_GRAPHICS;
 	case SStage::all:          return VK_SHADER_STAGE_ALL;
-#endif
+
 
 	default:
 		vtek_log_error("vtek::get_shader_stage: Invalid stage!");
@@ -319,6 +320,79 @@ VkShaderStageFlagBits vtek::get_shader_stage_ray_tracing(SSRayTrace stage)
 		vtek_log_error("vtek::get_shader_stage_ray_tracing: Invalid stage!");
 		return static_cast<VkShaderStageFlagBits>(0);
 	}
+}
+
+VkShaderStageFlags vtek::get_shader_stage_flags(
+	vtek::EnumBitmask<ShaderStage> mask)
+{
+	VkShaderStageFlags flags = 0U;
+
+	if (mask.has_flag(SStage::vertex)) {
+		flags |= VK_SHADER_STAGE_VERTEX_BIT;
+	}
+	if (mask.has_flag(SStage::tessellation_control)) {
+		flags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+	}
+	if (mask.has_flag(SStage::tessellation_eval)) {
+		flags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+	}
+	if (mask.has_flag(SStage::geometry)) {
+		flags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+	}
+	if (mask.has_flag(SStage::fragment)) {
+		flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+	}
+
+	if (mask.has_flag(SStage::compute)) {
+		flags |= VK_SHADER_STAGE_COMPUTE_BIT;
+	}
+
+	// NOTE: Making sure code compiles on platforms without these extensions.
+	// TODO: Check that these are accessible on platforms where extensions ARE present!
+	// Provided by VK_KHR_ray_tracing_pipeline
+#if defined(VK_VERSION_1_1) && defined(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
+	if (mask.has_flag(SStage::raygen)) {
+		flags |= VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+	}
+	if (mask.has_flag(SStage::any_hit)) {
+		flags |= VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+	}
+	if (mask.has_flag(SStage::closest_hit)) {
+		flags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	}
+	if (mask.has_flag(SStage::miss)) {
+		flags |= VK_SHADER_STAGE_MISS_BIT_KHR;
+	}
+	if (mask.has_flag(SStage::intersection)) {
+		flags |= VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+	}
+	if (mask.has_flag(SStage::callable)) {
+		flags |= VK_SHADER_STAGE_CALLABLE_BIT_KHR;
+	}
+#endif
+
+	vtek_log_debug("vtek_shaders.cpp:374: Remove this check when works! (1/2)");
+	// Provided by VK_EXT_mesh_shader
+#if defined(VK_VERSION_1_1) && defined(VK_EXT_MESH_SHADER_EXTENSION_NAME)
+	// TODO: Does this work?
+	vtek_log_debug("vtek_shaders.cpp:378: Remove this check when works! (2/2)");
+	if (mask.has_flag(SStage::task)) {
+		flags |= VK_SHADER_STAGE_TASK_BIT_EXT;
+	}
+	if (mask.has_flag(SStage::mesh)) {
+		flags |= VK_SHADER_STAGE_MESH_BIT_EXT;
+	}
+#endif
+
+	if (mask.has_flag(SStage::all_graphics)) {
+		flags |= VK_SHADER_STAGE_ALL_GRAPHICS;
+	}
+	if (mask.has_flag(SStage::all)) {
+		flags |= VK_SHADER_STAGE_ALL;
+
+
+
+	return flags;
 }
 
 VkShaderStageFlags vtek::get_shader_stage_flags_graphics(

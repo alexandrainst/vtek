@@ -18,8 +18,9 @@ struct vtek::DescriptorPool
 };
 
 
-/* helper functions */
-static std::optional<VkDescriptorType> get_descriptor_type(
+
+/* interface */
+std::optional<VkDescriptorType> get_descriptor_type(
 	vtek::DescriptorType type, vtek::Device* device)
 {
 	switch (type)
@@ -98,9 +99,6 @@ static std::optional<VkDescriptorType> get_descriptor_type(
 	}
 }
 
-
-
-/* interface */
 vtek::DescriptorPool* vtek::descriptor_pool_create(
 	vtek::DescriptorPoolInfo* info, vtek::Device* device)
 {

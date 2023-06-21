@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <optional>
 #include <vector>
 
 #include "vtek_vulkan_handles.hpp"
@@ -28,6 +29,9 @@ namespace vtek
 		// Provided by VK_KHR_acceleration_structure
 		acceleration_structure
 	};
+
+	std::optional<VkDescriptorType> get_descriptor_type(
+		DescriptorType type, Device device);
 
 	struct DescriptorPoolType
 	{

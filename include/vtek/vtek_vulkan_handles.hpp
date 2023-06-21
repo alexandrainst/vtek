@@ -12,6 +12,7 @@ namespace vtek
 	struct CommandBuffer;
 	struct CommandPool;
 	struct DescriptorPool;
+	struct DescriptorSetLayout;
 	struct Device;
 	struct GraphicsPipeline;
 	struct GraphicsShader;
@@ -21,5 +22,4 @@ namespace vtek
 	struct RenderPass;
 	struct Swapchain;
 	// TODO: struct SwapchainFramebuffers;
-
 }
