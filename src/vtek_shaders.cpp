@@ -371,11 +371,8 @@ VkShaderStageFlags vtek::get_shader_stage_flags(
 	}
 #endif
 
-	vtek_log_debug("vtek_shaders.cpp:374: Remove this check when works! (1/2)");
 	// Provided by VK_EXT_mesh_shader
 #if defined(VK_VERSION_1_1) && defined(VK_EXT_MESH_SHADER_EXTENSION_NAME)
-	// TODO: Does this work?
-	vtek_log_debug("vtek_shaders.cpp:378: Remove this check when works! (2/2)");
 	if (mask.has_flag(SStage::task)) {
 		flags |= VK_SHADER_STAGE_TASK_BIT_EXT;
 	}

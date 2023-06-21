@@ -12,6 +12,7 @@ namespace vtek
 	struct CommandBuffer;
 	struct CommandPool;
 	struct DescriptorPool;
+	struct DescriptorSet;
 	struct DescriptorSetLayout;
 	struct Device;
 	struct GraphicsPipeline;

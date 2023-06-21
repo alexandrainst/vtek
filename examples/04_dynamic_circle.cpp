@@ -376,7 +376,7 @@ int main()
 		return -1;
 	}
 
-	// Descriptor layout
+	// Descriptor set layout
 	vtek::DescriptorSetLayoutInfo descriptorLayoutInfo{};
 	vtek::DescriptorLayoutBinding descriptorBinding{};
 	descriptorBinding.type = vtek::DescriptorType::uniform_buffer;
@@ -391,6 +391,19 @@ int main()
 		return -1;
 	}
 
+	// Descriptor set
+	vtek::DescriptorSet* descriptorSet = vtek::descriptor_set_create(
+		descriptorPool, descriptorSetLayout, device);
+	if (descriptorSet == nullptr)
+	{
+		log_error("Failed to create descriptor set!");
+		return -1;
+	}
+	if (!update_uniform_buffer())
+	{
+		log_error("Failed to fill uniform buffer!");
+		return -1;
+	}
 
 	// Vertex buffer
 	vtek::BufferInfo bufferInfo{};
@@ -581,6 +594,7 @@ int main()
 
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
 	vtek::buffer_destroy(vertexBuffer);
+	vtek::descriptor_set_destroy(descriptorSet);
 	vtek::descriptor_set_layout_destroy(descriptorSetLayout, device);
 	vtek::descriptor_pool_destroy(descriptorPool, device);
 	vtek::graphics_shader_destroy(shader, device);

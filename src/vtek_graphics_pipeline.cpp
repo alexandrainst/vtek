@@ -517,6 +517,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	layoutInfo.pNext = nullptr;
 	layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
 
+	// REVIEW: Library to extract descriptor layout from Spir-V ?
 	layoutInfo.setLayoutCount = 0;
 	layoutInfo.pSetLayouts = nullptr;
 	std::vector<VkDescriptorSetLayout> layouts;
@@ -561,47 +562,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		vtek_log_error("Failed to create graphics pipeline layout!");
 		return nullptr;
 	}
-
-
-	// TODO: Get this from shader!
-	// VkDescriptorSetLayout descriptorSetLayout =
-	// 	vtek::graphics_shader_get_descriptor_layout(info->shader);
-
-	// // TODO: This is probably, _maybe_, an issue?
-	// // layoutInfo.setLayoutCount = 0; // ??
-	// // layoutInfo.pSetLayouts = nullptr; // ??
-	// VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
-	// setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	// setLayoutInfo.pNext = nullptr;
-	// setLayoutInfo.flags = 0; // ??
-	// setLayoutInfo.bindingCount = 0;
-	// setLayoutInfo.pBindings = nullptr;
-
-	// VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-	// VkResult setLayoutResult = vkCreateDescriptorSetLayout(dev, &setLayoutInfo, nullptr, &descriptorSetLayout);
-	// if (setLayoutResult != VK_SUCCESS)
-	// {
-	// 	vtek_log_error("EXPERIMENTAL: Failed to create graphics pipeline descriptor set layout!");
-	// 	return nullptr;
-	// }
-
-	// VkPipelineLayoutCreateInfo layoutInfo{};
-	// layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	// layoutInfo.pNext = nullptr;
-	// layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
-	// layoutInfo.setLayoutCount = 0; // 1;
-	// layoutInfo.pSetLayouts = nullptr; // &descriptorSetLayout;
-	// layoutInfo.pushConstantRangeCount = 0; // ??
-	// layoutInfo.pPushConstantRanges = nullptr; // ??
-	// // TODO: Library to extract descriptor layout from Spir-V ??
-
-	// VkPipelineLayout layout {VK_NULL_HANDLE};
-	// VkResult layoutResult = vkCreatePipelineLayout(dev, &layoutInfo, nullptr, &layout);
-	// if (layoutResult != VK_SUCCESS)
-	// {
-	// 	vtek_log_error("Failed to create graphics pipeline layout!");
-	// 	return nullptr;
-	// }
 
 	// ========================= //
 	// === Dynamic rendering === // -- alternative to providing a render pass.

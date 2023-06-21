@@ -28,6 +28,7 @@
 #include "vtek_command_buffer.hpp"
 #include "vtek_command_pool.hpp"
 #include "vtek_descriptor_pool.hpp"
+#include "vtek_descriptor_set.hpp"
 #include "vtek_descriptor_set_layout.hpp"
 #include "vtek_device.hpp"
 #include "vtek_graphics_pipeline.hpp"
