@@ -647,7 +647,6 @@ vtek::Device* vtek::device_create(
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.pEnabledFeatures =
 		vtek::physical_device_get_required_features(physicalDevice);
-	createInfo.
 
 	// Device extensions - support queried for during physical device pick.
 	// Now we just enable them!

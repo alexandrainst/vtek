@@ -516,9 +516,20 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layoutInfo.pNext = nullptr;
 	layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
-	// TODO: Descriptor sets
+
 	layoutInfo.setLayoutCount = 0;
 	layoutInfo.pSetLayouts = nullptr;
+	std::vector<VkDescriptorSetLayout> layouts;
+	if (!info->descriptorSetLayouts.empty())
+	{
+		for (auto* layout : info->descriptorSetLayouts)
+		{
+			layouts.push_back(vtek::descriptor_set_layout_get_handle(layout));
+		}
+		layoutInfo.setLayoutCount = layouts.size();
+		layoutInfo.pSetLayouts = layouts.data();
+	}
+
 	layoutInfo.pushConstantRangeCount = 0;
 	layoutInfo.pPushConstantRanges = nullptr;
 	VkPushConstantRange pushConstantRange{};

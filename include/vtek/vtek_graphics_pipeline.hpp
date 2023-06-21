@@ -5,6 +5,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "vtek_descriptor_set_layout.hpp"
 #include "vtek_push_constants.hpp"
 #include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
@@ -313,7 +314,8 @@ namespace vtek
 		// dynamic states
 		EnumBitmask<PipelineDynamicState> dynamicStateFlags {0U};
 
-		// Optional: pipeline layout
+		// Optional: pipeline layout and push constants
+		std::vector<DescriptorSetLayout*> descriptorSetLayouts;
 		PushConstantType pushConstantType {PushConstantType::none};
 		EnumBitmask<ShaderStageGraphics> pushConstantShaderStages {0U};
 	};

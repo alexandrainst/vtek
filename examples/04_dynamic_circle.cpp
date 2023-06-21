@@ -84,6 +84,10 @@ bool update_vertex_buffer(vtek::Buffer* buffer, vtek::Device* device)
 
 bool update_uniform_buffer()
 {
+	// Packed data
+	glm::vec3 circleParams {circleCenter.x, circleCenter.y, circleRadius};
+
+
 	return false;
 }
 
@@ -362,18 +366,30 @@ int main()
 
 	// Descriptor pool
 	vtek::DescriptorPoolInfo descriptorPoolInfo{};
-	descriptorPoolInfo.descriptorTypes.// push_back(
-	// 	{ vtek::DescriptorType::uniform_buffer, 1 });
-	// vtek::DescriptorPool* descriptorPool =
-	// 	vtek::descriptor_pool_create(&descriptorPoolInfo, device);
-	// if (descriptorPool == nullptr)
-	// {
-	// 	log_error("Failed to create descriptor pool!");
-	// 	return -1;
+	descriptorPoolInfo.descriptorTypes.push_back(
+		{ vtek::DescriptorType::uniform_buffer, 1 });
+	vtek::DescriptorPool* descriptorPool =
+		vtek::descriptor_pool_create(&descriptorPoolInfo, device);
+	if (descriptorPool == nullptr)
+	{
+		log_error("Failed to create descriptor pool!");
+		return -1;
 	}
 
 	// Descriptor layout
-
+	vtek::DescriptorSetLayoutInfo descriptorLayoutInfo{};
+	vtek::DescriptorLayoutBinding descriptorBinding{};
+	descriptorBinding.type = vtek::DescriptorType::uniform_buffer;
+	descriptorBinding.binding = 0;
+	descriptorBinding.shaderStages = vtek::ShaderStage::vertex;
+	descriptorLayoutInfo.bindings.emplace_back(descriptorBinding);
+	vtek::DescriptorSetLayout* descriptorSetLayout =
+		vtek::descriptor_set_layout_create(&descriptorLayoutInfo, device);
+	if (descriptorSetLayout == nullptr)
+	{
+		log_error("Failed to create descriptor set layout!");
+		return -1;
+	}
 
 
 	// Vertex buffer
@@ -434,6 +450,7 @@ int main()
 	graphicsPipelineInfo.multisampleState = &multisampling;
 	graphicsPipelineInfo.depthStencilState = &depthStencil;
 	graphicsPipelineInfo.colorBlendState = &colorBlending;
+	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayout);
 
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
@@ -564,6 +581,7 @@ int main()
 
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
 	vtek::buffer_destroy(vertexBuffer);
+	vtek::descriptor_set_layout_destroy(descriptorSetLayout, device);
 	vtek::descriptor_pool_destroy(descriptorPool, device);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);

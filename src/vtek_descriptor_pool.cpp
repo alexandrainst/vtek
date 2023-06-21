@@ -20,7 +20,7 @@ struct vtek::DescriptorPool
 
 
 /* interface */
-std::optional<VkDescriptorType> get_descriptor_type(
+std::optional<VkDescriptorType> vtek::get_descriptor_type(
 	vtek::DescriptorType type, vtek::Device* device)
 {
 	switch (type)
@@ -134,7 +134,7 @@ vtek::DescriptorPool* vtek::descriptor_pool_create(
 	{
 		vtek::DescriptorPoolType poolType = info->descriptorTypes[i];
 		std::optional<VkDescriptorType> typeOpt =
-			get_descriptor_type(poolType.type, device);
+			vtek::get_descriptor_type(poolType.type, device);
 		if (!typeOpt.has_value())
 		{
 			vtek_log_error("Failed to get descriptor type -- {}",

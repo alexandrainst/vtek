@@ -389,8 +389,7 @@ VkShaderStageFlags vtek::get_shader_stage_flags(
 	}
 	if (mask.has_flag(SStage::all)) {
 		flags |= VK_SHADER_STAGE_ALL;
-
-
+	}
 
 	return flags;
 }

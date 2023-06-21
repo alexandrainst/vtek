@@ -39,5 +39,9 @@ namespace vtek
 	DescriptorSetLayout* descriptor_set_layout_create(
 		const DescriptorSetLayoutInfo* info, Device* device);
 
-	void descriptor_set_layout_destroy(DescriptorSetLayout* layout);
+	void descriptor_set_layout_destroy(
+		DescriptorSetLayout* layout, Device* device);
+
+	VkDescriptorSetLayout descriptor_set_layout_get_handle(
+		DescriptorSetLayout* layout);
 }

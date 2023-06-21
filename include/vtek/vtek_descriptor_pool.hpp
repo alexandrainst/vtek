@@ -31,7 +31,7 @@ namespace vtek
 	};
 
 	std::optional<VkDescriptorType> get_descriptor_type(
-		DescriptorType type, Device device);
+		DescriptorType type, Device* device);
 
 	struct DescriptorPoolType
 	{
