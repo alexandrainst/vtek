@@ -1,6 +1,7 @@
 #include "vtek_vulkan.pch"
 #include "vtek_descriptor_set_layout.hpp"
 
+
 /* struct implementation */
 struct vtek::DescriptorSetLayout
 {

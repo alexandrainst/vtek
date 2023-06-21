@@ -8,6 +8,7 @@ namespace vtek
 	// ============================= //
 	struct Allocator;
 	struct ApplicationWindow;
+	struct Buffer;
 	struct CommandBuffer;
 	struct CommandPool;
 	struct DescriptorPool;

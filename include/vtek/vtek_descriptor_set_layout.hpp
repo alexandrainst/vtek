@@ -8,7 +8,8 @@
 namespace vtek
 {
 	struct DescriptorSetLayoutInfo
-	{};
+	{
+	};
 
 
 	DescriptorSetLayout* descriptor_set_layout_create(

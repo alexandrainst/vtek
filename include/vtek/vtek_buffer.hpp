@@ -69,8 +69,6 @@ namespace vtek
 		EnumBitmask<BufferUsageFlag> usageFlags {0U};
 	};
 
-	struct Buffer; // opaque handle
-
 
 	Buffer* buffer_create(const BufferInfo* info, Device* device);
 	void buffer_destroy(Buffer* buffer);
