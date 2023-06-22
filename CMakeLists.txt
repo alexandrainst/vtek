@@ -89,6 +89,7 @@ set (src
     include/vtek/vtek_descriptor_pool.hpp
     include/vtek/vtek_descriptor_set.hpp
     include/vtek/vtek_descriptor_set_layout.hpp
+    include/vtek/vtek_descriptor_type.hpp
     include/vtek/vtek_device.hpp
     include/vtek/vtek_fileio.hpp
     include/vtek/vtek_graphics_pipeline.hpp
@@ -125,6 +126,7 @@ set (src
     src/vtek_descriptor_pool.cpp
     src/vtek_descriptor_set.cpp
     src/vtek_descriptor_set_layout.cpp
+    src/vtek_descriptor_type.cpp
     src/vtek_device.cpp
     src/vtek_fileio.cpp
     src/vtek_graphics_pipeline.cpp
