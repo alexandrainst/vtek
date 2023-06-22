@@ -14,7 +14,7 @@ uint64_t vtek::get_uniform_buffer_size(vtek::UniformBufferType type)
 	case UBType::vec3: return sizeof(glm::vec3);
 
 	default:
-		vtek_error("vtek_get_uniform_buffer_size(): Invalid enum type!");
+		vtek_log_error("vtek_get_uniform_buffer_size(): Invalid enum type!");
 		return 0;
 	}
 }

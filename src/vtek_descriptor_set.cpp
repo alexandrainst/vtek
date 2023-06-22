@@ -8,6 +8,7 @@
 #include "vtek_logging.hpp"
 
 #include <deque>
+#include <vector>
 
 
 /* struct implementation */
@@ -16,6 +17,7 @@ struct vtek::DescriptorSet
 	VkDescriptorSet vulkanHandle {VK_NULL_HANDLE};
 
 	std::deque<VkDescriptorBufferInfo> bufferInfos;
+	std::vector<VkWriteDescriptorSet> writeDescriptors;
 };
 
 
@@ -55,53 +57,58 @@ void vtek::descriptor_set_destroy(vtek::DescriptorSet* set)
 	vtek_log_error("vtek::descriptor_set_destroy(): Not implemented!");
 }
 
-void vtek::descriptor_set_apply_updates(
+void vtek::descriptor_set_update(
 	vtek::DescriptorSet* set, vtek::Device* device)
 {
 	VkDevice dev = vtek::device_get_handle(device);
 
-	//vkUpdateDescriptorSets(dev, size, data, 0, nullptr); // TODO: ?
+	vkUpdateDescriptorSets(
+		dev, set->writeDescriptors.size(), set->writeDescriptors.data(),
+		0, nullptr); // TODO: ?
+
+	set->writeDescriptors.clear();
+	set->bufferInfos.clear();
 }
 
 
 
 /* update descriptors */
-bool vtek::descriptor_set_add_sampler()
+bool vtek::descriptor_set_bind_sampler()
 {
-	vtek_log_error("vtek::descriptor_set_add_sampler(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_sampler(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_combined_image_sampler()
+bool vtek::descriptor_set_bind_combined_image_sampler()
 {
-	vtek_log_error("vtek::descriptor_set_add_combined_image_sampler(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_combined_image_sampler(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_sampled_image()
+bool vtek::descriptor_set_bind_sampled_image()
 {
-	vtek_log_error("vtek::descriptor_set_add_sampled_image(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_sampled_image(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_uniform_texel_buffer()
+bool vtek::descriptor_set_bind_uniform_texel_buffer()
 {
-	vtek_log_error("vtek::descriptor_set_add_uniform_texel_buffer(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_uniform_texel_buffer(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_storage_texel_buffer()
+bool vtek::descriptor_set_bind_storage_texel_buffer()
 {
-	vtek_log_error("vtek::descriptor_set_add_storage_texel_buffer(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_storage_texel_buffer(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_uniform_buffer(
+bool vtek::descriptor_set_bind_uniform_buffer(
 	vtek::DescriptorSet* set, uint32_t binding,
 	vtek::Buffer* buffer, vtek::UniformBufferType type)
 {
@@ -127,42 +134,42 @@ bool vtek::descriptor_set_add_uniform_buffer(
 	writeSet.pBufferInfo = &(set->bufferInfos.back());
 	writeSet.pTexelBufferView = nullptr;
 
-	// TODO: Save the bufferInfo and the writeSet internally until update!
+	set->writeDescriptors.emplace_back(writeSet);
 
 	return true;
 }
 
-bool vtek::descriptor_set_add_storage_buffer()
+bool vtek::descriptor_set_bind_storage_buffer()
 {
-	vtek_log_error("vtek::descriptor_set_add_storage_buffer(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_storage_buffer(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_uniform_buffer_dynamic()
+bool vtek::descriptor_set_bind_uniform_buffer_dynamic()
 {
-	vtek_log_error("vtek::descriptor_set_add_uniform_buffer_dynamic(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_uniform_buffer_dynamic(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_storage_buffer_dynamic()
+bool vtek::descriptor_set_bind_storage_buffer_dynamic()
 {
-	vtek_log_error("vtek::descriptor_set_add_storage_buffer_dynamic(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_storage_buffer_dynamic(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_input_attachment()
+bool vtek::descriptor_set_bind_input_attachment()
 {
-	vtek_log_error("vtek::descriptor_set_add_input_attachment(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_input_attachment(): {}",
 	               "Not implemented!");
 	return false;
 }
 
-bool vtek::descriptor_set_add_inline_uniform_block()
+bool vtek::descriptor_set_bind_inline_uniform_block()
 {
-	vtek_log_error("vtek::descriptor_set_add_inline_uniform_block(): {}",
+	vtek_log_error("vtek::descriptor_set_bind_inline_uniform_block(): {}",
 	               "Not implemented!");
 	return false;
 }

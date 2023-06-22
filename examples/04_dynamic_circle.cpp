@@ -10,6 +10,7 @@ std::vector<glm::vec2> vertices;
 glm::vec2 circleCenter{0.0f, 0.0f};
 float circleMoveSpeed = 0.05f;
 float circleRadius = 0.5f;
+vtek::Uniform_v3 uniform;
 bool recreateVertexBuffer = false;
 bool recreateUniformBuffer = false;
 
@@ -82,26 +83,33 @@ bool update_vertex_buffer(vtek::Buffer* buffer, vtek::Device* device)
 	return vtek::buffer_write_data(buffer, vertices.data(), &region, device);
 }
 
-bool update_uniform_buffer(vtek::DescriptorSet* set, vtek::Buffer* buffer)
+bool update_uniform_buffer(
+	vtek::DescriptorSet* set, vtek::Buffer* buffer, vtek::Device* device)
 {
 	// Packed data
-	glm::vec3 circleParams {circleCenter.x, circleCenter.y, circleRadius};
+	uniform.v3 = {circleCenter.x, circleCenter.y, circleRadius};
 
-	if (!vtek::buffer_write_data(buffer, vertices.data(), &region, device))
+	// Update uniform buffer
+	vtek::BufferRegion region{
+		.offset = 0,
+		.size = uniform.size()
+	};
+	if (!vtek::buffer_write_data(buffer, &uniform, &region, device))
 	{
 		log_error("Failed to write data to the uniform buffer!");
 		return false;
 	}
 
-	if (!vtek::descriptor_set_add_uniform_buffer(
-		    set, 0, buffer, vtek::UniformBufferType::vec3))
+	// Update descriptor set
+	if (!vtek::descriptor_set_bind_uniform_buffer(
+		    set, 0, buffer, uniform.type()))
 	{
 		log_error("Failed to add uniform buffer to the descriptor set!");
 		return false;
 	}
+	vtek::descriptor_set_update(set, device);
 
-
-	return false;
+	return true;
 }
 
 bool record_command_buffers(
@@ -412,11 +420,6 @@ int main()
 		log_error("Failed to create descriptor set!");
 		return -1;
 	}
-	if (!update_uniform_buffer())
-	{
-		log_error("Failed to fill uniform buffer!");
-		return -1;
-	}
 
 	// Vertex buffer
 	vtek::BufferInfo bufferInfo{};
@@ -437,6 +440,27 @@ int main()
 	if (!update_vertex_buffer(vertexBuffer, device))
 	{
 		log_error("Failed to fill vertex buffer!");
+		return -1;
+	}
+
+	// Uniform buffer
+	vtek::BufferInfo uniformBufferInfo{};
+	uniformBufferInfo.size = uniform.size();
+	uniformBufferInfo.requireHostVisibleStorage = true; // TODO: Test without!
+	uniformBufferInfo.disallowInternalStagingBuffer = true;
+	uniformBufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
+	uniformBufferInfo.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::uniform_buffer;
+	vtek::Buffer* uniformBuffer = vtek::buffer_create(&uniformBufferInfo, device);
+	if (uniformBuffer == nullptr)
+	{
+		log_error("Failed to create uniform buffer!");
+		return -1;
+	}
+	if (!update_uniform_buffer(descriptorSet, uniformBuffer, device))
+	{
+		log_error("Failed to fill uniform buffer!");
 		return -1;
 	}
 
@@ -529,7 +553,12 @@ int main()
 		}
 		if (recreateUniformBuffer)
 		{
-			update_uniform_buffer();
+			if (!update_uniform_buffer(descriptorSet, uniformBuffer, device))
+			{
+				log_error("Failed to update uniform buffer!");
+				return -1;
+			}
+			// NOTE: Re-recording the command buffers is not necessary here!
 			recreateUniformBuffer = false;
 		}
 
