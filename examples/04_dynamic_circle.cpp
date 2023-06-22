@@ -5,11 +5,12 @@
 // global data
 vtek::ApplicationWindow* window = nullptr;
 constexpr uint32_t kVertMax = 33;
-vtek::IntClamp<uint32_t, 3, kVertMax-1> numCircleVertices = 32;
+vtek::IntClamp<uint32_t, 3, kVertMax-1> numCircleVertices = 8;
 std::vector<glm::vec2> vertices;
 glm::vec2 circleCenter{0.0f, 0.0f};
 float circleMoveSpeed = 0.05f;
 float circleRadius = 0.5f;
+float circleGrowSpeed = 0.05f;
 vtek::Uniform_v3 uniform;
 bool recreateVertexBuffer = false;
 bool recreateUniformBuffer = false;
@@ -17,8 +18,9 @@ bool recreateUniformBuffer = false;
 
 /*
  * Use arrow keys on keyboard to move the circle.
- * Use keys 'i' and 'd', respectively, to increase/decrese the number of
+ * Use keys 'i' and 'k', respectively, to increase/decrese the number of
  * vertices on the circle's edge.
+ * Use keys 'u' and 'j', respectively, to increase/decrease the circle's radius.
  * Press 'escape' to close the window.
  */
 
@@ -35,10 +37,11 @@ void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 			numCircleVertices++;
 			recreateVertexBuffer = true;
 			break;
-		case vtek::KeyboardKey::d:
+		case vtek::KeyboardKey::k:
 			numCircleVertices--;
 			recreateVertexBuffer = true;
 			break;
+
 		case vtek::KeyboardKey::up:
 			circleCenter.y -= circleMoveSpeed;
 			recreateUniformBuffer = true;
@@ -53,6 +56,14 @@ void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 			break;
 		case vtek::KeyboardKey::right:
 			circleCenter.x += circleMoveSpeed;
+			recreateUniformBuffer = true;
+			break;
+		case vtek::KeyboardKey::u:
+			circleRadius += circleGrowSpeed;
+			recreateUniformBuffer = true;
+			break;
+		case vtek::KeyboardKey::j:
+			circleRadius -= circleGrowSpeed;
 			recreateUniformBuffer = true;
 			break;
 
@@ -71,8 +82,8 @@ bool update_vertex_buffer(vtek::Buffer* buffer, vtek::Device* device)
 	for (uint32_t i = 0; i <= numCircleVertices.get(); i++)
 	{
 		float localAngle = (float)i * angle;
-		float x = (glm::cos(localAngle) * circleRadius) + circleCenter.x;
-		float y = (glm::sin(localAngle) * circleRadius) + circleCenter.y;
+		float x = glm::cos(localAngle);
+		float y = glm::sin(localAngle);
 		vertices.push_back({x, y});
 	}
 
@@ -86,6 +97,9 @@ bool update_vertex_buffer(vtek::Buffer* buffer, vtek::Device* device)
 bool update_uniform_buffer(
 	vtek::DescriptorSet* set, vtek::Buffer* buffer, vtek::Device* device)
 {
+	// Wait until the device is finished with all operations
+	vtek::device_wait_idle(device);
+
 	// Packed data
 	uniform.v3 = {circleCenter.x, circleCenter.y, circleRadius};
 
@@ -115,9 +129,10 @@ bool update_uniform_buffer(
 bool record_command_buffers(
 	vtek::GraphicsPipeline* pipeline, vtek::Queue* queue,
 	std::vector<vtek::CommandBuffer*> commandBuffers, vtek::Swapchain* swapchain,
-	vtek::Buffer* vertexBuffer)
+	vtek::Buffer* vertexBuffer, vtek::DescriptorSet* descriptorSet)
 {
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
+	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
 	uint32_t queueIndex = vtek::queue_get_family_index(queue);
 	uint32_t commandBufferCount = commandBuffers.size();
 	VkExtent2D swapchainExtent = vtek::swapchain_get_image_extent(swapchain);
@@ -201,6 +216,14 @@ bool record_command_buffers(
 		VkBuffer buffers[1] = { vtek::buffer_get_handle(vertexBuffer) };
 		VkDeviceSize offsets[1] = { 0 };
 		vkCmdBindVertexBuffers(cmdBuf, 0, 1, buffers, offsets);
+
+		// Bind descriptor set
+		VkDescriptorSet descriptorSets[1] = {
+			vtek::descriptor_set_get_handle(descriptorSet)
+		};
+		vkCmdBindDescriptorSets(
+			cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipLayout, 0, 1,
+			descriptorSets, 0, nullptr);
 
 		// draw calls here
 		vkCmdDraw(cmdBuf, vertices.size(), 1, 0, 0);
@@ -513,7 +536,7 @@ int main()
 	// Command buffer recording
 	if (!record_command_buffers(
 		    graphicsPipeline, graphicsQueue, commandBuffers,
-		    swapchain, vertexBuffer))
+		    swapchain, vertexBuffer, descriptorSet))
 	{
 		log_error("Failed to record command buffers!");
 		return -1;
@@ -544,7 +567,7 @@ int main()
 			}
 			if (!record_command_buffers(
 				    graphicsPipeline, graphicsQueue, commandBuffers,
-				    swapchain, vertexBuffer))
+				    swapchain, vertexBuffer, descriptorSet))
 			{
 				log_error("Failed to re-record command buffers!");
 				return -1;
@@ -559,6 +582,13 @@ int main()
 				return -1;
 			}
 			// NOTE: Re-recording the command buffers is not necessary here!
+			if (!record_command_buffers(
+				    graphicsPipeline, graphicsQueue, commandBuffers,
+				    swapchain, vertexBuffer, descriptorSet))
+			{
+				log_error("Failed to re-record command buffers!");
+				return -1;
+			}
 			recreateUniformBuffer = false;
 		}
 

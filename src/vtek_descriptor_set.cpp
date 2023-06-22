@@ -57,6 +57,11 @@ void vtek::descriptor_set_destroy(vtek::DescriptorSet* set)
 	vtek_log_error("vtek::descriptor_set_destroy(): Not implemented!");
 }
 
+VkDescriptorSet vtek::descriptor_set_get_handle(vtek::DescriptorSet* set)
+{
+	return set->vulkanHandle;
+}
+
 void vtek::descriptor_set_update(
 	vtek::DescriptorSet* set, vtek::Device* device)
 {

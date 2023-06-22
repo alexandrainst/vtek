@@ -107,8 +107,6 @@ bool vtek::buffer_write_data(
 	// 1) Buffer is HOST_VISIBLE - just map directly.
 	if (memProps.has_flag(vtek::MemoryProperty::host_visible))
 	{
-		vtek_log_trace("Buffer is HOST_VISIBLE - map to it directly!");
-
 		void* mappedPtr = vtek::allocator_buffer_map(buffer); // TODO: Offset!
 		if (mappedPtr == nullptr)
 		{
