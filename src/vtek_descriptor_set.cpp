@@ -1,16 +1,21 @@
 #include "vtek_vulkan.pch"
 #include "vtek_descriptor_set.hpp"
 
+#include "vtek_buffer.hpp"
 #include "vtek_descriptor_pool.hpp"
 #include "vtek_descriptor_set_layout.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
+
+#include <deque>
 
 
 /* struct implementation */
 struct vtek::DescriptorSet
 {
 	VkDescriptorSet vulkanHandle {VK_NULL_HANDLE};
+
+	std::deque<VkDescriptorBufferInfo> bufferInfos;
 };
 
 
@@ -55,26 +60,57 @@ void vtek::descriptor_set_apply_updates(
 {
 	VkDevice dev = vtek::device_get_handle(device);
 
-	vkUpdateDescriptorSets(dev, size, data, 0, nullptr); // TODO: ?
+	//vkUpdateDescriptorSets(dev, size, data, 0, nullptr); // TODO: ?
 }
 
 
 
 /* update descriptors */
-bool descriptor_set_add_sampler();
+bool vtek::descriptor_set_add_sampler()
+{
+	vtek_log_error("vtek::descriptor_set_add_sampler(): {}",
+	               "Not implemented!");
+	return false;
+}
 
-bool descriptor_set_add_combined_image_sampler();
+bool vtek::descriptor_set_add_combined_image_sampler()
+{
+	vtek_log_error("vtek::descriptor_set_add_combined_image_sampler(): {}",
+	               "Not implemented!");
+	return false;
+}
 
-bool descriptor_set_add_sampled_image();
+bool vtek::descriptor_set_add_sampled_image()
+{
+	vtek_log_error("vtek::descriptor_set_add_sampled_image(): {}",
+	               "Not implemented!");
+	return false;
+}
 
-bool descriptor_set_add_uniform_texel_buffer();
+bool vtek::descriptor_set_add_uniform_texel_buffer()
+{
+	vtek_log_error("vtek::descriptor_set_add_uniform_texel_buffer(): {}",
+	               "Not implemented!");
+	return false;
+}
 
-bool descriptor_set_add_storage_texel_buffer();
+bool vtek::descriptor_set_add_storage_texel_buffer()
+{
+	vtek_log_error("vtek::descriptor_set_add_storage_texel_buffer(): {}",
+	               "Not implemented!");
+	return false;
+}
 
 bool vtek::descriptor_set_add_uniform_buffer(
 	vtek::DescriptorSet* set, uint32_t binding,
-	vtek::Buffer* buffer, const BufferRegion* region)
+	vtek::Buffer* buffer, vtek::UniformBufferType type)
 {
+	VkDescriptorBufferInfo bufferInfo{};
+	bufferInfo.buffer = vtek::buffer_get_handle(buffer);
+	bufferInfo.offset = 0;
+	bufferInfo.range = vtek::get_uniform_buffer_size(type);
+	set->bufferInfos.emplace_back(bufferInfo);
+
 	VkWriteDescriptorSet writeSet{};
 	writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeSet.pNext = nullptr;
@@ -85,19 +121,48 @@ bool vtek::descriptor_set_add_uniform_buffer(
 	// descriptor type of INLINE_UNIFORM_BLOCK, then dstArrayElement
 	// specifies the starting byte offset withing the binding.
 	writeSet.dstArrayElement = 0;
-	writeSet.descriptorType =; // TODO: VkDescriptorType
-	writeSet.descriptorCount =
+	writeSet.descriptorCount = 1; // Number of elements in `pBufferInfo`.
+	writeSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	writeSet.pImageInfo = nullptr;
+	writeSet.pBufferInfo = &(set->bufferInfos.back());
+	writeSet.pTexelBufferView = nullptr;
+
+	// TODO: Save the bufferInfo and the writeSet internally until update!
+
+	return true;
 }
 
-bool descriptor_set_add_storage_buffer();
+bool vtek::descriptor_set_add_storage_buffer()
+{
+	vtek_log_error("vtek::descriptor_set_add_storage_buffer(): {}",
+	               "Not implemented!");
+	return false;
+}
 
-bool descriptor_set_add_uniform_buffer_dynamic();
+bool vtek::descriptor_set_add_uniform_buffer_dynamic()
+{
+	vtek_log_error("vtek::descriptor_set_add_uniform_buffer_dynamic(): {}",
+	               "Not implemented!");
+	return false;
+}
 
-bool descriptor_set_add_storage_buffer_dynamic();
+bool vtek::descriptor_set_add_storage_buffer_dynamic()
+{
+	vtek_log_error("vtek::descriptor_set_add_storage_buffer_dynamic(): {}",
+	               "Not implemented!");
+	return false;
+}
 
-bool descriptor_set_add_input_attachment();
+bool vtek::descriptor_set_add_input_attachment()
+{
+	vtek_log_error("vtek::descriptor_set_add_input_attachment(): {}",
+	               "Not implemented!");
+	return false;
+}
 
-bool descriptor_set_add_inline_uniform_block();
-
-
-
+bool vtek::descriptor_set_add_inline_uniform_block()
+{
+	vtek_log_error("vtek::descriptor_set_add_inline_uniform_block(): {}",
+	               "Not implemented!");
+	return false;
+}

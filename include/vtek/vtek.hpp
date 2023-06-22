@@ -17,6 +17,8 @@
  * all of vtek's functionality.
  */
 
+#include "vtek_glm_includes.hpp"
+
 #include "vtek_main.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vulkan_handles.hpp"
@@ -42,4 +44,5 @@
 #include "vtek_shaders.hpp"
 #include "vtek_submit_info.hpp"
 #include "vtek_swapchain.hpp"
+#include "vtek_uniform_data.hpp"
 #include "vtek_vertex_data.hpp"

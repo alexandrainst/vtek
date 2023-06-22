@@ -82,10 +82,23 @@ bool update_vertex_buffer(vtek::Buffer* buffer, vtek::Device* device)
 	return vtek::buffer_write_data(buffer, vertices.data(), &region, device);
 }
 
-bool update_uniform_buffer()
+bool update_uniform_buffer(vtek::DescriptorSet* set, vtek::Buffer* buffer)
 {
 	// Packed data
 	glm::vec3 circleParams {circleCenter.x, circleCenter.y, circleRadius};
+
+	if (!vtek::buffer_write_data(buffer, vertices.data(), &region, device))
+	{
+		log_error("Failed to write data to the uniform buffer!");
+		return false;
+	}
+
+	if (!vtek::descriptor_set_add_uniform_buffer(
+		    set, 0, buffer, vtek::UniformBufferType::vec3))
+	{
+		log_error("Failed to add uniform buffer to the descriptor set!");
+		return false;
+	}
 
 
 	return false;

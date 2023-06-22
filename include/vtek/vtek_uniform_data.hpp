@@ -1,12 +1,16 @@
 #pragma once
 
+#include "vtek_glm_includes.hpp"
+
 
 namespace vtek
 {
-	enum class UniformType
+	enum class UniformBufferType
 	{
-		// TODO: Look at the vertex types!
+		vec3
 	};
+
+	uint64_t get_uniform_buffer_size(UniformBufferType type);
 
 	// TODO: Consider different types of uniforms? (layouts?)
 

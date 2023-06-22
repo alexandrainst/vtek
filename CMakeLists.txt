@@ -92,6 +92,7 @@ set (src
     include/vtek/vtek_descriptor_type.hpp
     include/vtek/vtek_device.hpp
     include/vtek/vtek_fileio.hpp
+    include/vtek/vtek_glm_includes.hpp
     include/vtek/vtek_graphics_pipeline.hpp
     include/vtek/vtek_input.hpp
     include/vtek/vtek_instance.hpp
@@ -105,6 +106,7 @@ set (src
     include/vtek/vtek_submit_info.hpp
     include/vtek/vtek_swapchain.hpp
     include/vtek/vtek_types.hpp
+    include/vtek/vtek_uniform_data.hpp
     include/vtek/vtek_vertex_data.hpp
     include/vtek/vtek_vulkan_handles.hpp
     include/vtek/vtek_vulkan_version.hpp
@@ -139,6 +141,7 @@ set (src
     src/vtek_render_pass.cpp
     src/vtek_shaders.cpp
     src/vtek_swapchain.cpp
+    src/vtek_uniform_data.cpp
     src/vtek_vertex_data.cpp
     )
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vtek_uniform_data.hpp"
 #include "vtek_vulkan_handles.hpp"
 
 
@@ -33,7 +34,7 @@ namespace vtek
 
 	bool descriptor_set_add_uniform_buffer(
 		DescriptorSet* set, uint32_t binding,
-		Buffer* buffer, const BufferRegion* region);
+		Buffer* buffer, UniformBufferType type);
 
 	bool descriptor_set_add_storage_buffer();
 
