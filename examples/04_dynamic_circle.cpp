@@ -329,6 +329,7 @@ int main()
 
 	// Device
 	vtek::DeviceCreateInfo deviceCreateInfo{};
+	deviceCreateInfo.asyncCommandScheduler = true; // true is default.
 	vtek::Device* device = vtek::device_create(
 		&deviceCreateInfo, instance, physicalDevice);
 	if (device == nullptr)
@@ -346,10 +347,10 @@ int main()
 	}
 
 	// Graphics command pool
-	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
-	commandPoolCreateInfo.allowIndividualBufferReset = true;
+	vtek::CommandPoolInfo commandPoolInfo{};
+	commandPoolInfo.allowIndividualBufferReset = true;
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
-		&commandPoolCreateInfo, device, graphicsQueue);
+		&commandPoolInfo, device, graphicsQueue);
 	if (graphicsCommandPool == nullptr)
 	{
 		log_error("Failed to create graphics command pool!");
@@ -357,14 +358,13 @@ int main()
 	}
 
 	// Swapchain
-	vtek::SwapchainCreateInfo swapchainCreateInfo{};
-	swapchainCreateInfo.vsync = true;
-	swapchainCreateInfo.prioritizeLowLatency = false;
+	vtek::SwapchainInfo swapchainInfo{};
+	swapchainInfo.vsync = true;
+	swapchainInfo.prioritizeLowLatency = false;
 	vtek::window_get_framebuffer_size(
-		window, &swapchainCreateInfo.framebufferWidth,
-		&swapchainCreateInfo.framebufferHeight);
+		window, &swapchainInfo.framebufferWidth, &swapchainInfo.framebufferHeight);
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
-		&swapchainCreateInfo, surface, physicalDevice, device);
+		&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)
 	{
 		log_error("Failed to create swapchain!");

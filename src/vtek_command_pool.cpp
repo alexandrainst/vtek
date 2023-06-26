@@ -21,7 +21,7 @@ static vtek::HostAllocator<vtek::CommandPool> sAllocator("vtek_command_pool");
 
 /* interface */
 vtek::CommandPool* vtek::command_pool_create(
-	const vtek::CommandPoolCreateInfo* info, const vtek::Device* device, const vtek::Queue* queue)
+	const vtek::CommandPoolInfo* info, const vtek::Device* device, const vtek::Queue* queue)
 {
 	// Allocate device
 	auto [id, commandPool] = sAllocator.alloc();

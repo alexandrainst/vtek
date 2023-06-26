@@ -8,7 +8,7 @@
 
 namespace vtek
 {
-	struct CommandPoolCreateInfo
+	struct CommandPoolInfo
 	{
 		// Allow individual command buffers to be re-recorded individually.
 		// Without this flag, only the entire pool may be reset at once.
@@ -21,14 +21,14 @@ namespace vtek
 
 
 	CommandPool* command_pool_create(
-		const CommandPoolCreateInfo* info, const Device* device, const Queue* queue);
+		const CommandPoolInfo* info, const Device* device, const Queue* queue);
 
 	void command_pool_destroy(CommandPool* commandPool, const Device* device);
 
 	VkCommandPool command_pool_get_handle(CommandPool* commandPool);
 
 	// The return value directly reflects the ´allowIndividualBufferReset´ flag
-	// passed to the `CommandPoolCreateInfo` when the pool was created.
+	// passed to the `CommandPoolInfo` when the pool was created.
 	// If it is false, command buffers allocated from this pool may still be
 	// reset, but only by resetting them all at once!
 	bool command_pool_allow_individual_reset(CommandPool* commandPool);

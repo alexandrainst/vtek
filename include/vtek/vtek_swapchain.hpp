@@ -23,7 +23,7 @@ namespace vtek
 	// reduce rendering latency and increase memory usage.
 	static constexpr uint32_t kMaxFramesInFlight = 2;
 
-	struct SwapchainCreateInfo
+	struct SwapchainInfo
 	{
 		bool vsync {false};
 
@@ -39,7 +39,7 @@ namespace vtek
 
 
 	Swapchain* swapchain_create(
-		const SwapchainCreateInfo* info, VkSurfaceKHR surface,
+		const SwapchainInfo* info, VkSurfaceKHR surface,
 		const PhysicalDevice* physicalDevice, Device* device);
 	bool swapchain_recreate(
 		Swapchain* swapchain, Device* device, VkSurfaceKHR surface,

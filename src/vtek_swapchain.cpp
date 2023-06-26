@@ -554,7 +554,7 @@ static void set_image_in_use(
 
 /* swapchain interface */
 vtek::Swapchain* vtek::swapchain_create(
-	const SwapchainCreateInfo* info, VkSurfaceKHR surface,
+	const SwapchainInfo* info, VkSurfaceKHR surface,
 	const vtek::PhysicalDevice* physicalDevice, vtek::Device* device)
 {
 	VkDevice dev = vtek::device_get_handle(device);

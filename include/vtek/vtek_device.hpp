@@ -48,6 +48,11 @@ namespace vtek
 		// aftwerwards and passed on to functions that create buffers and images.
 		// NOTE: It is recommended to just leave this as is for simplicity.
 		bool createDefaultAllocator {true};
+
+		// A device will always have a command scheduler for running background
+		// commands, such as single-use transfer operations. We can choose whether
+		// this command scheduler runs on a parallel thread or not.
+		bool asyncCommandScheduler {true};
 	};
 
 	struct DeviceExtensions
@@ -75,6 +80,7 @@ namespace vtek
 	const VkPhysicalDeviceFeatures* device_get_enabled_features(const Device* device);
 
 	Allocator* device_get_allocator(const Device* device);
+	CommandScheduler* device_get_command_scheduler(const Device* device);
 
 	// If any of these functions return `nullptr`, then no corresponding queues
 	// were created.

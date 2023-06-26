@@ -132,6 +132,8 @@ bool vtek::buffer_write_data(
 	{
 		vtek_log_trace("Buffer has a staging buffer - map to that, then transfer!");
 
+		auto scheduler = vtek::device_get_command_scheduler(device);
+
 		return false;
 	}
 
