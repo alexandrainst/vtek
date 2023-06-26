@@ -121,9 +121,9 @@ int main()
 	}
 
 	// Graphics command pool
-	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
+	vtek::CommandPoolInfo commandPoolInfo{};
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
-		&commandPoolCreateInfo, device, graphicsQueue);
+		&commandPoolInfo, device, graphicsQueue);
 	if (graphicsCommandPool == nullptr)
 	{
 		log_error("Failed to create graphics command pool!");
@@ -131,12 +131,13 @@ int main()
 	}
 
 	// Swapchain
-	vtek::SwapchainCreateInfo swapchainCreateInfo{};
-	swapchainCreateInfo.vsync = true;
-	swapchainCreateInfo.prioritizeLowLatency = false;
+	vtek::SwapchainInfo swapchainInfo{};
+	swapchainInfo.vsync = true;
+	swapchainInfo.prioritizeLowLatency = false;
 	vtek::window_get_framebuffer_size(
-		window, &swapchainCreateInfo.framebufferWidth, &swapchainCreateInfo.framebufferHeight);
-	vtek::Swapchain* swapchain = vtek::swapchain_create(&swapchainCreateInfo, surface, physicalDevice, device);
+		window, &swapchainInfo.framebufferWidth, &swapchainInfo.framebufferHeight);
+	vtek::Swapchain* swapchain =
+		vtek::swapchain_create(&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)
 	{
 		log_error("Failed to create swapchain!");
@@ -173,8 +174,8 @@ int main()
 	}
 
 	// Vulkan graphics pipeline
-	const uint32_t width = swapchainCreateInfo.framebufferWidth;
-	const uint32_t height = swapchainCreateInfo.framebufferHeight;
+	const uint32_t width = swapchainInfo.framebufferWidth;
+	const uint32_t height = swapchainInfo.framebufferHeight;
 	vtek::ViewportState viewport{
 		.viewportRegion = {
 			.offset = {0U, 0U},

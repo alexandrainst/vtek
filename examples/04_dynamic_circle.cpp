@@ -488,8 +488,8 @@ int main()
 	}
 
 	// Vulkan graphics pipeline
-	const uint32_t width = swapchainCreateInfo.framebufferWidth;
-	const uint32_t height = swapchainCreateInfo.framebufferHeight;
+	const uint32_t width = swapchainInfo.framebufferWidth;
+	const uint32_t height = swapchainInfo.framebufferHeight;
 	vtek::ViewportState viewport{
 		.viewportRegion = {
 			.offset = {0U, 0U},

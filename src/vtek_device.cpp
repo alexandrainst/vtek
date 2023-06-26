@@ -11,6 +11,7 @@
 #include "impl/vtek_host_allocator.hpp"
 #include "impl/vtek_init.hpp"
 #include "vtek_allocator.hpp"
+#include "vtek_command_scheduler.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_physical_device.hpp"
@@ -47,6 +48,7 @@ struct vtek::Device
 	VkSampleCountFlagBits msaaStencilLimit {VK_SAMPLE_COUNT_1_BIT};
 
 	vtek::Allocator* allocator {nullptr};
+	vtek::CommandScheduler* scheduler {nullptr};
 };
 
 
@@ -748,6 +750,19 @@ vtek::Device* vtek::device_create(
 		return nullptr;
 	}
 
+	// Create command scheduler for submitting single-use command buffers.
+	vtek::CommandSchedulerInfo schedulerInfo{};
+	schedulerInfo.backgroundThread = info->asyncCommandScheduler;
+	device->scheduler = vtek::command_scheduler_create(&schedulerInfo, device);
+	if (device->scheduler == nullptr)
+	{
+		vtek_log_error(
+			"Failed to create command scheduler for single-use submission -- {}",
+			"Device creation cannot proceed.");
+		vtek::device_destroy(device);
+		return nullptr;
+	}
+
 	// Log creation success and Vulkan version
 	auto vs = device->vulkanVersion;
 	vtek_log_info("Created Device with Vulkan v{}.{}.{}",
@@ -762,15 +777,14 @@ void vtek::device_destroy(Device* device)
 {
 	if (device == nullptr || device->vulkanHandle == VK_NULL_HANDLE) return;
 
+	// VMA allocator
 	if (device->allocator != nullptr)
 	{
 		vtek::allocator_destroy(device->allocator);
 		device->allocator = nullptr;
 	}
 
-	vkDestroyDevice(device->vulkanHandle, nullptr);
-	device->vulkanHandle = VK_NULL_HANDLE;
-
+	// Queue allocators
 	if (device->queueAllocator != nullptr)
 	{
 		device->graphicsQueue = {};
@@ -781,6 +795,17 @@ void vtek::device_destroy(Device* device)
 		delete device->queueAllocator;
 	}
 	device->queueAllocator = nullptr;
+
+	// Command scheduler
+	if (device->scheduler != nullptr)
+	{
+		vtek::command_scheduler_destroy(device->scheduler, device);
+	}
+	device->scheduler = nullptr;
+
+	// Destroy Vulkan device
+	vkDestroyDevice(device->vulkanHandle, nullptr);
+	device->vulkanHandle = VK_NULL_HANDLE;
 
 	sAllocator.free(device->id);
 	device->id = VTEK_INVALID_ID;
@@ -819,6 +844,12 @@ const VkPhysicalDeviceFeatures* vtek::device_get_enabled_features(
 vtek::Allocator* vtek::device_get_allocator(const vtek::Device* device)
 {
 	return device->allocator;
+}
+
+vtek::CommandScheduler* vtek::device_get_command_scheduler(
+	const vtek::Device* device)
+{
+	return device->scheduler;
 }
 
 vtek::Queue* vtek::device_get_graphics_queue(vtek::Device* device)

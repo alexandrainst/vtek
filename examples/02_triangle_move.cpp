@@ -312,10 +312,10 @@ int main()
 	}
 
 	// Graphics command pool
-	vtek::CommandPoolCreateInfo commandPoolCreateInfo{};
-	commandPoolCreateInfo.allowIndividualBufferReset = true;
+	vtek::CommandPoolInfo commandPoolInfo{};
+	commandPoolInfo.allowIndividualBufferReset = true;
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
-		&commandPoolCreateInfo, device, graphicsQueue);
+		&commandPoolInfo, device, graphicsQueue);
 	if (graphicsCommandPool == nullptr)
 	{
 		log_error("Failed to create graphics command pool!");
@@ -323,13 +323,13 @@ int main()
 	}
 
 	// Swapchain
-	vtek::SwapchainCreateInfo swapchainCreateInfo{};
-	swapchainCreateInfo.vsync = true;
-	swapchainCreateInfo.prioritizeLowLatency = false;
-	swapchainCreateInfo.framebufferWidth = gFramebufferWidth;
-	swapchainCreateInfo.framebufferHeight = gFramebufferHeight;
+	vtek::SwapchainInfo swapchainInfo{};
+	swapchainInfo.vsync = true;
+	swapchainInfo.prioritizeLowLatency = false;
+	swapchainInfo.framebufferWidth = gFramebufferWidth;
+	swapchainInfo.framebufferHeight = gFramebufferHeight;
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
-		&swapchainCreateInfo, surface, physicalDevice, device);
+		&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)
 	{
 		log_error("Failed to create swapchain!");
@@ -359,8 +359,8 @@ int main()
 	// return 0;
 
 	// Vulkan graphics pipeline
-	const uint32_t width = swapchainCreateInfo.framebufferWidth;
-	const uint32_t height = swapchainCreateInfo.framebufferHeight;
+	const uint32_t width = swapchainInfo.framebufferWidth;
+	const uint32_t height = swapchainInfo.framebufferHeight;
 	vtek::ViewportState viewport{};
 
 	vtek::RasterizationState rasterizer{};

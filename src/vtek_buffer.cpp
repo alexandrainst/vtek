@@ -1,6 +1,9 @@
+#include "vtek_vulkan.pch"
 #include "vtek_buffer.hpp"
 
 #include "impl/vtek_vma_helpers.hpp"
+#include "vtek_command_buffer.hpp"
+#include "vtek_command_scheduler.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 
@@ -133,6 +136,29 @@ bool vtek::buffer_write_data(
 		vtek_log_trace("Buffer has a staging buffer - map to that, then transfer!");
 
 		auto scheduler = vtek::device_get_command_scheduler(device);
+		auto commandBuffer =
+			vtek::command_scheduler_begin_singleuse_transfer(scheduler);
+		if (commandBuffer == nullptr)
+		{
+			vtek_log_error(
+				"Failed to begin single-use transfer command buffer -- {}",
+				"cannot write data to buffer!");
+			return false;
+		}
+
+		// TODO: Interface for command buffer operations inside vtek!
+		//vtek::cmd_copy_buffer(...); // etc.
+		VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+		VkBuffer stagingBuf = vtek::buffer_get_handle(buffer->stagingBuffer);
+		VkBuffer buf = vtek::buffer_get_handle(buffer);
+
+		VkBufferCopy copyRegion{};
+		copyRegion.srcOffset = 0;
+		copyRegion.dstOffset = finalRegion.offset;
+		copyRegion.size = finalRegion.size;
+		vkCmdCopyBuffer(cmdBuf, stagingBuf, buf, 1, &copyRegion);
+
+		vtek::command_scheduler_end_singleuse_transfer(scheduler, commandBuffer);
 
 		return false;
 	}

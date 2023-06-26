@@ -103,6 +103,7 @@ namespace vtek
 	// created, by specifying flags and options for its usage.
 	// And if the buffer does not support the desired update, then contents
 	// are not updated, and an error is returned.
+	// TODO: Add srcOffset ?
 	bool buffer_write_data(
 		Buffer* buffer, void* data, const BufferRegion* region, Device* device);
 

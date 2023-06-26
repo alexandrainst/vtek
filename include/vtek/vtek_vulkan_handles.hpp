@@ -11,6 +11,7 @@ namespace vtek
 	struct Buffer;
 	struct CommandBuffer;
 	struct CommandPool;
+	struct CommandScheduler;
 	struct DescriptorPool;
 	struct DescriptorSet;
 	struct DescriptorSetLayout;
