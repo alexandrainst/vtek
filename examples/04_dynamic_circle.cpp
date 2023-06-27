@@ -324,6 +324,8 @@ int main()
 	physicalDeviceInfo.requirePresentQueue = true;
 	physicalDeviceInfo.requireSwapchainSupport = true;
 	physicalDeviceInfo.requireDynamicRendering = true;
+	physicalDeviceInfo.updateAfterBindFeatures
+		= vtek::UpdateAfterBindFeature::uniform_buffer;
 	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
 		&physicalDeviceInfo, instance, surface);
 	if (physicalDevice == nullptr)

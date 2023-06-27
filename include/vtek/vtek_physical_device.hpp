@@ -4,17 +4,32 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "vtek_types.hpp"
 #include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek
 {
+	// Specifies if a descriptor may be updated while being bound to
+	// command buffer without invalidating that command buffer.
+	// The command buffer must not be pending execution.
+	// NOTE: >= Vulkan 1.2 is required for enabling these features.
+	enum class UpdateAfterBindFeature : uint32_t
+	{
+		uniform_buffer       = 0x0001U,
+		sampled_image        = 0x0002U,
+		storage_image        = 0x0004U,
+		storage_buffer       = 0x0008U,
+		uniform_texel_buffer = 0x0010U,
+		storage_texel_buffer = 0x0020U
+	};
+
 	struct PhysicalDeviceInfo
 	{
 		// required properties
 		uint64_t requiredMinMemoryBytes {0UL}; // TODO: This field is not implemented.
 
-		// required queue familily properties
+		// required queue family properties
 		bool requireGraphicsQueue {false};
 		bool requirePresentQueue {false};
 		bool requireComputeQueue {false};
@@ -23,6 +38,9 @@ namespace vtek
 		// required features, e.g. geometry shader or uint16 shader types,
 		// verified here and enabled later during device creation.
 		VkPhysicalDeviceFeatures requiredFeatures {};
+
+		// Various types deduced from VkPhysicalDeviceDescriptorIndexingFeatures:
+		EnumBitmask<UpdateAfterBindFeature> updateAfterBindFeatures {};
 
 		// required extensions
 		bool requireRaytracingSupport {false};
