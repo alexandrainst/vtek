@@ -98,6 +98,11 @@ bool update_uniform_buffer(
 	vtek::DescriptorSet* set, vtek::Buffer* buffer, vtek::Device* device)
 {
 	// Wait until the device is finished with all operations
+	// NOTE: This is needed because even with "updateAfterBind" enabled,
+	// it is still not valid to update a bound descriptor set if the command
+	// buffer is pending execution. Exempt to this rule is only updating
+	// descriptors inside the set which are not used by the command buffer,
+	// but that is a subtle nuance and likely not needed for most purposes.
 	vtek::device_wait_idle(device);
 
 	// Packed data
@@ -410,6 +415,7 @@ int main()
 
 	// Descriptor pool
 	vtek::DescriptorPoolInfo descriptorPoolInfo{};
+	descriptorPoolInfo.allowUpdateAfterBind = true;
 	descriptorPoolInfo.descriptorTypes.push_back(
 		{ vtek::DescriptorType::uniform_buffer, 1 });
 	vtek::DescriptorPool* descriptorPool =
@@ -426,6 +432,7 @@ int main()
 	descriptorBinding.type = vtek::DescriptorType::uniform_buffer;
 	descriptorBinding.binding = 0;
 	descriptorBinding.shaderStages = vtek::ShaderStage::vertex;
+	descriptorBinding.updateAfterBind = true;
 	descriptorLayoutInfo.bindings.emplace_back(descriptorBinding);
 	vtek::DescriptorSetLayout* descriptorSetLayout =
 		vtek::descriptor_set_layout_create(&descriptorLayoutInfo, device);
@@ -516,7 +523,8 @@ int main()
 	graphicsPipelineInfo.shader = shader;
 	// TODO: Rename to `vertexBufferBindings`
 	graphicsPipelineInfo.vertexInputBindings = &bindings;
-	graphicsPipelineInfo.primitiveTopology = vtek::PrimitiveTopology::triangle_fan;
+	graphicsPipelineInfo.primitiveTopology =
+		vtek::PrimitiveTopology::triangle_fan;
 	graphicsPipelineInfo.enablePrimitiveRestart = false;
 	graphicsPipelineInfo.viewportState = &viewport;
 	graphicsPipelineInfo.rasterizationState = &rasterizer;
@@ -581,14 +589,10 @@ int main()
 				log_error("Failed to update uniform buffer!");
 				return -1;
 			}
-			// NOTE: Re-recording the command buffers is not necessary here!
-			if (!record_command_buffers(
-				    graphicsPipeline, graphicsQueue, commandBuffers,
-				    swapchain, vertexBuffer, descriptorSet))
-			{
-				log_error("Failed to re-record command buffers!");
-				return -1;
-			}
+			// NOTE: Re-recording the command buffers is not necessary here,
+			// because descriptor pool and descriptor layout both were created
+			// with the `updateAfterBind` flag. This implies that updates to
+			// the descriptor set does not invalidate the command buffer.
 			recreateUniformBuffer = false;
 		}
 
@@ -608,7 +612,8 @@ int main()
 
 		// Acquire the next available image in the swapchain
 		uint32_t frameIndex;
-		auto acquireStatus = vtek::swapchain_acquire_next_image(swapchain, device, &frameIndex);
+		auto acquireStatus =
+			vtek::swapchain_acquire_next_image(swapchain, device, &frameIndex);
 		if (acquireStatus == vtek::SwapchainStatus::outofdate)
 		{
 			log_error("Failed to acquire image - swapchain outofdate!");
@@ -623,7 +628,8 @@ int main()
 
 		// Wait until any previous operations are finished using this image, for either read or write.
 		// NOTE: We can do command buffer recording or other operations before calling this function.
-		auto readyStatus = vtek::swapchain_wait_image_ready(swapchain, device, frameIndex);
+		auto readyStatus =
+			vtek::swapchain_wait_image_ready(swapchain, device, frameIndex);
 		if (readyStatus == vtek::SwapchainStatus::timeout)
 		{
 			log_error("Failed to wait image ready - swapchain timeout!");
@@ -638,7 +644,8 @@ int main()
 		// Submit the current command buffer for execution on the graphics queue
 		vtek::SubmitInfo submitInfo{};
 		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
-		if (!vtek::queue_submit(graphicsQueue, commandBuffers[frameIndex], &submitInfo))
+		if (!vtek::queue_submit(
+			    graphicsQueue, commandBuffers[frameIndex], &submitInfo))
 		{
 			log_error("Failed to submit to queue!");
 			// TODO: This is an error.
@@ -665,6 +672,7 @@ int main()
 	vtek::device_wait_idle(device);
 
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
+	vtek::buffer_destroy(uniformBuffer);
 	vtek::buffer_destroy(vertexBuffer);
 	vtek::descriptor_set_destroy(descriptorSet);
 	vtek::descriptor_set_layout_destroy(descriptorSetLayout, device);

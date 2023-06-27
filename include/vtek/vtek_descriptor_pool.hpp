@@ -44,12 +44,13 @@ namespace vtek
 	// Frees all allocated descriptor sets from the pool.
 	// Before calling this function, make sure that no descriptor sets allocated
 	// from this pool are still in use.
-	void descriptor_pool_reset(DescriptorPool* pool);
+	void descriptor_pool_reset(DescriptorPool* pool, Device* device);
 
 	// TODO: This is the same problem as with command pools and command buffers:
 	// Descriptor sets are ALLOCATED, not created, from a descriptor pool.
 	// It does not really make sense to "destroy" a descriptor set, and it is
 	// CERTAINLY NOT a descriptor set's responsibility to free itself!
 
+	// NEXT: Figure out the naming and placement of this as well.
 	void descriptor_pool_free_set(DescriptorPool* pool);
 }

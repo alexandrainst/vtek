@@ -28,6 +28,12 @@ namespace vtek
 		// Could be used for small-scale instancing or bone transforms
 		// for skeletal animation.
 		uint32_t count {1U};
+
+		// Specifies if the descriptor binding may be updated while being
+		// bound in a command buffer without invalidating that command
+		// buffer. Without this flag the command buffer becomes invalidated
+		// and requires re-recording.
+		bool updateAfterBind {false};
 	};
 
 	struct DescriptorSetLayoutInfo

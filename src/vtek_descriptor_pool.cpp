@@ -126,5 +126,5 @@ void vtek::descriptor_pool_reset(vtek::DescriptorPool* pool, vtek::Device* devic
 	VkDevice dev = vtek::device_get_handle(device);
 	constexpr VkDescriptorPoolResetFlags flags = 0; // reserved for future use
 
-	vkResetDescriptorPool(device, pool->vulkanHandle, flags);
+	vkResetDescriptorPool(dev, pool->vulkanHandle, flags);
 }

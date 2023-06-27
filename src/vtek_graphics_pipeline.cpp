@@ -27,7 +27,7 @@ static void get_enabled_dynamic_states(
 	using PDState = vtek::PipelineDynamicState;
 	states.clear();
 
-	const vtek::VulkanVersion* apiVersion = vtek::device_get_vulkan_version(device);
+	auto vv = vtek::device_get_vulkan_version(device);
 	vtek::EnumBitmask<PDState> ds = info->dynamicStateFlags;
 
 	auto add = [&states](VkDynamicState s) { states.push_back(s); };
@@ -46,7 +46,7 @@ static void get_enabled_dynamic_states(
 	// TODO: Error handling for when the device doesn't support >= Vulkan 1.3!
 	// Provided by VK_VERSION_1_3
 #if defined(VK_API_VERSION_1_3)
-	if (apiVersion->major() >= 1 && apiVersion->minor() >= 3)
+	if (vv.major() >= 1 && vv.minor() >= 3)
 	{
 		if (ds.has_flag(PDState::cull_mode))
 			add(VK_DYNAMIC_STATE_CULL_MODE);

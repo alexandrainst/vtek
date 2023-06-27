@@ -40,14 +40,14 @@ vtek::Allocator* vtek::allocator_create_default(
 	VkDevice dev = vtek::device_get_handle(device);
 	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
 
-	const vtek::VulkanVersion* vv = device_get_vulkan_version(device);
+	auto vv = device_get_vulkan_version(device);
 
 	VmaVulkanFunctions vulkanFunctions{};
 	vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
 	vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
 
 	VmaAllocatorCreateInfo createInfo{};
-	createInfo.vulkanApiVersion = vv->apiVersion();
+	createInfo.vulkanApiVersion = vv.apiVersion();
 	createInfo.physicalDevice = physDev;
 	createInfo.device = dev;
 	createInfo.instance = inst;

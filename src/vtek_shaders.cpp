@@ -217,12 +217,12 @@ static VkShaderModule load_glsl_shader(
 	vtek::Directory* shaderdir, const char* filename, const char* type,
 	SSGraphics stage, vtek::Device* device)
 {
-	const vtek::VulkanVersion apiVersion = *(vtek::device_get_vulkan_version(device));
+	auto vv = vtek::device_get_vulkan_version(device);
 	VkDevice dev = vtek::device_get_handle(device);
 
 	// Load GLSL shader from file source
-	std::vector<uint32_t> spirvCode = vtek::glsl_utils_load_shader(
-		shaderdir, filename, stage, apiVersion, dev);
+	std::vector<uint32_t> spirvCode =
+		vtek::glsl_utils_load_shader(shaderdir, filename, stage, vv, dev);
 	if (spirvCode.empty())
 	{
 		vtek_log_error("Failed to load {} shader from GLSL source!", type);

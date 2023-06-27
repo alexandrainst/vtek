@@ -40,7 +40,7 @@ std::optional<VkDescriptorType> vtek::get_descriptor_type(
 		// Provided by VK_VERSION_1_3
 		{
 #if defined(VK_VERSION_1_3)
-			vtek::VulkanVersion vv = *vtek::device_get_vulkan_version(device);
+			auto vv = vtek::device_get_vulkan_version(device);
 			if (vv.major() > 1 || vv.minor() >= 3)
 			{
 				return VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK;

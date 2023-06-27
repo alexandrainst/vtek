@@ -824,9 +824,9 @@ VkPhysicalDevice vtek::device_get_physical_handle(const vtek::Device* device)
 	return device->physicalHandle;
 }
 
-const vtek::VulkanVersion* vtek::device_get_vulkan_version(const vtek::Device* device)
+const vtek::VulkanVersion& vtek::device_get_vulkan_version(const vtek::Device* device)
 {
-	return &device->vulkanVersion;
+	return device->vulkanVersion;
 }
 
 const vtek::DeviceExtensions* vtek::device_get_enabled_extensions(
