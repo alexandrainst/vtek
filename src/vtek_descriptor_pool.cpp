@@ -13,6 +13,9 @@
 struct vtek::DescriptorPool
 {
 	VkDescriptorPool vulkanHandle {VK_NULL_HANDLE};
+
+	bool individualFree {false};
+	bool updateAfterBind {false};
 };
 
 
@@ -35,6 +38,7 @@ vtek::DescriptorPool* vtek::descriptor_pool_create(
 		// Similar to command buffer pools. If this bit is set, then the
 		// function `vkFreeDescriptorSets` may be called.
 		createInfo.flags |= VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		pool->individualFree = true;
 	}
 	if (info->allowUpdateAfterBind)
 	{
@@ -42,6 +46,7 @@ vtek::DescriptorPool* vtek::descriptor_pool_create(
 		// can include bindings with this bit:
 		// `VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT`.
 		createInfo.flags |= VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+		pool->updateAfterBind = true;
 	}
 
 	// NOTE: Specify descriptor pool sizes (??)
@@ -104,4 +109,22 @@ void vtek::descriptor_pool_destroy(
 VkDescriptorPool vtek::descriptor_pool_get_handle(vtek::DescriptorPool* pool)
 {
 	return pool->vulkanHandle;
+}
+
+bool vtek::descriptor_pool_individual_free(vtek::DescriptorPool* pool)
+{
+	return pool->individualFree;
+}
+
+bool vtek::descriptor_pool_update_after_bind(vtek::DescriptorPool* pool)
+{
+	return pool->updateAfterBind;
+}
+
+void vtek::descriptor_pool_reset(vtek::DescriptorPool* pool, vtek::Device* device)
+{
+	VkDevice dev = vtek::device_get_handle(device);
+	constexpr VkDescriptorPoolResetFlags flags = 0; // reserved for future use
+
+	vkResetDescriptorPool(device, pool->vulkanHandle, flags);
 }
