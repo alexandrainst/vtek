@@ -615,6 +615,47 @@ static void get_msaa_limits(
 	device->msaaStencilLimit = get_max(stencil);
 }
 
+static bool use_descriptor_indexing_features(
+	VkPhysicalDeviceDescriptorIndexingFeatures* indexingFeatures,
+	const vtek::PhysicalDevice* physicalDevice)
+{
+	auto required =
+		vtek::physical_device_get_update_after_bind_features(physicalDevice);
+	if (required.empty())
+	{
+		return false;
+	}
+
+	using UABFeature = vtek::UpdateAfterBindFeature;
+
+	if (required.has_flag(UABFeature::uniform_buffer))
+	{
+		indexingFeatures->descriptorBindingUniformBufferUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::sampled_image))
+	{
+		indexingFeatures->descriptorBindingSampledImageUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::storage_image))
+	{
+		indexingFeatures->descriptorBindingStorageImageUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::storage_buffer))
+	{
+		indexingFeatures->descriptorBindingStorageBufferUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::uniform_texel_buffer))
+	{
+		indexingFeatures->descriptorBindingUniformTexelBufferUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::storage_texel_buffer))
+	{
+		indexingFeatures->descriptorBindingStorageTexelBufferUpdateAfterBind = true;
+	}
+
+	return true;
+}
+
 
 
 /* device interface */
@@ -672,6 +713,18 @@ vtek::Device* vtek::device_create(
 
 		createInfo.pNext = &dynRenderInfo;
 	};
+
+	// Descriptor indexing support: update-after-bind
+#if defined(VK_VERSION_1_2)
+	VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{};
+	if (use_descriptor_indexing_features(&indexingFeatures, physicalDevice))
+	{
+		indexingFeatures.sType =
+			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+		indexingFeatures.pNext = const_cast<void*>(createInfo.pNext);
+		createInfo.pNext = &indexingFeatures;
+	}
+#endif
 
 	// Set the actual Vulkan API version.
 	// This is needed for enabling and querying features and extensions.

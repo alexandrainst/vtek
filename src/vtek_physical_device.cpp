@@ -828,6 +828,13 @@ const VkPhysicalDeviceFeatures* vtek::physical_device_get_required_features(
 	return &physicalDevice->requiredFeatures;
 }
 
+vtek::EnumBitmask<vtek::UpdateAfterBindFeature>
+vtek::physical_device_get_update_after_bind_features(
+	const vtek::PhysicalDevice* physicalDevice)
+{
+	return physicalDevice->requiredUpdateAfterBindFeatures;
+}
+
 const std::vector<const char*>& vtek::physical_device_get_required_extensions(
 	const vtek::PhysicalDevice* physicalDevice)
 {

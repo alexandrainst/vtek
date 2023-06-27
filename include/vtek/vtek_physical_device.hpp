@@ -116,6 +116,10 @@ namespace vtek
 	const VkPhysicalDeviceFeatures* physical_device_get_required_features(
 		const PhysicalDevice* physicalDevice);
 
+	EnumBitmask<UpdateAfterBindFeature>
+	physical_device_get_update_after_bind_features(
+		const PhysicalDevice* physicalDevice);
+
 	const std::vector<const char*>& physical_device_get_required_extensions(
 		const PhysicalDevice* physicalDevice);
 
