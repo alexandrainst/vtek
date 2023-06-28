@@ -26,7 +26,7 @@ constexpr int kMinWindowHeight = 100;
 /* struct implementation */
 struct vtek::ApplicationWindow
 {
-	uint64_t id {0UL};
+	//uint64_t id {0UL}; // TODO: No longer need this ?
 	GLFWwindow* glfwHandle {nullptr};
 	uint32_t framebufferWidth {0U};
 	uint32_t framebufferHeight {0U};
@@ -42,7 +42,8 @@ struct vtek::ApplicationWindow
 
 
 /* host allocator */
-static vtek::HostAllocator<vtek::ApplicationWindow> sAllocator("application_window");
+// TODO: No longer use sAllocator ?
+//static vtek::HostAllocator<vtek::ApplicationWindow> sAllocator("application_window");
 
 // Event mapper: Fetch a complete window context from an opaque GLFW handle.
 // Used for delegating input events and other window-related events, such as
@@ -433,13 +434,15 @@ static GLFWwindow* create_fullscreen_window(const vtek::WindowCreateInfo* info)
 vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 {
 	// Allocate window
-	auto [id, appWindow] = sAllocator.alloc();
-	if (appWindow == nullptr)
-	{
-		vtek_log_fatal("Failed to allocate application window!");
-		return nullptr;
-	}
-	appWindow->id = id;
+	// TODO: No longer use sAllocator ?
+	// auto [id, appWindow] = sAllocator.alloc();
+	// if (appWindow == nullptr)
+	// {
+	// 	vtek_log_fatal("Failed to allocate application window!");
+	// 	return nullptr;
+	// }
+	// appWindow->id = id;
+	auto appWindow = new vtek::ApplicationWindow;
 
 	// Set hints for how GLFW should create the window
 	set_window_hints(info);
@@ -454,7 +457,9 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	if (appWindow->glfwHandle == nullptr)
 	{
 		vtek_log_error("Failed to create GLFW window!");
-		sAllocator.free(id);
+		// TODO: No longer use sAllocator ?
+		// sAllocator.free(id);
+		delete appWindow;
 		return nullptr;
 	}
 
@@ -475,7 +480,9 @@ vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
 	{
 		vtek_log_error("Invalid framebuffer dimensions retrieved from GLFW!");
 		vtek_log_error("--> Cannot create application window.");
-		sAllocator.free(id);
+		// TODO: No longer use sAllocator ?
+		// sAllocator.free(id);
+		delete appWindow;
 		return nullptr;
 	}
 	appWindow->framebufferWidth = static_cast<uint32_t>(width);
@@ -524,7 +531,9 @@ void vtek::window_destroy(vtek::ApplicationWindow* window)
 		glfwDestroyWindow(window->glfwHandle);
 	}
 
-	sAllocator.free(window->id);
+	// TODO: No longer use sAllocator ?
+	// sAllocator.free(window->id);
+	delete window;
 }
 
 VkSurfaceKHR vtek::window_create_surface(

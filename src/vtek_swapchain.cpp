@@ -1,9 +1,4 @@
-// standard
-#include <algorithm>
-#include <vector>
-#include <vulkan/vulkan.h>
-
-// vtek
+#include "vtek_vulkan.pch"
 #include "vtek_swapchain.hpp"
 
 #include "impl/vtek_host_allocator.hpp"
@@ -14,6 +9,10 @@
 #include "vtek_queue.hpp"
 #include "vtek_submit_info.hpp"
 
+#include <algorithm>
+#include <vector>
+#include <vulkan/vulkan.h>
+
 
 
 /* struct implementation */
@@ -22,7 +21,7 @@ struct vtek::Swapchain
 	// ============================ //
 	// === Swapchain properties === //
 	// ============================ //
-	uint64_t id {VTEK_INVALID_ID};
+	// uint64_t id {VTEK_INVALID_ID}; // TODO: No longer need this ?
 	VkSwapchainKHR vulkanHandle {VK_NULL_HANDLE};
 	uint32_t length {0};
 	VkExtent2D imageExtent {0, 0};
@@ -74,7 +73,8 @@ struct vtek::Swapchain
 
 
 /* host allocator */
-static vtek::HostAllocator<vtek::Swapchain> sAllocator("vtek_swapchain");
+// TODO: No longer use sAllocator ?
+//static vtek::HostAllocator<vtek::Swapchain> sAllocator("vtek_swapchain");
 
 
 
@@ -712,13 +712,15 @@ vtek::Swapchain* vtek::swapchain_create(
 	// ========================= //
 	// === Create swap chain === //
 	// ========================= //
-	auto [id, swapchain] = sAllocator.alloc();
-	if (swapchain == nullptr)
-	{
-		vtek_log_error("Failed to allocate swapchain!");
-		return nullptr;
-	}
-	swapchain->id = id;
+	// TODO: No longer use sAllocator ?
+	// auto [id, swapchain] = sAllocator.alloc(); // TODO: There's a memory bug here, in how it is freed later!
+	// if (swapchain == nullptr)
+	// {
+	// 	vtek_log_error("Failed to allocate swapchain!");
+	// 	return nullptr;
+	// }
+	// swapchain->id = id;
+	auto swapchain = new vtek::Swapchain;
 
 	VkResult result = vkCreateSwapchainKHR(
 		dev, &createInfo, nullptr, &swapchain->vulkanHandle);
@@ -947,8 +949,10 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	destroy_swapchain_handle(swapchain, dev);
 	swapchain->isInvalidated = false;
 
-	sAllocator.free(swapchain->id);
-	swapchain->id = VTEK_INVALID_ID;
+	// TODO: No longer use sAllocator ?
+	// sAllocator.free(swapchain->id); // TODO: Apparently this doesn't work as intended!
+	// swapchain->id = VTEK_INVALID_ID;
+	delete swapchain;
 }
 
 uint32_t vtek::swapchain_get_length(vtek::Swapchain* swapchain)

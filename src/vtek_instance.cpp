@@ -1,15 +1,15 @@
-// standard
-#include <algorithm>
-#include <cstring>
-#include <vulkan/vk_enum_string_helper.h> // string_VkObjectType(VkObjectType input_value)
+#include "vtek_vulkan.pch"
+#include "vtek_instance.hpp"
 
-// vtek
 #include "impl/vtek_glfw_backend.hpp"
 #include "impl/vtek_host_allocator.hpp"
 #include "version.hpp"
-#include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_vulkan_version.hpp"
+
+#include <algorithm>
+#include <cstring>
+#include <vulkan/vk_enum_string_helper.h> // string_VkObjectType(VkObjectType input_value)
 
 
 /* Validation layers, more can be added if desired */
@@ -21,7 +21,7 @@ static const std::vector<const char*> sValidationLayers = {
 /* struct implementation */
 struct vtek::Instance
 {
-	uint64_t id {VTEK_INVALID_ID};
+	//uint64_t id {VTEK_INVALID_ID};
 	VkInstance vulkanHandle {VK_NULL_HANDLE};
 	vtek::VulkanVersion vulkanVersion {0};
 
@@ -32,7 +32,8 @@ struct vtek::Instance
 
 
 /* host allocator */
-static vtek::HostAllocator<vtek::Instance> sAllocator("instance");
+// TODO: No longer use sAllocator ?
+//static vtek::HostAllocator<vtek::Instance> sAllocator("instance");
 
 
 /* helper functions */
@@ -236,13 +237,15 @@ vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
 		return nullptr;
 	}
 
-	auto [id, instance] = sAllocator.alloc();
-	if (instance == nullptr)
-	{
-		vtek_log_fatal("Failed to allocate instance!");
-		return nullptr;
-	}
-	instance->id = id;
+	// TODO: No longer use sAllocator?
+	// auto [id, instance] = sAllocator.alloc();
+	// if (instance == nullptr)
+	// {
+	// 	vtek_log_fatal("Failed to allocate instance!");
+	// 	return nullptr;
+	// }
+	// instance->id = id;
+	auto instance = new vtek::Instance;
 
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -403,8 +406,10 @@ void vtek::instance_destroy(vtek::Instance* instance)
 		instance->vulkanHandle = VK_NULL_HANDLE;
 	}
 
-	sAllocator.free(instance->id);
-	instance->id = VTEK_INVALID_ID;
+	// TODO: No longer use sAllocator?
+	// sAllocator.free(instance->id);
+	// instance->id = VTEK_INVALID_ID;
+	delete instance;
 }
 
 

@@ -1,11 +1,4 @@
-// standard
-#include <algorithm>
-#include <map>
-#include <optional>
-#include <set>
-#include <vector>
-
-// vtek
+#include "vtek_vulkan.pch"
 #include "vtek_device.hpp"
 
 #include "impl/vtek_host_allocator.hpp"
@@ -17,6 +10,12 @@
 #include "vtek_physical_device.hpp"
 #include "vtek_vulkan_version.hpp"
 
+#include <algorithm>
+#include <map>
+#include <optional>
+#include <set>
+#include <vector>
+
 
 /* queue implementation */
 #include "impl/vtek_queue_struct.hpp"
@@ -25,7 +24,7 @@
 /* struct implementation */
 struct vtek::Device
 {
-	uint64_t id {VTEK_INVALID_ID};
+	// uint64_t id {VTEK_INVALID_ID}; // TODO: No longer need this ?
 	VkDevice vulkanHandle {VK_NULL_HANDLE};
 	VkPhysicalDevice physicalHandle {VK_NULL_HANDLE};
 	vtek::VulkanVersion vulkanVersion {1, 0, 0};
@@ -37,7 +36,8 @@ struct vtek::Device
 	// Say 1 transfer queue == graphics queue, then destroying graphics queue
 	// would be highly ambiguous!
 	// OKAY: This should be done!
-	vtek::HostAllocator<vtek::Queue>* queueAllocator {nullptr};
+	// TODO: No longer use HostAllocator ?
+	//vtek::HostAllocator<vtek::Queue>* queueAllocator {nullptr};
 	vtek::Queue graphicsQueue {};
 	vtek::Queue presentQueue {};
 	std::vector<vtek::Queue> transferQueues {};
@@ -56,7 +56,8 @@ struct vtek::Device
 // TODO: Because of the high memory requirement, perhaps this particular allocator
 //       should store a pointer to a vtek::Device instead, as an optimization.
 // OKAY: This should be done!
-static vtek::HostAllocator<vtek::Device> sAllocator("vtek_device");
+// TODO: No longer use sAllocator ?
+//static vtek::HostAllocator<vtek::Device> sAllocator("vtek_device");
 
 
 /* helper functions */
@@ -666,13 +667,15 @@ vtek::Device* vtek::device_create(
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
 
 	// Allocate device
-	auto[id, device] = sAllocator.alloc();
-	if (device == nullptr)
-	{
-		vtek_log_error("Failed to allocate (logical) device!");
-		return nullptr;
-	}
-	device->id = id;
+	// TODO: No longer use sAllocator ?
+	// auto[id, device] = sAllocator.alloc();
+	// if (device == nullptr)
+	// {
+	// 	vtek_log_error("Failed to allocate (logical) device!");
+	// 	return nullptr;
+	// }
+	// device->id = id;
+	auto device = new vtek::Device;
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	QueueFamilySelections queueSelections{};
@@ -771,7 +774,8 @@ vtek::Device* vtek::device_create(
 	}
 
 	// Retrieve device queues
-	device->queueAllocator = new vtek::HostAllocator<vtek::Queue>("vtek_device_queues");
+	// TODO: No longer use HostAllocator ?
+	//device->queueAllocator = new vtek::HostAllocator<vtek::Queue>("vtek_device_queues");
 	create_device_queues(device, info, &queueSelections);
 
 	// Set extensions as enabled
@@ -838,21 +842,26 @@ void vtek::device_destroy(Device* device)
 	}
 
 	// Queue allocators
-	if (device->queueAllocator != nullptr)
-	{
-		device->graphicsQueue = {};
-		device->presentQueue = {};
-		device->transferQueues.clear();
-		device->computeQueues.clear();
+	// TODO: No longer use HostAllocator ?
+	// if (device->queueAllocator != nullptr)
+	// {
+	// 	device->graphicsQueue = {};
+	// 	device->presentQueue = {};
+	// 	device->transferQueues.clear();
+	// 	device->computeQueues.clear();
 
-		delete device->queueAllocator;
-	}
-	device->queueAllocator = nullptr;
+	// 	delete device->queueAllocator;
+	// }
+	// device->queueAllocator = nullptr;
+	device->graphicsQueue = {};
+	device->presentQueue = {};
+	device->transferQueues.clear();
+	device->computeQueues.clear();
 
 	// Command scheduler
 	if (device->scheduler != nullptr)
 	{
-		vtek::command_scheduler_destroy(device->scheduler, device);
+		vtek::command_scheduler_destroy(device->scheduler, device); // TODO: Valgrind complains about this!
 	}
 	device->scheduler = nullptr;
 
@@ -860,8 +869,11 @@ void vtek::device_destroy(Device* device)
 	vkDestroyDevice(device->vulkanHandle, nullptr);
 	device->vulkanHandle = VK_NULL_HANDLE;
 
-	sAllocator.free(device->id);
-	device->id = VTEK_INVALID_ID;
+	// TODO: No longer use sAllocator ?
+	// sAllocator.free(device->id);
+	// device->id = VTEK_INVALID_ID; // TODO: Valgrind complains about this! (Obviously!)
+	// TODO: Generally, I would like to get rid of sAllocator?
+	delete device;
 }
 
 

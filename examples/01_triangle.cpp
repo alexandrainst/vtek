@@ -95,7 +95,7 @@ int main()
 	physicalDeviceInfo.requireSwapchainSupport = true;
 	physicalDeviceInfo.requireDynamicRendering = true;
 	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
-		&physicalDeviceInfo, instance, surface);
+		&physicalDeviceInfo, instance, surface);  // TODO: Valgrind complains about this!
 	if (physicalDevice == nullptr)
 	{
 		log_error("Failed to pick physical device!");
@@ -122,6 +122,7 @@ int main()
 
 	// Graphics command pool
 	vtek::CommandPoolInfo commandPoolInfo{};
+	commandPoolInfo.allowIndividualBufferReset = true;
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
 		&commandPoolInfo, device, graphicsQueue);
 	if (graphicsCommandPool == nullptr)
@@ -137,7 +138,7 @@ int main()
 	vtek::window_get_framebuffer_size(
 		window, &swapchainInfo.framebufferWidth, &swapchainInfo.framebufferHeight);
 	vtek::Swapchain* swapchain =
-		vtek::swapchain_create(&swapchainInfo, surface, physicalDevice, device);
+		vtek::swapchain_create(&swapchainInfo, surface, physicalDevice, device); // TODO: Memory error here!
 	if (swapchain == nullptr)
 	{
 		log_error("Failed to create swapchain!");
@@ -216,10 +217,10 @@ int main()
 
 	// Command buffers
 	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
-	vtek::CommandBufferCreateInfo commandBufferInfo{};
-	commandBufferInfo.isSecondary = false;
-	std::vector<vtek::CommandBuffer*> commandBuffers = vtek::command_buffer_create(
-		&commandBufferInfo, commandBufferCount, graphicsCommandPool, device);
+	std::vector<vtek::CommandBuffer*> commandBuffers =
+		vtek::command_pool_alloc_buffers(
+			graphicsCommandPool, vtek::CommandBufferUsage::primary,
+			commandBufferCount, device);
 	if (commandBuffers.empty())
 	{
 		log_error("Failed to create command buffer!");
@@ -421,15 +422,16 @@ int main()
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);
+	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device); // TODO: Valgrind complains about this!
 	vtek::command_pool_destroy(graphicsCommandPool, device);
-	vtek::device_destroy(device);
-	vtek::physical_device_release(physicalDevice);
+	vtek::device_destroy(device); // TODO: Valgrind complains about this!
+	vtek::physical_device_release(physicalDevice);  // TODO: Valgrind complains about this!
 	vtek::window_surface_destroy(surface, instance);
 	vtek::instance_destroy(instance);
 	vtek::window_destroy(window);
 
 	log_debug("All went well!");
-	vtek::terminate();
+	vtek::terminate(); // TODO: Valgrind complains about this!
 
 	return 0;
 }

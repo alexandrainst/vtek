@@ -13,14 +13,15 @@ using CBState = vtek::CommandBufferStateType;
 /* struct implementation */
 struct vtek::CommandPool
 {
-	uint64_t id {VTEK_INVALID_ID};
+	//uint64_t id {VTEK_INVALID_ID}; // TODO: No longer need this ?
 	VkCommandPool vulkanHandle {VK_NULL_HANDLE};
 	bool allowIndividualBufferReset {false};
 };
 
 
 /* host allocator */
-static vtek::HostAllocator<vtek::CommandPool> sAllocator("vtek_command_pool");
+// TODO: No longer use sAllocator ?
+//static vtek::HostAllocator<vtek::CommandPool> sAllocator("vtek_command_pool");
 
 
 /* interface */
@@ -28,13 +29,15 @@ vtek::CommandPool* vtek::command_pool_create(
 	const vtek::CommandPoolInfo* info, const vtek::Device* device, const vtek::Queue* queue)
 {
 	// Allocate device
-	auto [id, commandPool] = sAllocator.alloc();
-	if (commandPool == nullptr)
-	{
-		vtek_log_error("Failed to allocate command pool!");
-		return nullptr;
-	}
-	commandPool->id = id;
+	// TODO: No longer use sAllocator ?
+	// auto [id, commandPool] = sAllocator.alloc(); // TODO: Valgrind complains about this!
+	// if (commandPool == nullptr)
+	// {
+	// 	vtek_log_error("Failed to allocate command pool!");
+	// 	return nullptr;
+	// }
+	// commandPool->id = id;
+	auto commandPool = new vtek::CommandPool;
 
 	VkCommandPoolCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -82,8 +85,10 @@ void vtek::command_pool_destroy(vtek::CommandPool* commandPool, const vtek::Devi
 		commandPool->vulkanHandle = VK_NULL_HANDLE;
 	}
 
-	sAllocator.free(commandPool->id);
-	commandPool->id = VTEK_INVALID_ID;
+	// TODO: No longer use sAllocator ?
+	// sAllocator.free(commandPool->id);
+	// commandPool->id = VTEK_INVALID_ID;  // TODO: Valgrind complains about this!
+	delete commandPool;
 }
 
 VkCommandPool vtek::command_pool_get_handle(vtek::CommandPool* commandPool)
@@ -132,7 +137,7 @@ vtek::CommandBuffer* vtek::command_pool_alloc_buffer(
 	return commandBuffer;
 }
 
-std::vector<vtek::CommandBuffer*> command_pool_alloc_buffers(
+std::vector<vtek::CommandBuffer*> vtek::command_pool_alloc_buffers(
 	vtek::CommandPool* pool, vtek::CommandBufferUsage usage,
 	uint32_t numBuffers, vtek::Device* device)
 {
@@ -217,7 +222,7 @@ void vtek::command_pool_free_buffers(
 		handles.push_back(buf->vulkanHandle);
 	}
 	vkFreeCommandBuffers(
-		vtek::device_get_handle(device), buffers[0]->poolHandle,
+		vtek::device_get_handle(device), pool->vulkanHandle,
 		handles.size(), handles.data());
 
 	for (auto buf : buffers)

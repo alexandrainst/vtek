@@ -533,6 +533,8 @@ int main()
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);
+	// TODO: Fix memory bug here (aka "corrupted size vs. prev_size in fastbins").
+	//vtek::command_buffer_destroy(commandBuffers, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);
 	vtek::device_destroy(device);
 	vtek::physical_device_release(physicalDevice);

@@ -14,7 +14,8 @@ using CBState = vtek::CommandBufferStateType;
 // TODO: Because of the high memory requirement, perhaps this particular allocator
 //       should store a pointer to a vtek::Device instead, as an optimization.
 // OKAY: This should be done!
-static vtek::HostAllocator<vtek::CommandBuffer> sAllocator("command_buffer");
+// TODO: No longer use sAllocator ?
+//static vtek::HostAllocator<vtek::CommandBuffer> sAllocator("command_buffer");
 
 
 

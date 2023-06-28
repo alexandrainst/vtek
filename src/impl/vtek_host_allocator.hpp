@@ -33,6 +33,7 @@ namespace vtek
 
 
 	void host_allocator_register_allocator(IHostAllocator* allocator);
+	void host_allocator_unregister_allocator(IHostAllocator* allocator);
 	void host_allocator_check_all_freed();
 
 
@@ -43,6 +44,10 @@ namespace vtek
 		HostAllocator(const std::string&& title)
 		: IHostAllocator(std::forward<const std::string&&>(title)), mNext(0UL) {
 			host_allocator_register_allocator(this);
+		}
+		inline ~HostAllocator()
+		{
+			//host_allocator_unregister_allocator(this);
 		}
 
 		inline int GetNumAllocations() const override { return mPool.size(); }

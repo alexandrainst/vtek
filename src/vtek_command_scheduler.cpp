@@ -110,7 +110,7 @@ void vtek::command_scheduler_destroy(
 	// TODO: Mutex ?
 	if (scheduler == nullptr) { return; }
 
-	vtek::command_pool_destroy(scheduler->graphicsPool, device);
+	vtek::command_pool_destroy(scheduler->graphicsPool, device); // TODO: Valgrind complains about this!
 	vtek::command_pool_destroy(scheduler->computePool, device);
 	vtek::command_pool_destroy(scheduler->transferPool, device);
 
