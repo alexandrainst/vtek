@@ -1,42 +1,13 @@
+#include "vtek_vulkan.pch"
 #include "vtek_command_buffer.hpp"
 
+#include "impl/vtek_command_buffer_struct.hpp"
 #include "vtek_command_pool.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 #include "impl/vtek_host_allocator.hpp"
 
 using CBState = vtek::CommandBufferStateType;
-
-
-/* struct implementation */
-namespace vtek
-{
-	// TODO: If this works, implement it somewhere else, and rewrite all allocators and structs!
-	struct OpaqueHandle
-	{
-	public:
-		uint64_t id {VTEK_INVALID_ID}; // Implemented in impl/vtek_host_allocator.h
-
-		inline OpaqueHandle() { id = global_id++; }
-		inline virtual ~OpaqueHandle() {}
-	private:
-		static inline uint64_t global_id = 0;
-	};
-}
-
-struct vtek::CommandBuffer : public OpaqueHandle
-{
-	VkCommandBuffer vulkanHandle {VK_NULL_HANDLE};
-	VkCommandPool poolHandle {VK_NULL_HANDLE};
-	CBState state {CBState::invalid};
-
-	// If command buffer was created from a pool that was created with the
-	// VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag. Otherwise the
-	// command buffer cannot be reset.
-	bool supportsReset {false};
-
-	bool isSecondary {false}; // TODO: What to use this for?
-};
 
 
 /* host allocator */
@@ -103,7 +74,7 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 	if (allocResult != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to allocate command buffer!");
-		delete allocations;
+		delete[] allocations;
 		return {};
 	}
 
@@ -113,7 +84,7 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 	for (uint32_t i = 0; i < createCount; i++)
 	{
 		commandBuffers[i]->vulkanHandle = vulkanHandles[i];
-		commandBuffers[i]->poolHandle = vtek::command_pool_get_handle(pool);
+		commandBuffers[i]->poolHandle = vtek::command_pool_get_handle(pool); // TODO: ??
 		commandBuffers[i]->supportsReset = reset;
 		commandBuffers[i]->isSecondary = secondary;
 		commandBuffers[i]->state = CBState::initial;

@@ -112,6 +112,7 @@ set (src
     include/vtek/vtek_vulkan_handles.hpp
     include/vtek/vtek_vulkan_version.hpp
 
+    src/impl/vtek_command_buffer_struct.hpp
     src/impl/vtek_glfw_backend.hpp
     src/impl/vtek_host_allocator.hpp
     src/impl/vtek_init.hpp

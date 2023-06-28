@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <memory>
+#include <vector>
+#include <vulkan/vulkan.h>
 
 #include "vtek_vulkan_handles.hpp"
 
@@ -48,8 +49,18 @@ namespace vtek
 		secondary
 	};
 
-	CommandBuffer* command_pool_alloc_buffer(CommandPool* pool, CommandBufferUsage usage);
-	void command_pool_free_buffer(CommandPool* pool, CommandBuffer* buffer);
-	bool command_pool_reset_buffer(CommandPool* pool, CommandBuffer* buffer);
+	CommandBuffer* command_pool_alloc_buffer(
+		CommandPool* pool, CommandBufferUsage usage, Device* device);
 
+	std::vector<CommandBuffer*> command_pool_alloc_buffers(
+		CommandPool* pool, CommandBufferUsage usage,
+		uint32_t numBuffers, Device* device);
+
+	void command_pool_free_buffer(
+		CommandPool* pool, CommandBuffer* buffer, Device* device);
+
+	void command_pool_free_buffers(
+		CommandPool* pool, std::vector<CommandBuffer*> buffers, Device* device);
+
+	bool command_pool_reset_buffer(CommandPool* pool, CommandBuffer* buffer);
 }

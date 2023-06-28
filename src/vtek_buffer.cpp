@@ -137,7 +137,7 @@ bool vtek::buffer_write_data(
 
 		auto scheduler = vtek::device_get_command_scheduler(device);
 		auto commandBuffer =
-			vtek::command_scheduler_begin_singleuse_transfer(scheduler);
+			vtek::command_scheduler_begin_transfer(scheduler);
 		if (commandBuffer == nullptr)
 		{
 			vtek_log_error(
@@ -158,7 +158,7 @@ bool vtek::buffer_write_data(
 		copyRegion.size = finalRegion.size;
 		vkCmdCopyBuffer(cmdBuf, stagingBuf, buf, 1, &copyRegion);
 
-		vtek::command_scheduler_end_singleuse_transfer(scheduler, commandBuffer);
+		vtek::command_scheduler_submit_transfer(scheduler, commandBuffer);
 
 		return false;
 	}

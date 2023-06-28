@@ -117,7 +117,7 @@ void vtek::command_scheduler_destroy(
 	delete scheduler;
 }
 
-vtek::CommandBuffer* vtek::command_scheduler_begin_singleuse_transfer(
+vtek::CommandBuffer* vtek::command_scheduler_begin_transfer(
 	vtek::CommandScheduler* scheduler)
 {
 	vtek_log_error(
@@ -126,7 +126,7 @@ vtek::CommandBuffer* vtek::command_scheduler_begin_singleuse_transfer(
 	return nullptr;
 }
 
-void vtek::command_scheduler_end_singleuse_transfer(
+void vtek::command_scheduler_submit_transfer(
 	vtek::CommandScheduler* scheduler, vtek::CommandBuffer* commandBuffer)
 {
 	vtek_log_error(
