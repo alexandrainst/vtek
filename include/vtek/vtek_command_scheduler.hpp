@@ -14,6 +14,8 @@ namespace vtek
 	};
 
 
+	// Create a command scheduler, an object which issues single-use command
+	// buffers, e.g. for transfer operations.
 	CommandScheduler* command_scheduler_create(
 		const CommandSchedulerInfo* info, Device* device);
 
@@ -26,8 +28,9 @@ namespace vtek
 	// for execution onto an internally referenced transfer queue.
 	// TODO: Create dedicated command buffer type to distinguish ?
 	// TODO: E.g. `SingleUseCommandBuffer` ?
-	CommandBuffer* command_scheduler_begin_singleuse_transfer(
+	CommandBuffer* command_scheduler_begin_transfer(
 		CommandScheduler* scheduler);
-	void command_scheduler_end_singleuse_transfer(
+
+	void command_scheduler_submit_transfer(
 		CommandScheduler* scheduler, CommandBuffer* commandBuffer);
 }

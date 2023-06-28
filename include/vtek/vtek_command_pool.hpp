@@ -32,4 +32,24 @@ namespace vtek
 	// If it is false, command buffers allocated from this pool may still be
 	// reset, but only by resetting them all at once!
 	bool command_pool_allow_individual_reset(CommandPool* commandPool);
+
+	// =========================== //
+	// === Considering New API === //
+	// =========================== //
+
+	// Reset the pool which resets all buffers.
+	// TODO: Does it also free all allocated command buffers, or only reset them?
+	// TODO: Should we check that no allocated command buffers are pending execution?
+	void command_pool_reset(CommandPool* commandPool);
+
+	enum class CommandBufferUsage
+	{
+		primary,
+		secondary
+	};
+
+	CommandBuffer* command_pool_alloc_buffer(CommandPool* pool, CommandBufferUsage usage);
+	void command_pool_free_buffer(CommandPool* pool, CommandBuffer* buffer);
+	bool command_pool_reset_buffer(CommandPool* pool, CommandBuffer* buffer);
+
 }

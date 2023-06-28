@@ -91,3 +91,26 @@ bool vtek::command_pool_allow_individual_reset(vtek::CommandPool* commandPool)
 {
 	return commandPool->allowIndividualBufferReset;
 }
+
+
+// =========================== //
+// === Considering New API === //
+// =========================== //
+
+vtek::CommandBuffer* vtek::command_pool_alloc_buffer(
+	vtek::CommandPool* pool, vtek::CommandBufferUsage usage)
+{
+
+}
+
+void vtek::command_pool_free_buffer(
+	vtek::CommandPool* pool, vtek::CommandBuffer* buffer)
+{
+
+}
+
+bool vtek::command_pool_reset_buffer(
+	vtek::CommandPool* pool, vtek::CommandBuffer* buffer)
+{
+
+}

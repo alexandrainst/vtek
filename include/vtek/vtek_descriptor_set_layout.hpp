@@ -33,6 +33,7 @@ namespace vtek
 		// bound in a command buffer without invalidating that command
 		// buffer. Without this flag the command buffer becomes invalidated
 		// and requires re-recording.
+		// NOTE: This feature must be required when picking a physical device.
 		bool updateAfterBind {false};
 	};
 
