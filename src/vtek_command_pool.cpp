@@ -199,10 +199,12 @@ void vtek::command_pool_free_buffer(
 	vkFreeCommandBuffers(dev, pool->vulkanHandle, 1, buffers);
 	buffer->state = CBState::not_allocated;
 	buffer->vulkanHandle = VK_NULL_HANDLE;
+
+	delete buffer;
 }
 
 void vtek::command_pool_free_buffers(
-	vtek::CommandPool* pool, std::vector<vtek::CommandBuffer*> buffers,
+	vtek::CommandPool* pool, std::vector<vtek::CommandBuffer*>& buffers,
 	vtek::Device* device)
 {
 	if (buffers.size() == 0) { return; }
@@ -217,20 +219,13 @@ void vtek::command_pool_free_buffers(
 	}
 
 	std::vector<VkCommandBuffer> handles;
-	for (auto buf : buffers)
+	for (uint32_t i = 0; i < buffers.size(); i++)
 	{
-		handles.push_back(buf->vulkanHandle);
+		handles.push_back(buffers[i]->vulkanHandle);
 	}
 	vkFreeCommandBuffers(
 		vtek::device_get_handle(device), pool->vulkanHandle,
 		handles.size(), handles.data());
-
-	for (auto buf : buffers)
-	{
-		buf->vulkanHandle = VK_NULL_HANDLE;
-		buf->poolHandle = VK_NULL_HANDLE;
-		buf->state = CBState::not_allocated;
-	}
 
 	delete[] buffers.data();
 	buffers.clear();

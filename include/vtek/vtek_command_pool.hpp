@@ -60,7 +60,7 @@ namespace vtek
 		CommandPool* pool, CommandBuffer* buffer, Device* device);
 
 	void command_pool_free_buffers(
-		CommandPool* pool, std::vector<CommandBuffer*> buffers, Device* device);
+		CommandPool* pool, std::vector<CommandBuffer*>& buffers, Device* device);
 
 	bool command_pool_reset_buffer(CommandPool* pool, CommandBuffer* buffer);
 }
