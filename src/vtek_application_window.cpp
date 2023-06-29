@@ -12,7 +12,8 @@
 // vtek
 #include "vtek_application_window.hpp"
 
-#include "impl/vtek_host_allocator.hpp"
+// TODO: No longer use sAllocator ?
+//#include "impl/vtek_host_allocator.hpp"
 #include "vtek_input.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"

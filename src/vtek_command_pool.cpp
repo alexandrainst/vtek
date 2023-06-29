@@ -2,7 +2,8 @@
 #include "vtek_command_pool.hpp"
 
 #include "impl/vtek_command_buffer_struct.hpp"
-#include "impl/vtek_host_allocator.hpp"
+// TODO: No longer use sAllocator ?
+//#include "impl/vtek_host_allocator.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_queue.hpp"
@@ -141,12 +142,13 @@ std::vector<vtek::CommandBuffer*> vtek::command_pool_alloc_buffers(
 	vtek::CommandPool* pool, vtek::CommandBufferUsage usage,
 	uint32_t numBuffers, vtek::Device* device)
 {
-	auto allocations = new vtek::CommandBuffer[numBuffers];
-	std::vector<vtek::CommandBuffer*> commandBuffers(numBuffers, VK_NULL_HANDLE);
-	for (uint32_t i = 0; i < numBuffers; i++)
-	{
-		commandBuffers[i] = &(allocations[i]);
-	}
+	// TODO: Try something different here with memory allocation.
+	// auto allocations = new vtek::CommandBuffer[numBuffers];
+	// std::vector<vtek::CommandBuffer*> commandBuffers(numBuffers, VK_NULL_HANDLE);
+	// for (uint32_t i = 0; i < numBuffers; i++)
+	// {
+	// 	commandBuffers[i] = &(allocations[i]);
+	// }
 
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -165,20 +167,26 @@ std::vector<vtek::CommandBuffer*> vtek::command_pool_alloc_buffers(
 	if (allocResult != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to allocate command buffer!");
-		delete[] allocations;
+		//delete[] allocations;
 		return {};
 	}
 
-	bool reset = vtek::command_pool_allow_individual_reset(pool);
+	bool reset = pool->allowIndividualBufferReset;
 	bool secondary = (usage == vtek::CommandBufferUsage::secondary);
+
+	// NEXT: Allocate the wrapper objects
+	std::vector<vtek::CommandBuffer*> commandBuffers;
 
 	for (uint32_t i = 0; i < numBuffers; i++)
 	{
-		commandBuffers[i]->vulkanHandle = vulkanHandles[i];
-		commandBuffers[i]->poolHandle = pool->vulkanHandle;
-		commandBuffers[i]->supportsReset = reset;
-		commandBuffers[i]->isSecondary = secondary;
-		commandBuffers[i]->state = CBState::initial;
+		vtek::CommandBuffer* buffer = new vtek::CommandBuffer;
+		buffer->vulkanHandle = vulkanHandles[i];
+		buffer->poolHandle = pool->vulkanHandle;
+		buffer->supportsReset = reset;
+		buffer->isSecondary = secondary;
+		buffer->state = CBState::initial;
+
+		commandBuffers.emplace_back(buffer);
 	}
 
 	return commandBuffers;
@@ -222,12 +230,13 @@ void vtek::command_pool_free_buffers(
 	for (uint32_t i = 0; i < buffers.size(); i++)
 	{
 		handles.push_back(buffers[i]->vulkanHandle);
+
+		if (handles[i] != nullptr) { delete buffers[i]; }
 	}
 	vkFreeCommandBuffers(
 		vtek::device_get_handle(device), pool->vulkanHandle,
 		handles.size(), handles.data());
 
-	delete[] buffers.data();
 	buffers.clear();
 }
 

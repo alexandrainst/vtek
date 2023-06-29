@@ -2,22 +2,23 @@
 
 #pragma once
 
-#include "vtek_host_allocator.hpp"
+// TODO: No longer use sAllocator ?
+//#include "vtek_host_allocator.hpp"
 
 
 namespace vtek
 {
 	// TODO: If this works, implement it somewhere else, and rewrite all allocators and structs!
-	struct OpaqueHandle
-	{
-	public:
-		uint64_t id {VTEK_INVALID_ID}; // Implemented in impl/vtek_host_allocator.h
+	// struct OpaqueHandle
+	// {
+	// public:
+	// 	uint64_t id {VTEK_INVALID_ID}; // Implemented in impl/vtek_host_allocator.h
 
-		inline OpaqueHandle() { id = global_id++; }
-		inline virtual ~OpaqueHandle() {}
-	private:
-		static inline uint64_t global_id = 0;
-	};
+	// 	inline OpaqueHandle() { id = global_id++; }
+	// 	inline virtual ~OpaqueHandle() {}
+	// private:
+	// 	static inline uint64_t global_id = 0;
+	// };
 
 
 	// TODO: Do we _really_ need this? Can't Vulkan check it for us, and rid us of this overhead?!

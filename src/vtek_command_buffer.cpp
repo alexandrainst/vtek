@@ -5,7 +5,8 @@
 #include "vtek_command_pool.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
-#include "impl/vtek_host_allocator.hpp"
+// TODO: No longer use sAllocator ?
+//#include "impl/vtek_host_allocator.hpp"
 
 using CBState = vtek::CommandBufferStateType;
 
@@ -52,6 +53,7 @@ std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
 	const vtek::CommandBufferCreateInfo* info, uint32_t createCount,
 	vtek::CommandPool* pool, vtek::Device* device)
 {
+	// TODO: Try something different here with memory allocation.
 	auto allocations = new vtek::CommandBuffer[createCount];
 	std::vector<vtek::CommandBuffer*> commandBuffers(createCount, VK_NULL_HANDLE);
 	for (uint32_t i = 0; i < createCount; i++)

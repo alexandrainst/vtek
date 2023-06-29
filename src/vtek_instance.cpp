@@ -2,7 +2,8 @@
 #include "vtek_instance.hpp"
 
 #include "impl/vtek_glfw_backend.hpp"
-#include "impl/vtek_host_allocator.hpp"
+// TODO: No longer use sAllocator ?
+//#include "impl/vtek_host_allocator.hpp"
 #include "version.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_vulkan_version.hpp"

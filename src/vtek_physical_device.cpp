@@ -1,7 +1,8 @@
 #include "vtek_vulkan.pch"
 #include "vtek_physical_device.hpp"
 
-#include "impl/vtek_host_allocator.hpp"
+// TODO: No longer use sAllocator ?
+//#include "impl/vtek_host_allocator.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 
