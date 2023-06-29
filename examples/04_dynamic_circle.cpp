@@ -379,12 +379,11 @@ int main()
 	}
 
 	// Command buffers
-	log_trace("Command buffers");
 	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
-	vtek::CommandBufferCreateInfo commandBufferInfo{};
-	commandBufferInfo.isSecondary = false;
-	std::vector<vtek::CommandBuffer*> commandBuffers = vtek::command_buffer_create(
-		&commandBufferInfo, commandBufferCount, graphicsCommandPool, device);
+	std::vector<vtek::CommandBuffer*> commandBuffers =
+		vtek::command_pool_alloc_buffers(
+			graphicsCommandPool, vtek::CommandBufferUsage::primary,
+			commandBufferCount, device);
 	if (commandBuffers.empty())
 	{
 		log_error("Failed to create command buffer!");
@@ -681,6 +680,7 @@ int main()
 	vtek::descriptor_pool_destroy(descriptorPool, device);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);
+	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);
 	vtek::device_destroy(device);
 	vtek::physical_device_release(physicalDevice);
