@@ -155,7 +155,6 @@ std::vector<vtek::CommandBuffer*> vtek::command_pool_alloc_buffers(
 	{
 		vtek::CommandBuffer* buffer = new vtek::CommandBuffer;
 		buffer->vulkanHandle = vulkanHandles[i];
-		buffer->poolHandle = pool->vulkanHandle;
 		buffer->supportsReset = reset;
 		buffer->isSecondary = secondary;
 		buffer->state = CBState::initial;

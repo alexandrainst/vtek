@@ -9,7 +9,6 @@
 namespace vtek
 {
 	VkCommandBuffer command_buffer_get_handle(CommandBuffer* commandBuffer);
-	VkCommandPool command_buffer_get_pool_handle(CommandBuffer* commandBuffer);
 
 	bool command_buffer_begin(CommandBuffer* commandBuffer);
 	bool command_buffer_end(CommandBuffer* commandBuffer);

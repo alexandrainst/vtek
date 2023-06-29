@@ -16,11 +16,6 @@ VkCommandBuffer vtek::command_buffer_get_handle(vtek::CommandBuffer* commandBuff
 	return commandBuffer->vulkanHandle;
 }
 
-VkCommandPool vtek::command_buffer_get_pool_handle(vtek::CommandBuffer* commandBuffer)
-{
-	return commandBuffer->poolHandle;
-}
-
 bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
 {
 	if (commandBuffer->state == CBState::pending) // TODO: How do we measure this?

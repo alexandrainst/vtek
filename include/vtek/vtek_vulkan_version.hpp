@@ -6,6 +6,8 @@
 
 namespace vtek
 {
+	// Creates a human-readable interface for the packed `apiVersion` type
+	// used many places through the Vulkan Api.
 	class VulkanVersion
 	{
 	public:

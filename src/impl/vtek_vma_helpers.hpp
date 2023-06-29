@@ -10,7 +10,6 @@
 namespace vtek
 {
 	/* internal helper types */
-	// TODO: Do we want this?
 	enum class MemoryProperty : uint32_t
 	{
 		device_local     = 0x0001U,
@@ -19,6 +18,7 @@ namespace vtek
 		host_cached      = 0x0008U,
 		lazily_allocated = 0x0010U,
 		// Supported by >= Vulkan 1.1
+		// TODO: Enforce this?
 		memory_protected = 0x0020U
 	};
 
