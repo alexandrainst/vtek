@@ -10,7 +10,7 @@ namespace vtek
 		// With a background thread running the command scheduler
 		// all commands will be executed asynchronously, although the host
 		// may explicitly synchronize as well.
-		bool backgroundThread {true};
+		bool backgroundThread {false};
 	};
 
 
@@ -29,7 +29,7 @@ namespace vtek
 	// TODO: Create dedicated command buffer type to distinguish ?
 	// TODO: E.g. `SingleUseCommandBuffer` ?
 	CommandBuffer* command_scheduler_begin_transfer(
-		CommandScheduler* scheduler);
+		CommandScheduler* scheduler, Device* device);
 
 	void command_scheduler_submit_transfer(
 		CommandScheduler* scheduler, CommandBuffer* commandBuffer);

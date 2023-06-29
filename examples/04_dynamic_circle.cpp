@@ -455,7 +455,7 @@ int main()
 	// Vertex buffer
 	vtek::BufferInfo bufferInfo{};
 	bufferInfo.size = 2* sizeof(glm::vec2) * kVertMax;
-	bufferInfo.requireHostVisibleStorage = true; // NOTE: Easy for now.
+	//bufferInfo.requireHostVisibleStorage = true;
 	//bufferInfo.disallowInternalStagingBuffer = true;
 	//bufferInfo.requireDedicatedAllocation = true;
 	bufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;

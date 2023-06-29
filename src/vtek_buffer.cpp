@@ -8,6 +8,12 @@
 #include "vtek_logging.hpp"
 
 
+/* helper functions */
+
+// TODO: Place 3 options for buffer write here!
+
+
+
 /* interface */
 vtek::Buffer* vtek::buffer_create(
 	const vtek::BufferInfo* info, vtek::Device* device)
@@ -45,7 +51,7 @@ vtek::Buffer* vtek::buffer_create(
 		stagingInfo.requireHostVisibleStorage = true;
 		stagingInfo.usageFlags = vtek::BufferUsageFlag::transfer_src;
 
-		if (!vtek::allocator_buffer_create(allocator, info, buffer->stagingBuffer))
+		if (!vtek::allocator_buffer_create(allocator, &stagingInfo, buffer->stagingBuffer))
 		{
 			vtek_log_error("Failed to create staging buffer for buffer!");
 			delete buffer->stagingBuffer;
@@ -135,9 +141,32 @@ bool vtek::buffer_write_data(
 	{
 		vtek_log_trace("Buffer has a staging buffer - map to that, then transfer!");
 
+		// 2.1) map and memcpy
+
+		void* mappedPtr = vtek::allocator_buffer_map(buffer->stagingBuffer); // TODO: Offset!
+		if (mappedPtr == nullptr)
+		{
+			vtek_log_error("Failed to map the buffer -- cannot write data!");
+			return false;
+		}
+
+		memcpy(mappedPtr, data, finalRegion.size);
+
+		// Flush if the buffer is not HOST_COHERENT
+		if (!memProps.has_flag(vtek::MemoryProperty::host_coherent))
+		{
+			vtek::allocator_buffer_flush(buffer->stagingBuffer, &finalRegion);
+		}
+
+		vtek::allocator_buffer_unmap(buffer->stagingBuffer);
+
+
+
+		// 2.2) schedule transfer command
+
 		auto scheduler = vtek::device_get_command_scheduler(device);
 		auto commandBuffer =
-			vtek::command_scheduler_begin_transfer(scheduler);
+			vtek::command_scheduler_begin_transfer(scheduler, device);
 		if (commandBuffer == nullptr)
 		{
 			vtek_log_error(
@@ -160,7 +189,7 @@ bool vtek::buffer_write_data(
 
 		vtek::command_scheduler_submit_transfer(scheduler, commandBuffer);
 
-		return false;
+		return true;
 	}
 
 	// 3) Create a temporary staging buffer - map to that, then transfer queue.
