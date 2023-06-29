@@ -1,8 +1,6 @@
 #include "vtek_vulkan.pch"
 #include "vtek_swapchain.hpp"
 
-// TODO: No longer use sAllocator ?
-//#include "impl/vtek_host_allocator.hpp"
 #include "impl/vtek_vulkan_helpers.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
@@ -15,14 +13,12 @@
 #include <vulkan/vulkan.h>
 
 
-
 /* struct implementation */
 struct vtek::Swapchain
 {
 	// ============================ //
 	// === Swapchain properties === //
 	// ============================ //
-	// uint64_t id {VTEK_INVALID_ID}; // TODO: No longer need this ?
 	VkSwapchainKHR vulkanHandle {VK_NULL_HANDLE};
 	uint32_t length {0};
 	VkExtent2D imageExtent {0, 0};
@@ -71,11 +67,6 @@ struct vtek::Swapchain
 	bool prioritizeLowLatency {false};
 	VkPhysicalDevice physDev {VK_NULL_HANDLE};
 };
-
-
-/* host allocator */
-// TODO: No longer use sAllocator ?
-//static vtek::HostAllocator<vtek::Swapchain> sAllocator("vtek_swapchain");
 
 
 
@@ -534,8 +525,6 @@ static void reset_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 	swapchain->numFramesInFlight = numFrames;
 	swapchain->imagesInFlight.resize(numFrames, VK_NULL_HANDLE);
 	swapchain->currentFrameIndex = 0U;
-
-	// TODO: Should we signal the semaphores?
 }
 
 static void set_image_in_use(
@@ -713,14 +702,6 @@ vtek::Swapchain* vtek::swapchain_create(
 	// ========================= //
 	// === Create swap chain === //
 	// ========================= //
-	// TODO: No longer use sAllocator ?
-	// auto [id, swapchain] = sAllocator.alloc(); // TODO: There's a memory bug here, in how it is freed later!
-	// if (swapchain == nullptr)
-	// {
-	// 	vtek_log_error("Failed to allocate swapchain!");
-	// 	return nullptr;
-	// }
-	// swapchain->id = id;
 	auto swapchain = new vtek::Swapchain;
 
 	VkResult result = vkCreateSwapchainKHR(
@@ -950,9 +931,6 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	destroy_swapchain_handle(swapchain, dev);
 	swapchain->isInvalidated = false;
 
-	// TODO: No longer use sAllocator ?
-	// sAllocator.free(swapchain->id); // TODO: Apparently this doesn't work as intended!
-	// swapchain->id = VTEK_INVALID_ID;
 	delete swapchain;
 }
 
@@ -998,7 +976,7 @@ vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
 	if (test == VK_SUCCESS) { return vtek::SwapchainStatus::ok; }
 
-	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
 	switch (result)
 	{
 	case VK_SUCCESS: return vtek::SwapchainStatus::ok;
@@ -1060,7 +1038,7 @@ vtek::SwapchainStatus vtek::swapchain_wait_image_ready(
 		return vtek::SwapchainStatus::ok;
 	}
 
-	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
 	switch (result)
 	{
 	case VK_SUCCESS:

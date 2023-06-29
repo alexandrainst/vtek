@@ -2,8 +2,6 @@
 #include "vtek_command_pool.hpp"
 
 #include "impl/vtek_command_buffer_struct.hpp"
-// TODO: No longer use sAllocator ?
-//#include "impl/vtek_host_allocator.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_queue.hpp"
@@ -14,15 +12,10 @@ using CBState = vtek::CommandBufferStateType;
 /* struct implementation */
 struct vtek::CommandPool
 {
-	//uint64_t id {VTEK_INVALID_ID}; // TODO: No longer need this ?
 	VkCommandPool vulkanHandle {VK_NULL_HANDLE};
 	bool allowIndividualBufferReset {false};
 };
 
-
-/* host allocator */
-// TODO: No longer use sAllocator ?
-//static vtek::HostAllocator<vtek::CommandPool> sAllocator("vtek_command_pool");
 
 
 /* interface */
@@ -30,14 +23,6 @@ vtek::CommandPool* vtek::command_pool_create(
 	const vtek::CommandPoolInfo* info, const vtek::Device* device, const vtek::Queue* queue)
 {
 	// Allocate device
-	// TODO: No longer use sAllocator ?
-	// auto [id, commandPool] = sAllocator.alloc(); // TODO: Valgrind complains about this!
-	// if (commandPool == nullptr)
-	// {
-	// 	vtek_log_error("Failed to allocate command pool!");
-	// 	return nullptr;
-	// }
-	// commandPool->id = id;
 	auto commandPool = new vtek::CommandPool;
 
 	VkCommandPoolCreateInfo createInfo{};
@@ -68,6 +53,7 @@ vtek::CommandPool* vtek::command_pool_create(
 	if (result != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to create command pool!");
+		delete commandPool;
 		return nullptr;
 	}
 
@@ -86,9 +72,6 @@ void vtek::command_pool_destroy(vtek::CommandPool* commandPool, const vtek::Devi
 		commandPool->vulkanHandle = VK_NULL_HANDLE;
 	}
 
-	// TODO: No longer use sAllocator ?
-	// sAllocator.free(commandPool->id);
-	// commandPool->id = VTEK_INVALID_ID;  // TODO: Valgrind complains about this!
 	delete commandPool;
 }
 
@@ -142,14 +125,6 @@ std::vector<vtek::CommandBuffer*> vtek::command_pool_alloc_buffers(
 	vtek::CommandPool* pool, vtek::CommandBufferUsage usage,
 	uint32_t numBuffers, vtek::Device* device)
 {
-	// TODO: Try something different here with memory allocation.
-	// auto allocations = new vtek::CommandBuffer[numBuffers];
-	// std::vector<vtek::CommandBuffer*> commandBuffers(numBuffers, VK_NULL_HANDLE);
-	// for (uint32_t i = 0; i < numBuffers; i++)
-	// {
-	// 	commandBuffers[i] = &(allocations[i]);
-	// }
-
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.pNext = nullptr;
@@ -167,7 +142,6 @@ std::vector<vtek::CommandBuffer*> vtek::command_pool_alloc_buffers(
 	if (allocResult != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to allocate command buffer!");
-		//delete[] allocations;
 		return {};
 	}
 

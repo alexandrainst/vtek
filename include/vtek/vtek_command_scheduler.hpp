@@ -5,6 +5,18 @@
 
 namespace vtek
 {
+	// TODO: Single-use command buffers! Considerations:
+	// - waiting for buffer to finish execution?
+	// - after finished execution, how to free the buffer?
+	// - do we create a fence for this particular buffer and signal that when done?
+	// - cleanup routine inside vtek to handle finished buffers?
+	// - should these buffers be created from a dedicated pool?
+	// - if dedicated cleanup thread inside vtek, then we need a dedicated pool for these buffers!
+	//
+	// Perhaps better to just expose a cleanup function that client applications may call
+	// once a while, and let clients choose how to handle threading.
+	// Then just inform them that this cleanup routine should be called!
+
 	struct CommandSchedulerInfo
 	{
 		// With a background thread running the command scheduler

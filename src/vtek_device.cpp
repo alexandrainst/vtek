@@ -1,8 +1,6 @@
 #include "vtek_vulkan.pch"
 #include "vtek_device.hpp"
 
-// TODO: No longer use sAllocator ?
-//#include "impl/vtek_host_allocator.hpp"
 #include "impl/vtek_init.hpp"
 #include "vtek_allocator.hpp"
 #include "vtek_command_scheduler.hpp"
@@ -25,7 +23,6 @@
 /* struct implementation */
 struct vtek::Device
 {
-	// uint64_t id {VTEK_INVALID_ID}; // TODO: No longer need this ?
 	VkDevice vulkanHandle {VK_NULL_HANDLE};
 	VkPhysicalDevice physicalHandle {VK_NULL_HANDLE};
 	vtek::VulkanVersion vulkanVersion {1, 0, 0};
@@ -33,12 +30,6 @@ struct vtek::Device
 	VkPhysicalDeviceFeatures enabledFeatures {};
 	vtek::DeviceExtensions enabledExtensions {};
 
-	// TODO: We really **do** need a queue allocator. Example:
-	// Say 1 transfer queue == graphics queue, then destroying graphics queue
-	// would be highly ambiguous!
-	// OKAY: This should be done!
-	// TODO: No longer use HostAllocator ?
-	//vtek::HostAllocator<vtek::Queue>* queueAllocator {nullptr};
 	vtek::Queue graphicsQueue {};
 	vtek::Queue presentQueue {};
 	std::vector<vtek::Queue> transferQueues {};
@@ -52,13 +43,6 @@ struct vtek::Device
 	vtek::CommandScheduler* scheduler {nullptr};
 };
 
-
-/* host allocator */
-// TODO: Because of the high memory requirement, perhaps this particular allocator
-//       should store a pointer to a vtek::Device instead, as an optimization.
-// OKAY: This should be done!
-// TODO: No longer use sAllocator ?
-//static vtek::HostAllocator<vtek::Device> sAllocator("vtek_device");
 
 
 /* helper functions */
@@ -668,14 +652,6 @@ vtek::Device* vtek::device_create(
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
 
 	// Allocate device
-	// TODO: No longer use sAllocator ?
-	// auto[id, device] = sAllocator.alloc();
-	// if (device == nullptr)
-	// {
-	// 	vtek_log_error("Failed to allocate (logical) device!");
-	// 	return nullptr;
-	// }
-	// device->id = id;
 	auto device = new vtek::Device;
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -684,6 +660,7 @@ vtek::Device* vtek::device_create(
 	{
 		vtek_log_error(
 			"Failed to get device queue infos! Device creation cannot proceed.");
+		delete device;
 		return nullptr;
 	}
 
@@ -751,6 +728,7 @@ vtek::Device* vtek::device_create(
 	if (info->enableBindlessTextureSupport)
 	{
 		vtek_log_error("Bindless texture support untested/not implemented");
+		delete device;
 		return nullptr;
 	}
 
@@ -771,12 +749,11 @@ vtek::Device* vtek::device_create(
 	    != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to create logical device!");
+		delete device;
 		return nullptr;
 	}
 
 	// Retrieve device queues
-	// TODO: No longer use HostAllocator ?
-	//device->queueAllocator = new vtek::HostAllocator<vtek::Queue>("vtek_device_queues");
 	create_device_queues(device, info, &queueSelections);
 
 	// Set extensions as enabled
@@ -842,18 +819,6 @@ void vtek::device_destroy(Device* device)
 		device->allocator = nullptr;
 	}
 
-	// Queue allocators
-	// TODO: No longer use HostAllocator ?
-	// if (device->queueAllocator != nullptr)
-	// {
-	// 	device->graphicsQueue = {};
-	// 	device->presentQueue = {};
-	// 	device->transferQueues.clear();
-	// 	device->computeQueues.clear();
-
-	// 	delete device->queueAllocator;
-	// }
-	// device->queueAllocator = nullptr;
 	device->graphicsQueue = {};
 	device->presentQueue = {};
 	device->transferQueues.clear();
@@ -870,10 +835,6 @@ void vtek::device_destroy(Device* device)
 	vkDestroyDevice(device->vulkanHandle, nullptr);
 	device->vulkanHandle = VK_NULL_HANDLE;
 
-	// TODO: No longer use sAllocator ?
-	// sAllocator.free(device->id);
-	// device->id = VTEK_INVALID_ID; // TODO: Valgrind complains about this! (Obviously!)
-	// TODO: Generally, I would like to get rid of sAllocator?
 	delete device;
 }
 
@@ -939,8 +900,6 @@ std::vector<vtek::Queue*> vtek::device_get_transfer_queues(vtek::Device* device)
 
 std::vector<vtek::Queue*> vtek::device_get_compute_queues(vtek::Device* device)
 {
-	// TODO: When queues are stored as pointers from a queue allocator,
-	// this can be greatly simplified!
 	std::vector<vtek::Queue*> res;
 	for (vtek::Queue& q : device->computeQueues) { res.emplace_back(&q); }
 	return res;

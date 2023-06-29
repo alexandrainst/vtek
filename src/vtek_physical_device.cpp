@@ -1,8 +1,6 @@
 #include "vtek_vulkan.pch"
 #include "vtek_physical_device.hpp"
 
-// TODO: No longer use sAllocator ?
-//#include "impl/vtek_host_allocator.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 
@@ -19,7 +17,6 @@ using UABFeature = vtek::UpdateAfterBindFeature;
 /* struct implementation */
 struct vtek::PhysicalDevice
 {
-	//uint64_t id {VTEK_INVALID_ID}; // TODO: No longer need this ?
 	VkPhysicalDevice vulkanHandle { VK_NULL_HANDLE };
 	VkPhysicalDeviceProperties properties {};
 
@@ -41,10 +38,6 @@ struct vtek::PhysicalDevice
 	std::vector<std::string> supportedExtensions {}; // TODO: Can we replace this with `requiredExtensions`?
 };
 
-
-/* host allocator */
-// TODO: No longer use sAllocator ?
-//static vtek::HostAllocator<vtek::PhysicalDevice> sAllocator("vtek_physical_device");
 
 
 /* helper functions */
@@ -732,14 +725,6 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 		weightedDevices.begin(), weightedDevices.end(), [](auto& p1, auto& p2) { return p1.first < p2.first; });
 
 	// Allocate
-	// TODO: No longer use sAllocator ?
-	// auto [id, physicalDevice] = sAllocator.alloc();
-	// if (physicalDevice == nullptr)
-	// {
-	// 	vtek_log_fatal("Failed to allocate physical device!");
-	// 	return nullptr;
-	// }
-	// physicalDevice->id = id;
 	auto physicalDevice = new vtek::PhysicalDevice;
 
 	// Run through them in sorted order and check if the physical device supports:
@@ -801,9 +786,6 @@ void vtek::physical_device_release(vtek::PhysicalDevice* physicalDevice)
 	physicalDevice->supportedExtensions.clear();
 	physicalDevice->requiredExtensions.clear();
 
-	// TODO: No longer use sAllocator ?
-	// sAllocator.free(physicalDevice->id);
-	// physicalDevice->id = VTEK_INVALID_ID;
 	delete physicalDevice;
 }
 

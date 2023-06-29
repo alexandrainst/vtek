@@ -69,6 +69,11 @@ void vtek::buffer_destroy(vtek::Buffer* buffer)
 	if (buffer == nullptr) return;
 
 	vtek::allocator_buffer_destroy(buffer);
+	if (buffer->stagingBuffer != nullptr)
+	{
+		vtek::allocator_buffer_destroy(buffer->stagingBuffer);
+	}
+
 	buffer->allocator = nullptr;
 	buffer->stagingBuffer = nullptr;
 
@@ -204,6 +209,7 @@ bool vtek::buffer_write_data(
 // === Cache control === //
 // ===================== //
 
+// TODO: Use these notes for something or delete?
 // Any memory type that doesn't have HOST_COHERENT flag needs manual cache constrol:
 // - vkInvalidateMappedMemoryRanges before read on CPU.
 // - vkFlushMappedMemoryRanges after write on CPU.
