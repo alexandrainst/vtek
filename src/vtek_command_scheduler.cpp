@@ -151,14 +151,14 @@ vtek::CommandBuffer* vtek::command_scheduler_begin_transfer(
 	return buffer;
 }
 
-void vtek::command_scheduler_submit_transfer(
+bool vtek::command_scheduler_submit_transfer(
 	vtek::CommandScheduler* scheduler, vtek::CommandBuffer* buffer)
 {
 	if (!vtek::command_buffer_end(buffer))
 	{
 		vtek_log_error(
 			"Failed to end recording on single-use transfer command buffer!");
-		return;
+		return false;
 	}
 
 	// TODO: Wait for fence?
@@ -168,8 +168,11 @@ void vtek::command_scheduler_submit_transfer(
 	if (!vtek::queue_submit(scheduler->transferQueue, buffer, &submitInfo))
 	{
 		vtek_log_error("Failed to submit single-use transfer command buffer!");
+		return false;
 	}
 
 	// TODO: Right now, wait fence is not implemented, nor await or async, so we wait!
 	vtek::queue_wait_idle(scheduler->transferQueue);
+
+	return true;
 }

@@ -43,6 +43,6 @@ namespace vtek
 	CommandBuffer* command_scheduler_begin_transfer(
 		CommandScheduler* scheduler, Device* device);
 
-	void command_scheduler_submit_transfer(
+	bool command_scheduler_submit_transfer(
 		CommandScheduler* scheduler, CommandBuffer* commandBuffer);
 }

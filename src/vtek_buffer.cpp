@@ -9,8 +9,59 @@
 
 
 /* helper functions */
+static bool do_map_and_copy(
+	vtek::Buffer* buffer, void* data, const vtek::BufferRegion* region)
+{
+	void* mappedPtr = vtek::allocator_buffer_map(buffer); // TODO: Offset!
+	if (mappedPtr == nullptr)
+	{
+		vtek_log_error("Failed to map the buffer -- cannot write data!");
+		return false;
+	}
 
-// TODO: Place 3 options for buffer write here!
+	memcpy(mappedPtr, data, region->size);
+
+	// Flush if the buffer is not HOST_COHERENT
+	auto memProps = buffer->memoryProperties;
+	if (!memProps.has_flag(vtek::MemoryProperty::host_coherent))
+	{
+		vtek::allocator_buffer_flush(buffer, region);
+	}
+
+	vtek::allocator_buffer_unmap(buffer);
+
+	return true;
+}
+
+static bool do_schedule_transfer(
+	vtek::Buffer* source, vtek::Buffer* destination,
+	const vtek::BufferRegion* region, vtek::Device* device)
+{
+	auto scheduler = vtek::device_get_command_scheduler(device);
+	auto commandBuffer =
+		vtek::command_scheduler_begin_transfer(scheduler, device);
+	if (commandBuffer == nullptr)
+	{
+		vtek_log_error(
+			"Failed to begin single-use transfer command buffer -- {}",
+			"cannot write data to buffer!");
+		return false;
+	}
+
+	// TODO: Interface for command buffer operations inside vtek!
+	//vtek::cmd_copy_buffer(...); // etc.
+	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	VkBuffer srcBuf = source->vulkanHandle;
+	VkBuffer dstBuf = destination->vulkanHandle;
+
+	VkBufferCopy copyRegion{};
+	copyRegion.srcOffset = 0;
+	copyRegion.dstOffset = region->offset;
+	copyRegion.size = region->size;
+	vkCmdCopyBuffer(cmdBuf, srcBuf, dstBuf, 1, &copyRegion);
+
+	return vtek::command_scheduler_submit_transfer(scheduler, commandBuffer);
+}
 
 
 
@@ -34,7 +85,6 @@ vtek::Buffer* vtek::buffer_create(
 		delete buffer;
 		return nullptr;
 	}
-	vtek_log_info("Created buffer!"); // TODO: Example output ?
 
 	bool createStagingBuffer
 		= !info->disallowInternalStagingBuffer
@@ -42,7 +92,6 @@ vtek::Buffer* vtek::buffer_create(
 		& (info->writePolicy != vtek::BufferWritePolicy::write_once);
 	if (createStagingBuffer)
 	{
-		vtek_log_trace("create staging buffer...");
 		buffer->stagingBuffer = new vtek::Buffer;
 		buffer->stagingBuffer->stagingBuffer = nullptr;
 
@@ -57,7 +106,6 @@ vtek::Buffer* vtek::buffer_create(
 			delete buffer->stagingBuffer;
 			buffer->stagingBuffer = nullptr;
 		}
-		vtek_log_info("Created staging buffer!"); // TODO: Example output ?
 	}
 
 	buffer->allocator = allocator;
@@ -121,86 +169,56 @@ bool vtek::buffer_write_data(
 	// 1) Buffer is HOST_VISIBLE - just map directly.
 	if (memProps.has_flag(vtek::MemoryProperty::host_visible))
 	{
-		void* mappedPtr = vtek::allocator_buffer_map(buffer); // TODO: Offset!
-		if (mappedPtr == nullptr)
-		{
-			vtek_log_error("Failed to map the buffer -- cannot write data!");
-			return false;
-		}
-
-		memcpy(mappedPtr, data, finalRegion.size);
-
-		// Flush if the buffer is not HOST_COHERENT
-		if (!memProps.has_flag(vtek::MemoryProperty::host_coherent))
-		{
-			vtek::allocator_buffer_flush(buffer, &finalRegion);
-		}
-
-		vtek::allocator_buffer_unmap(buffer);
-
-		return true;
+		return do_map_and_copy(buffer, data, &finalRegion);
 	}
 
 	// 2) Buffer has a staging buffer - map to that, then transfer queue.
-	if (buffer->stagingBuffer != nullptr)
+	else if (buffer->stagingBuffer != nullptr)
 	{
-		vtek_log_trace("Buffer has a staging buffer - map to that, then transfer!");
-
-		// 2.1) map and memcpy
-
-		void* mappedPtr = vtek::allocator_buffer_map(buffer->stagingBuffer); // TODO: Offset!
-		if (mappedPtr == nullptr)
+		if (!do_map_and_copy(buffer->stagingBuffer, data, &finalRegion))
 		{
-			vtek_log_error("Failed to map the buffer -- cannot write data!");
 			return false;
 		}
 
-		memcpy(mappedPtr, data, finalRegion.size);
-
-		// Flush if the buffer is not HOST_COHERENT
-		if (!memProps.has_flag(vtek::MemoryProperty::host_coherent))
-		{
-			vtek::allocator_buffer_flush(buffer->stagingBuffer, &finalRegion);
-		}
-
-		vtek::allocator_buffer_unmap(buffer->stagingBuffer);
-
-
-
-		// 2.2) schedule transfer command
-
-		auto scheduler = vtek::device_get_command_scheduler(device);
-		auto commandBuffer =
-			vtek::command_scheduler_begin_transfer(scheduler, device);
-		if (commandBuffer == nullptr)
-		{
-			vtek_log_error(
-				"Failed to begin single-use transfer command buffer -- {}",
-				"cannot write data to buffer!");
-			return false;
-		}
-
-		// TODO: Interface for command buffer operations inside vtek!
-		//vtek::cmd_copy_buffer(...); // etc.
-		VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
-		VkBuffer stagingBuf = vtek::buffer_get_handle(buffer->stagingBuffer);
-		VkBuffer buf = vtek::buffer_get_handle(buffer);
-
-		VkBufferCopy copyRegion{};
-		copyRegion.srcOffset = 0;
-		copyRegion.dstOffset = finalRegion.offset;
-		copyRegion.size = finalRegion.size;
-		vkCmdCopyBuffer(cmdBuf, stagingBuf, buf, 1, &copyRegion);
-
-		vtek::command_scheduler_submit_transfer(scheduler, commandBuffer);
-
-		return true;
+		return do_schedule_transfer(
+			buffer->stagingBuffer, buffer, &finalRegion, device);
 	}
 
 	// 3) Create a temporary staging buffer - map to that, then transfer queue.
-	vtek_log_trace("Buffer doesn't have staging buffer - create a temporary one!");
+	else
+	{
+		vtek::BufferInfo stagingInfo{};
+		stagingInfo.size = finalRegion.size;
+		stagingInfo.requireHostVisibleStorage = true;
+		stagingInfo.disallowInternalStagingBuffer = true;
+		stagingInfo.usageFlags = vtek::BufferUsageFlag::transfer_src;
 
-	return false;
+		vtek::Buffer* tempStaging = new vtek::Buffer;
+		tempStaging->stagingBuffer = nullptr;
+
+		vtek::Allocator* allocator = vtek::device_get_allocator(device);
+		if (!vtek::allocator_buffer_create(allocator, &stagingInfo, tempStaging))
+		{
+			vtek_log_error("Failed to create temporary staging buffer -- {}",
+			               "cannot write data to buffer!");
+			delete tempStaging;
+			return false;
+		}
+
+		if (!do_map_and_copy(tempStaging, data, &finalRegion))
+		{
+			return false;
+		}
+
+		if (!do_schedule_transfer(tempStaging, buffer, &finalRegion, device))
+		{
+			return false;
+		}
+
+		vtek::buffer_destroy(tempStaging);
+
+		return true;
+	}
 }
 
 
