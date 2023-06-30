@@ -20,7 +20,8 @@ struct vtek::CommandPool
 
 /* interface */
 vtek::CommandPool* vtek::command_pool_create(
-	const vtek::CommandPoolInfo* info, const vtek::Device* device, const vtek::Queue* queue)
+	const vtek::CommandPoolInfo* info, const vtek::Device* device,
+	const vtek::Queue* queue)
 {
 	// Allocate device
 	auto commandPool = new vtek::CommandPool;
@@ -49,7 +50,8 @@ vtek::CommandPool* vtek::command_pool_create(
 	}
 
 	VkDevice dev = vtek::device_get_handle(device);
-	VkResult result = vkCreateCommandPool(dev, &createInfo, nullptr, &commandPool->vulkanHandle);
+	VkResult result = vkCreateCommandPool(
+		dev, &createInfo, nullptr, &commandPool->vulkanHandle);
 	if (result != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to create command pool!");
@@ -60,7 +62,8 @@ vtek::CommandPool* vtek::command_pool_create(
 	return commandPool;
 }
 
-void vtek::command_pool_destroy(vtek::CommandPool* commandPool, const vtek::Device* device)
+void vtek::command_pool_destroy(
+	vtek::CommandPool* commandPool, const vtek::Device* device)
 {
 	if (commandPool == nullptr) { return; }
 
@@ -194,7 +197,8 @@ void vtek::command_pool_free_buffers(
 	{
 		if (buf->state == CBState::pending)
 		{
-			vtek_log_error("Command buffer(s) cannot be freed from pending state!");
+			vtek_log_error(
+				"Command buffer(s) cannot be freed from pending state!");
 			return;
 		}
 	}
@@ -216,8 +220,37 @@ void vtek::command_pool_free_buffers(
 bool vtek::command_pool_reset_buffer(
 	vtek::CommandPool* pool, vtek::CommandBuffer* buffer)
 {
-	vtek_log_error(
-		"vtek::command_pool_reset_buffer(): Not implemented!");
+	// TODO: How do we measure this?
+	// TODO: Perhaps require use of a semaphore - is it worth it?
+	const auto state = buffer->state;
+	if (state == CBState::pending)
+	{
+		vtek_log_error("Command buffer cannot be reset from pending state!");
+		return false;
+	}
+	if (state == CBState::initial)
+	{
+		return true;
+	}
+	if (!pool->allowIndividualBufferReset)
+	{
+		vtek_log_error(
+			"Command pool was not created with the individual reset flag -- {}",
+			"cannot reset command buffer!");
+		return false;
+	}
 
+	// NOTE: `flags` may be the VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT
+	// flag, which specifies that memory resources owned by the command buffer
+	// should be returned to the parent command pool.
+	VkCommandBufferResetFlags flags = 0;
+	VkResult result = vkResetCommandBuffer(commandBuffer->vulkanHandle, flags);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to reset command buffer!");
+		return false;
+	}
+
+	buffer->state = CBState::initial;
 	return false;
 }

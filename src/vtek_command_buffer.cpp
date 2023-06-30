@@ -105,36 +105,3 @@ bool vtek::command_buffer_end(vtek::CommandBuffer* commandBuffer)
 	commandBuffer->state = CBState::executable;
 	return true;
 }
-
-bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
-{
-	// TODO: How do we measure this?
-	// TODO: Perhaps require use of a semaphore - is it worth it?
-	if (commandBuffer->state == CBState::pending)
-	{
-		vtek_log_error("Command buffer cannot be reset from pending state!");
-		return false;
-	}
-	if (commandBuffer->state == CBState::initial)
-	{
-		return true;
-	}
-	if (!commandBuffer->supportsReset)
-	{
-		vtek_log_error("Command buffer cannot be reset from a pool not supporting buffer reset!");
-		return false;
-	}
-
-	// NOTE: `flags` may be the VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT flag, which
-	// specifies that memory resources owned by the command buffer should be returned to the
-	// parent command pool.
-	VkCommandBufferResetFlags flags = 0;
-	VkResult result = vkResetCommandBuffer(commandBuffer->vulkanHandle, flags);
-	if (result != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to reset command buffer!");
-		return false;
-	}
-
-	return true;
-}
