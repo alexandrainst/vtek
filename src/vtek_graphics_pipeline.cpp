@@ -27,7 +27,7 @@ static void get_enabled_dynamic_states(
 	using PDState = vtek::PipelineDynamicState;
 	states.clear();
 
-	const vtek::VulkanVersion* apiVersion = vtek::device_get_vulkan_version(device);
+	auto vv = vtek::device_get_vulkan_version(device);
 	vtek::EnumBitmask<PDState> ds = info->dynamicStateFlags;
 
 	auto add = [&states](VkDynamicState s) { states.push_back(s); };
@@ -46,7 +46,7 @@ static void get_enabled_dynamic_states(
 	// TODO: Error handling for when the device doesn't support >= Vulkan 1.3!
 	// Provided by VK_VERSION_1_3
 #if defined(VK_API_VERSION_1_3)
-	if (apiVersion->major() >= 1 && apiVersion->minor() >= 3)
+	if (vv.major() >= 1 && vv.minor() >= 3)
 	{
 		if (ds.has_flag(PDState::cull_mode))
 			add(VK_DYNAMIC_STATE_CULL_MODE);
@@ -272,8 +272,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	}
 	else
 	{
-		auto bindings = vertexBindings->GetBindingDescriptions();
-		auto attributes = vertexBindings->GetAttributeDescriptions();
+		auto& bindings = vertexBindings->GetBindingDescriptions();
+		auto& attributes = vertexBindings->GetAttributeDescriptions();
 		vertexInfo.vertexBindingDescriptionCount = bindings.size();
 		vertexInfo.pVertexBindingDescriptions = bindings.data();
 		vertexInfo.vertexAttributeDescriptionCount = attributes.size();
@@ -516,9 +516,21 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layoutInfo.pNext = nullptr;
 	layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
-	// TODO: Descriptor sets
+
+	// REVIEW: Library to extract descriptor layout from Spir-V ?
 	layoutInfo.setLayoutCount = 0;
 	layoutInfo.pSetLayouts = nullptr;
+	std::vector<VkDescriptorSetLayout> layouts;
+	if (!info->descriptorSetLayouts.empty())
+	{
+		for (auto* layout : info->descriptorSetLayouts)
+		{
+			layouts.push_back(vtek::descriptor_set_layout_get_handle(layout));
+		}
+		layoutInfo.setLayoutCount = layouts.size();
+		layoutInfo.pSetLayouts = layouts.data();
+	}
+
 	layoutInfo.pushConstantRangeCount = 0;
 	layoutInfo.pPushConstantRanges = nullptr;
 	VkPushConstantRange pushConstantRange{};
@@ -550,47 +562,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		vtek_log_error("Failed to create graphics pipeline layout!");
 		return nullptr;
 	}
-
-
-	// TODO: Get this from shader!
-	// VkDescriptorSetLayout descriptorSetLayout =
-	// 	vtek::graphics_shader_get_descriptor_layout(info->shader);
-
-	// // TODO: This is probably, _maybe_, an issue?
-	// // layoutInfo.setLayoutCount = 0; // ??
-	// // layoutInfo.pSetLayouts = nullptr; // ??
-	// VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
-	// setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	// setLayoutInfo.pNext = nullptr;
-	// setLayoutInfo.flags = 0; // ??
-	// setLayoutInfo.bindingCount = 0;
-	// setLayoutInfo.pBindings = nullptr;
-
-	// VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-	// VkResult setLayoutResult = vkCreateDescriptorSetLayout(dev, &setLayoutInfo, nullptr, &descriptorSetLayout);
-	// if (setLayoutResult != VK_SUCCESS)
-	// {
-	// 	vtek_log_error("EXPERIMENTAL: Failed to create graphics pipeline descriptor set layout!");
-	// 	return nullptr;
-	// }
-
-	// VkPipelineLayoutCreateInfo layoutInfo{};
-	// layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	// layoutInfo.pNext = nullptr;
-	// layoutInfo.flags = 0U; // reserved for future use (Vulkan 1.3)
-	// layoutInfo.setLayoutCount = 0; // 1;
-	// layoutInfo.pSetLayouts = nullptr; // &descriptorSetLayout;
-	// layoutInfo.pushConstantRangeCount = 0; // ??
-	// layoutInfo.pPushConstantRanges = nullptr; // ??
-	// // TODO: Library to extract descriptor layout from Spir-V ??
-
-	// VkPipelineLayout layout {VK_NULL_HANDLE};
-	// VkResult layoutResult = vkCreatePipelineLayout(dev, &layoutInfo, nullptr, &layout);
-	// if (layoutResult != VK_SUCCESS)
-	// {
-	// 	vtek_log_error("Failed to create graphics pipeline layout!");
-	// 	return nullptr;
-	// }
 
 	// ========================= //
 	// === Dynamic rendering === // -- alternative to providing a render pass.

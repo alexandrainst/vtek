@@ -1,7 +1,8 @@
 #include "vtek_main.hpp"
 
 #include "impl/vtek_glfw_backend.hpp"
-#include "impl/vtek_host_allocator.hpp"
+// TODO: No longer use sAllocator ?
+//#include "impl/vtek_host_allocator.hpp"
 #include "impl/vtek_init.hpp"
 #include "vtek_logging.hpp"
 
@@ -88,7 +89,8 @@ void vtek::terminate()
 		vtek::glfw_backend_terminate();
 	}
 
-	vtek::host_allocator_check_all_freed(); // TODO: This is horrible!
+	// TODO: No longer use sAllocator ?
+	//vtek::host_allocator_check_all_freed(); // TODO: This is horrible!
 
 	vtek::terminate_logging();
 

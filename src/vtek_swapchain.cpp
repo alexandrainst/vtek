@@ -1,12 +1,6 @@
-// standard
-#include <algorithm>
-#include <vector>
-#include <vulkan/vulkan.h>
-
-// vtek
+#include "vtek_vulkan.pch"
 #include "vtek_swapchain.hpp"
 
-#include "impl/vtek_host_allocator.hpp"
 #include "impl/vtek_vulkan_helpers.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
@@ -14,6 +8,9 @@
 #include "vtek_queue.hpp"
 #include "vtek_submit_info.hpp"
 
+#include <algorithm>
+#include <vector>
+#include <vulkan/vulkan.h>
 
 
 /* struct implementation */
@@ -22,7 +19,6 @@ struct vtek::Swapchain
 	// ============================ //
 	// === Swapchain properties === //
 	// ============================ //
-	uint64_t id {VTEK_INVALID_ID};
 	VkSwapchainKHR vulkanHandle {VK_NULL_HANDLE};
 	uint32_t length {0};
 	VkExtent2D imageExtent {0, 0};
@@ -71,10 +67,6 @@ struct vtek::Swapchain
 	bool prioritizeLowLatency {false};
 	VkPhysicalDevice physDev {VK_NULL_HANDLE};
 };
-
-
-/* host allocator */
-static vtek::HostAllocator<vtek::Swapchain> sAllocator("vtek_swapchain");
 
 
 
@@ -533,8 +525,6 @@ static void reset_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
 	swapchain->numFramesInFlight = numFrames;
 	swapchain->imagesInFlight.resize(numFrames, VK_NULL_HANDLE);
 	swapchain->currentFrameIndex = 0U;
-
-	// TODO: Should we signal the semaphores?
 }
 
 static void set_image_in_use(
@@ -554,7 +544,7 @@ static void set_image_in_use(
 
 /* swapchain interface */
 vtek::Swapchain* vtek::swapchain_create(
-	const SwapchainCreateInfo* info, VkSurfaceKHR surface,
+	const SwapchainInfo* info, VkSurfaceKHR surface,
 	const vtek::PhysicalDevice* physicalDevice, vtek::Device* device)
 {
 	VkDevice dev = vtek::device_get_handle(device);
@@ -712,13 +702,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	// ========================= //
 	// === Create swap chain === //
 	// ========================= //
-	auto [id, swapchain] = sAllocator.alloc();
-	if (swapchain == nullptr)
-	{
-		vtek_log_error("Failed to allocate swapchain!");
-		return nullptr;
-	}
-	swapchain->id = id;
+	auto swapchain = new vtek::Swapchain;
 
 	VkResult result = vkCreateSwapchainKHR(
 		dev, &createInfo, nullptr, &swapchain->vulkanHandle);
@@ -867,6 +851,8 @@ bool vtek::swapchain_recreate(
 	}
 	else
 	{
+		// NOTE: We should prefer exclusive sharing mode whenever possible,
+		// becuase concurrent mode disables DCC compression.
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
 		createInfo.pQueueFamilyIndices = qf_indices;
@@ -945,8 +931,7 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	destroy_swapchain_handle(swapchain, dev);
 	swapchain->isInvalidated = false;
 
-	sAllocator.free(swapchain->id);
-	swapchain->id = VTEK_INVALID_ID;
+	delete swapchain;
 }
 
 uint32_t vtek::swapchain_get_length(vtek::Swapchain* swapchain)
@@ -969,6 +954,11 @@ VkFormat vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
 	return swapchain->imageFormat;
 }
 
+VkExtent2D vtek::swapchain_get_image_extent(const vtek::Swapchain* swapchain)
+{
+	return swapchain->imageExtent;
+}
+
 vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 	vtek::Swapchain* swapchain, vtek::Device* device, uint64_t timeout)
 {
@@ -986,7 +976,7 @@ vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 	VkResult test = vkWaitForFences(dev, 1, &fence, VK_TRUE, 0UL);
 	if (test == VK_SUCCESS) { return vtek::SwapchainStatus::ok; }
 
-	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
 	switch (result)
 	{
 	case VK_SUCCESS: return vtek::SwapchainStatus::ok;
@@ -1048,7 +1038,7 @@ vtek::SwapchainStatus vtek::swapchain_wait_image_ready(
 		return vtek::SwapchainStatus::ok;
 	}
 
-	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout); // TODO: Deadlock!
+	VkResult result = vkWaitForFences(dev, 1, &fence, VK_TRUE, timeout);
 	switch (result)
 	{
 	case VK_SUCCESS:

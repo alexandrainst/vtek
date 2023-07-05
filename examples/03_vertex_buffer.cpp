@@ -1,5 +1,6 @@
 #include <vtek/vtek.hpp>
 #include <iostream>
+#include <vector>
 
 // global data
 vtek::ApplicationWindow* window = nullptr;
@@ -7,26 +8,19 @@ vtek::ApplicationWindow* window = nullptr;
 
 void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 {
-	std::cout << "key callback\n";
-	using vtek::KeyboardKey;
-	using vtek::InputAction;
-
-	if (action == InputAction::press)
+	if ((action == vtek::InputAction::release) &&
+	    (key == vtek::KeyboardKey::escape))
 	{
-
-	}
-	else if (action == InputAction::release)
-	{
-		switch (key)
-		{
-		case KeyboardKey::escape:
-			vtek::window_set_should_close(window, true);
-			break;
-		default:
-			break;
-		}
+		vtek::window_set_should_close(window, true);
 	}
 }
+
+
+struct Vertex2D
+{
+	glm::vec2 position;
+	glm::vec3 color;
+};
 
 
 int main()
@@ -34,9 +28,8 @@ int main()
 	// Initialize vtek
 	vtek::InitInfo initInfo{};
 	initInfo.disableLogging = false;
-	initInfo.applicationTitle = "triangle";
+	initInfo.applicationTitle = "03_vertex_buffer";
 	initInfo.useGLFW = true;
-	initInfo.loadShadersFromGLSL = true;
 	if (!vtek::initialize(&initInfo))
 	{
 		std::cerr << "Failed to initialize vtek!" << std::endl;
@@ -44,22 +37,8 @@ int main()
 	}
 
 	// Create window
-	constexpr bool kFullscreen = true;
 	vtek::WindowCreateInfo windowInfo{};
-	windowInfo.title = "01_triangle";
-	windowInfo.cursorDisabled = false;
-	if (kFullscreen)
-	{
-		windowInfo.fullscreen = true;
-	}
-	else
-	{
-		windowInfo.width = 500;
-		windowInfo.height = 500;
-		windowInfo.maximized = false;
-		windowInfo.resizeable = false;
-		windowInfo.decorated = true;
-	}
+	windowInfo.title = "vtek example 03: Vertex buffer";
 	window = vtek::window_create(&windowInfo);
 	if (window == nullptr)
 	{
@@ -70,7 +49,7 @@ int main()
 
 	// Vulkan instance
 	vtek::InstanceCreateInfo instanceInfo{};
-	instanceInfo.applicationName = "triangle";
+	instanceInfo.applicationName = "vertex_buffer";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
 	instanceInfo.enableValidationLayers = true;
 	auto instance = vtek::instance_create(&instanceInfo);
@@ -95,7 +74,7 @@ int main()
 	physicalDeviceInfo.requireSwapchainSupport = true;
 	physicalDeviceInfo.requireDynamicRendering = true;
 	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
-		&physicalDeviceInfo, instance, surface);  // TODO: Valgrind complains about this!
+		&physicalDeviceInfo, instance, surface);
 	if (physicalDevice == nullptr)
 	{
 		log_error("Failed to pick physical device!");
@@ -104,6 +83,8 @@ int main()
 
 	// Device
 	vtek::DeviceCreateInfo deviceCreateInfo{};
+	// TODO: Require independent transfer queue, because we can!
+	// TODO: -- also to test the vertex buffer transfer!
 	vtek::Device* device = vtek::device_create(
 		&deviceCreateInfo, instance, physicalDevice);
 	if (device == nullptr)
@@ -122,7 +103,6 @@ int main()
 
 	// Graphics command pool
 	vtek::CommandPoolInfo commandPoolInfo{};
-	commandPoolInfo.allowIndividualBufferReset = true;
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
 		&commandPoolInfo, device, graphicsQueue);
 	if (graphicsCommandPool == nullptr)
@@ -138,39 +118,60 @@ int main()
 	vtek::window_get_framebuffer_size(
 		window, &swapchainInfo.framebufferWidth, &swapchainInfo.framebufferHeight);
 	vtek::Swapchain* swapchain =
-		vtek::swapchain_create(&swapchainInfo, surface, physicalDevice, device); // TODO: Memory error here!
+		vtek::swapchain_create(&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)
 	{
 		log_error("Failed to create swapchain!");
 		return -1;
 	}
 
-	// Vulkan render pass
-	// DONE: We use dynamic rendering
-
-	// Vulkan swapchain framebuffers (after render pass ?)
-	// DONE: We use dynamic rendering
-
-	// Vulkan framebuffers
-	// DONE: We use dynamic rendering
-
 	// Shader
-	const char* shaderdirstr = "../shaders/simple_triangle/";
+	const char* shaderdirstr = "../shaders/simple_vertex/";
 	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
 	if (shaderdir == nullptr)
 	{
 		log_error("Failed to open shader directory!");
 		return -1;
 	}
-
 	vtek::GraphicsShaderInfo shaderInfo{};
 	shaderInfo.vertex = true;
 	shaderInfo.fragment = true;
 	vtek::GraphicsShader* shader =
-		vtek::graphics_shader_load_glsl(&shaderInfo, shaderdir, device);
+		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
 	if (shader == nullptr)
 	{
 		log_error("Failed to load graphics shader!");
+		return -1;
+	}
+
+	// vertex data
+	std::vector<Vertex2D> vertices = {
+		{{-0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}},
+		{{0.0f, -0.75f}, {1.0f, 0.7f, 0.4f}},
+		{{0.75f, 0.3f}, {0.9f, 0.9f, 0.6f}}
+	};
+
+	// Vertex buffer
+	log_trace("Vertex buffer");
+	vtek::BufferInfo bufferInfo{};
+	bufferInfo.size = sizeof(Vertex2D) * vertices.size();
+	bufferInfo.requireHostVisibleStorage = true; // NOTE: Easy for now.
+	//bufferInfo.disallowInternalStagingBuffer = true;
+	//bufferInfo.requireDedicatedAllocation = true;
+	bufferInfo.writePolicy = vtek::BufferWritePolicy::write_once;
+	bufferInfo.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::vertex_buffer;
+	vtek::Buffer* buffer = vtek::buffer_create(&bufferInfo, device);
+	if (buffer == nullptr)
+	{
+		log_error("Failed to create vertex buffer!");
+		return -1;
+	}
+	vtek::BufferRegion vertexRegion{};
+	if (!vtek::buffer_write_data(buffer, vertices.data(), &vertexRegion, device))
+	{
+		log_error("Failed to write data to vertex buffer!");
 		return -1;
 	}
 
@@ -183,7 +184,11 @@ int main()
 			.extent = {width, height}
 		},
 	};
-
+	vtek::VertexBufferBindings bindings{};
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec2,
+		vtek::VertexAttributeType::vec3,
+		vtek::VertexInputRate::per_vertex);
 	vtek::RasterizationState rasterizer{};
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{}; // No depth testing!
@@ -199,6 +204,8 @@ int main()
 	graphicsPipelineInfo.renderPass = nullptr; // Nice!
 	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
 	graphicsPipelineInfo.shader = shader;
+	// TODO: Rename to `vertexBufferBindings`
+	graphicsPipelineInfo.vertexInputBindings = &bindings;
 	graphicsPipelineInfo.primitiveTopology = vtek::PrimitiveTopology::triangle_list;
 	graphicsPipelineInfo.enablePrimitiveRestart = false;
 	graphicsPipelineInfo.viewportState = &viewport;
@@ -216,6 +223,8 @@ int main()
 	}
 
 	// Command buffers
+	// TODO: Can we do with only a single command buffer?
+	// TODO: -- because I kinda wanna try!
 	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
 	std::vector<vtek::CommandBuffer*> commandBuffers =
 		vtek::command_pool_alloc_buffers(
@@ -245,6 +254,13 @@ int main()
 			log_error("Failed to begin command buffer {} recording!", i);
 			return -1;
 		}
+
+		// NEXT: Cleanup a bit
+		//VkImage image = vtek::swapchain_get_image(swapchain, i);
+		//VkImageView imageView = vtek::swapchain_get_image_view(swapchain, i);
+		//vtek::swapchain_barrier_prerendering(i);
+		//render...
+		//vtek::swapchain_barrier_postrendering(i);
 
 		// Transition from whatever (probably present src) to color attachment
 		VkImageMemoryBarrier beginBarrier{
@@ -301,8 +317,13 @@ int main()
 
 		vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 
+		// Bind vertex buffer
+		VkBuffer buffers[1] = { vtek::buffer_get_handle(buffer) };
+		VkDeviceSize offsets[1] = { 0 };
+		vkCmdBindVertexBuffers(cmdBuf, 0, 1, buffers, offsets);
+
 		// draw calls here
-		vkCmdDraw(cmdBuf, 3, 1, 0, 0);
+		vkCmdDraw(cmdBuf, vertices.size(), 1, 0, 0);
 
 		// End dynamic rendering
 		vkCmdEndRendering(cmdBuf);
@@ -338,6 +359,7 @@ int main()
 			return -1;
 		}
 	}
+
 
 	// Error tolerance
 	int errors = 10;
@@ -415,23 +437,23 @@ int main()
 	}
 
 
-
 	// Cleanup
 	vtek::device_wait_idle(device);
 
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
+	vtek::buffer_destroy(buffer);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::swapchain_destroy(swapchain, device);
-	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device); // TODO: Valgrind complains about this!
+	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);
-	vtek::device_destroy(device); // TODO: Valgrind complains about this!
-	vtek::physical_device_release(physicalDevice);  // TODO: Valgrind complains about this!
+	vtek::device_destroy(device);
+	vtek::physical_device_release(physicalDevice);
 	vtek::window_surface_destroy(surface, instance);
 	vtek::instance_destroy(instance);
 	vtek::window_destroy(window);
 
-	log_debug("All went well!");
-	vtek::terminate(); // TODO: Valgrind complains about this!
+	log_info("Program Success!");
+	vtek::terminate();
 
 	return 0;
 }

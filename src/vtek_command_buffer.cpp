@@ -1,184 +1,19 @@
+#include "vtek_vulkan.pch"
 #include "vtek_command_buffer.hpp"
 
+#include "impl/vtek_command_buffer_struct.hpp"
 #include "vtek_command_pool.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
-#include "impl/vtek_host_allocator.hpp"
 
 using CBState = vtek::CommandBufferStateType;
 
 
-/* struct implementation */
-namespace vtek
-{
-	// TODO: If this works, implement it somewhere else, and rewrite all allocators and structs!
-	struct OpaqueHandle
-	{
-	public:
-		uint64_t id {VTEK_INVALID_ID}; // Implemented in impl/vtek_host_allocator.h
-
-		inline OpaqueHandle() { id = global_id++; }
-		inline virtual ~OpaqueHandle() {}
-	private:
-		static inline uint64_t global_id = 0;
-	};
-}
-
-struct vtek::CommandBuffer : public OpaqueHandle
-{
-	VkCommandBuffer vulkanHandle {VK_NULL_HANDLE};
-	VkCommandPool poolHandle {VK_NULL_HANDLE};
-	CBState state {CBState::invalid};
-
-	// If command buffer was created from a pool that was created with the
-	// VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag. Otherwise the
-	// command buffer cannot be reset.
-	bool supportsReset {false};
-
-	bool isSecondary {false}; // TODO: What to use this for?
-};
-
-
-/* host allocator */
-// TODO: Because of the high memory requirement, perhaps this particular allocator
-//       should store a pointer to a vtek::Device instead, as an optimization.
-// OKAY: This should be done!
-static vtek::HostAllocator<vtek::CommandBuffer> sAllocator("command_buffer");
-
-
 
 /* interface */
-vtek::CommandBuffer* vtek::command_buffer_create(
-	const vtek::CommandBufferCreateInfo* info, vtek::CommandPool* pool, vtek::Device* device)
-{
-	auto commandBuffer = new vtek::CommandBuffer();
-
-	VkCommandBufferAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.pNext = nullptr;
-	allocInfo.commandPool = vtek::command_pool_get_handle(pool);
-	allocInfo.level = (info->isSecondary)
-		? VK_COMMAND_BUFFER_LEVEL_SECONDARY
-		: VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
-
-	VkResult allocResult = vkAllocateCommandBuffers(
-		vtek::device_get_handle(device), &allocInfo, &commandBuffer->vulkanHandle);
-	if (allocResult != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to allocate command buffer!");
-		delete commandBuffer;
-		return nullptr;
-	}
-
-	commandBuffer->isSecondary = info->isSecondary;
-	commandBuffer->state = CBState::initial;
-	return commandBuffer;
-}
-
-std::vector<vtek::CommandBuffer*> vtek::command_buffer_create(
-	const vtek::CommandBufferCreateInfo* info, uint32_t createCount,
-	vtek::CommandPool* pool, vtek::Device* device)
-{
-	auto allocations = new vtek::CommandBuffer[createCount];
-	std::vector<vtek::CommandBuffer*> commandBuffers(createCount, VK_NULL_HANDLE);
-	for (uint32_t i = 0; i < createCount; i++)
-	{
-		commandBuffers[i] = &(allocations[i]);
-	}
-
-	VkCommandBufferAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.pNext = nullptr;
-	allocInfo.commandPool = vtek::command_pool_get_handle(pool);
-	allocInfo.level = (info->isSecondary)
-		? VK_COMMAND_BUFFER_LEVEL_SECONDARY
-		: VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = createCount;
-
-	std::vector<VkCommandBuffer> vulkanHandles(createCount, VK_NULL_HANDLE);
-
-	VkResult allocResult = vkAllocateCommandBuffers(
-		vtek::device_get_handle(device), &allocInfo, vulkanHandles.data());
-	if (allocResult != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to allocate command buffer!");
-		delete allocations;
-		return {};
-	}
-
-	bool reset = vtek::command_pool_allow_individual_reset(pool);
-	bool secondary = info->isSecondary;
-
-	for (uint32_t i = 0; i < createCount; i++)
-	{
-		commandBuffers[i]->vulkanHandle = vulkanHandles[i];
-		commandBuffers[i]->poolHandle = vtek::command_pool_get_handle(pool);
-		commandBuffers[i]->supportsReset = reset;
-		commandBuffers[i]->isSecondary = secondary;
-		commandBuffers[i]->state = CBState::initial;
-	}
-
-	return commandBuffers;
-}
-
-void vtek::command_buffer_destroy(vtek::CommandBuffer* commandBuffer, vtek::Device* device)
-{
-	if (commandBuffer->state == CBState::pending) // TODO: How do we measure this?
-	{
-		vtek_log_error("Command buffer cannot be freed from pending state!");
-		return;
-	}
-
-	VkDevice dev = vtek::device_get_handle(device);
-	VkCommandPool pool = commandBuffer->poolHandle;
-	const VkCommandBuffer buffers[] = { commandBuffer->vulkanHandle };
-
-	vkFreeCommandBuffers(dev, pool, 1, buffers);
-}
-
-void vtek::command_buffer_destroy(
-	std::vector<CommandBuffer*>& commandBuffers, vtek::Device* device)
-{
-	if (commandBuffers.size() == 0) { return; }
-
-	for (auto buf : commandBuffers)
-	{
-		if (buf->state == CBState::pending)
-		{
-			vtek_log_error("Command buffer(s) cannot be freed from pending state!");
-			return;
-		}
-	}
-
-	std::vector<VkCommandBuffer> handles;
-	for (auto buf : commandBuffers)
-	{
-		handles.push_back(buf->vulkanHandle);
-	}
-	vkFreeCommandBuffers(
-		vtek::device_get_handle(device), commandBuffers[0]->poolHandle,
-		handles.size(), handles.data());
-
-	for (auto buf : commandBuffers)
-	{
-		buf->vulkanHandle = VK_NULL_HANDLE;
-		buf->poolHandle = VK_NULL_HANDLE;
-		buf->state = CBState::not_allocated;
-	}
-
-	delete[] commandBuffers.data();
-	commandBuffers.clear();
-}
-
 VkCommandBuffer vtek::command_buffer_get_handle(vtek::CommandBuffer* commandBuffer)
 {
 	return commandBuffer->vulkanHandle;
-}
-
-VkCommandPool vtek::command_buffer_get_pool_handle(vtek::CommandBuffer* commandBuffer)
-{
-	return commandBuffer->poolHandle;
 }
 
 bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
@@ -268,38 +103,5 @@ bool vtek::command_buffer_end(vtek::CommandBuffer* commandBuffer)
 	}
 
 	commandBuffer->state = CBState::executable;
-	return true;
-}
-
-bool vtek::command_buffer_reset(vtek::CommandBuffer* commandBuffer)
-{
-	// TODO: How do we measure this?
-	// TODO: Perhaps require use of a semaphore - is it worth it?
-	if (commandBuffer->state == CBState::pending)
-	{
-		vtek_log_error("Command buffer cannot be reset from pending state!");
-		return false;
-	}
-	if (commandBuffer->state == CBState::initial)
-	{
-		return true;
-	}
-	if (!commandBuffer->supportsReset)
-	{
-		vtek_log_error("Command buffer cannot be reset from a pool not supporting buffer reset!");
-		return false;
-	}
-
-	// NOTE: `flags` may be the VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT flag, which
-	// specifies that memory resources owned by the command buffer should be returned to the
-	// parent command pool.
-	VkCommandBufferResetFlags flags = 0;
-	VkResult result = vkResetCommandBuffer(commandBuffer->vulkanHandle, flags);
-	if (result != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to reset command buffer!");
-		return false;
-	}
-
 	return true;
 }

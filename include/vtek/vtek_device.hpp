@@ -43,6 +43,16 @@ namespace vtek
 
 		// Features
 		bool enableBindlessTextureSupport {false};
+
+		// If this is set to false, an allocator must be manually created
+		// aftwerwards and passed on to functions that create buffers and images.
+		// NOTE: It is recommended to just leave this as is for simplicity.
+		bool createDefaultAllocator {true};
+
+		// A device will always have a command scheduler for running background
+		// commands, such as single-use transfer operations. We can choose whether
+		// this command scheduler runs on a parallel thread or not.
+		bool asyncCommandScheduler {true};
 	};
 
 	struct DeviceExtensions
@@ -64,11 +74,16 @@ namespace vtek
 	void device_destroy(Device* device);
 
 	VkDevice device_get_handle(const Device* device);
-	const VulkanVersion* device_get_vulkan_version(const Device* device);
+	VkPhysicalDevice device_get_physical_handle(const Device* device);
+	const VulkanVersion& device_get_vulkan_version(const Device* device);
 	const DeviceExtensions* device_get_enabled_extensions(const Device* device);
 	const VkPhysicalDeviceFeatures* device_get_enabled_features(const Device* device);
 
-	// If any of these functions return `nullptr`, then no corresponding queues were created.
+	Allocator* device_get_allocator(const Device* device);
+	CommandScheduler* device_get_command_scheduler(const Device* device);
+
+	// If any of these functions return `nullptr`, then no corresponding queues
+	// were created.
 	Queue* device_get_graphics_queue(Device* device);
 	Queue* device_get_present_queue(Device* device);
 	// TODO: Return std::vector<>&&, or is that too advanced?

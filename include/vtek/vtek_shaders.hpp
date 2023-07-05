@@ -65,6 +65,7 @@ namespace vtek
 	VkShaderStageFlagBits get_shader_stage_graphics(ShaderStageGraphics stage);
 	VkShaderStageFlagBits get_shader_stage_ray_tracing(ShaderStageRayTracing stage);
 
+	VkShaderStageFlags get_shader_stage_flags(EnumBitmask<ShaderStage> mask);
 	VkShaderStageFlags get_shader_stage_flags_graphics(
 		EnumBitmask<ShaderStageGraphics> mask);
 

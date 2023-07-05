@@ -17,14 +17,21 @@
  * all of vtek's functionality.
  */
 
+#include "vtek_glm_includes.hpp"
+
 #include "vtek_main.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vulkan_handles.hpp"
 #include "vtek_vulkan_version.hpp"
 
 #include "vtek_application_window.hpp"
+#include "vtek_allocator.hpp"
+#include "vtek_buffer.hpp"
 #include "vtek_command_buffer.hpp"
 #include "vtek_command_pool.hpp"
+#include "vtek_descriptor_pool.hpp"
+#include "vtek_descriptor_set.hpp"
+#include "vtek_descriptor_set_layout.hpp"
 #include "vtek_device.hpp"
 #include "vtek_graphics_pipeline.hpp"
 #include "vtek_input.hpp"
@@ -37,4 +44,5 @@
 #include "vtek_shaders.hpp"
 #include "vtek_submit_info.hpp"
 #include "vtek_swapchain.hpp"
+#include "vtek_uniform_data.hpp"
 #include "vtek_vertex_data.hpp"

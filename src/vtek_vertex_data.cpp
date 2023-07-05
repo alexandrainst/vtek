@@ -82,3 +82,29 @@ void vtek::VertexBufferBindings::add_buffer(VAT vt, VIR rate)
 	mBindCount++;
 	mLocCount++;
 }
+
+void vtek::VertexBufferBindings::add_buffer(VAT vt1, VAT vt2, VIR rate)
+{
+	VkVertexInputAttributeDescription attrDesc1{};
+	attrDesc1.binding = mBindCount;
+	attrDesc1.location = mLocCount;
+	attrDesc1.format = get_vertex_format(vt1);
+	attrDesc1.offset = 0;
+	mAttrDesc.emplace_back(attrDesc1);
+	mLocCount++;
+
+	VkVertexInputAttributeDescription attrDesc2{};
+	attrDesc2.binding = mBindCount;
+	attrDesc2.location = mLocCount;
+	attrDesc2.format = get_vertex_format(vt2);
+	attrDesc2.offset = get_vertex_size(vt1);
+	mAttrDesc.emplace_back(attrDesc2);
+	mLocCount++;
+
+	VkVertexInputBindingDescription bindDesc{};
+	bindDesc.binding = mBindCount;
+	bindDesc.stride = get_vertex_size(vt1) + get_vertex_size(vt2);
+	bindDesc.inputRate = get_vertex_input_rate(rate);
+	mBindDesc.emplace_back(bindDesc);
+	mBindCount++;
+}

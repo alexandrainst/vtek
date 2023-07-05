@@ -1,4 +1,9 @@
-// standard
+#include "vtek_vulkan.pch"
+#include "vtek_physical_device.hpp"
+
+#include "vtek_instance.hpp"
+#include "vtek_logging.hpp"
+
 #include <algorithm>
 #include <cstring>
 #include <cstdint>
@@ -6,19 +11,12 @@
 #include <utility>
 #include <vector>
 
-// vtek
-#include "vtek_physical_device.hpp"
-
-#include "impl/vtek_host_allocator.hpp"
-#include "vtek_instance.hpp"
-#include "vtek_logging.hpp"
-
+using UABFeature = vtek::UpdateAfterBindFeature;
 
 
 /* struct implementation */
 struct vtek::PhysicalDevice
 {
-	uint64_t id {VTEK_INVALID_ID};
 	VkPhysicalDevice vulkanHandle { VK_NULL_HANDLE };
 	VkPhysicalDeviceProperties properties {};
 
@@ -30,6 +28,7 @@ struct vtek::PhysicalDevice
 
 	// NOTE: Features required to be supported, used during device creation
 	VkPhysicalDeviceFeatures requiredFeatures {};
+	vtek::EnumBitmask<UABFeature> requiredUpdateAfterBindFeatures {};
 
 	// NOTE: Extensions required to be supported, used during device creation
 	std::vector<const char*> requiredExtensions {};
@@ -39,9 +38,6 @@ struct vtek::PhysicalDevice
 	std::vector<std::string> supportedExtensions {}; // TODO: Can we replace this with `requiredExtensions`?
 };
 
-
-/* host allocator */
-static vtek::HostAllocator<vtek::PhysicalDevice> sAllocator("vtek_physical_device");
 
 
 /* helper functions */
@@ -466,10 +462,137 @@ static bool has_required_features(
 	return support;
 }
 
+static bool has_required_descriptor_indexing_features(
+	const vtek::PhysicalDeviceInfo* info, vtek::PhysicalDevice* physicalDevice)
+{
+#if defined(VK_VERSION_1_2)
+	VkPhysicalDevice device = physicalDevice->vulkanHandle;
+	auto required = info->updateAfterBindFeatures;
+	auto& requiredFeatures = physicalDevice->requiredUpdateAfterBindFeatures;
+	requiredFeatures.clear();
+	bool support = true;
+
+	VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{};
+	indexingFeatures.sType =
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+	indexingFeatures.pNext = nullptr;
+
+	VkPhysicalDeviceFeatures2 supported{};
+	supported.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	supported.pNext = &indexingFeatures;
+
+	vkGetPhysicalDeviceFeatures2(device, &supported);
+
+	if (required.has_flag(UABFeature::uniform_buffer))
+	{
+		if (indexingFeatures.descriptorBindingUniformBufferUpdateAfterBind)
+		{
+			requiredFeatures.add_flag(UABFeature::uniform_buffer);
+		}
+		else
+		{
+			vtek_log_error(
+				"UpdateAfterBindFeature::{} required but not supported!",
+				"uniform_buffer");
+			support = false;
+		}
+	}
+
+	if (required.has_flag(UABFeature::sampled_image))
+	{
+		if (indexingFeatures.descriptorBindingSampledImageUpdateAfterBind)
+		{
+			requiredFeatures.add_flag(UABFeature::sampled_image);
+		}
+		else
+		{
+			vtek_log_error(
+				"UpdateAfterBindFeature::{} required but not supported!",
+				"sampled_image");
+			support = false;
+		}
+	}
+
+	if (required.has_flag(UABFeature::storage_image))
+	{
+		if (indexingFeatures.descriptorBindingStorageImageUpdateAfterBind)
+		{
+			requiredFeatures.add_flag(UABFeature::storage_image);
+		}
+		else
+		{
+			vtek_log_error(
+				"UpdateAfterBindFeature::{} required but not supported!",
+				"storage_image");
+			support = false;
+		}
+	}
+
+	if (required.has_flag(UABFeature::storage_buffer))
+	{
+		if (indexingFeatures.descriptorBindingStorageBufferUpdateAfterBind)
+		{
+			requiredFeatures.add_flag(UABFeature::storage_buffer);
+		}
+		else
+		{
+			vtek_log_error(
+				"UpdateAfterBindFeature::{} required but not supported!",
+				"storage_buffer");
+			support = false;
+		}
+	}
+
+	if (required.has_flag(UABFeature::uniform_texel_buffer))
+	{
+		if (indexingFeatures.descriptorBindingUniformTexelBufferUpdateAfterBind)
+		{
+			requiredFeatures.add_flag(UABFeature::uniform_texel_buffer);
+		}
+		else
+		{
+			vtek_log_error(
+				"UpdateAfterBindFeature::{} required but not supported!",
+				"uniform_texel_buffer");
+			support = false;
+		}
+	}
+
+	if (required.has_flag(UABFeature::storage_texel_buffer))
+	{
+		if (indexingFeatures.descriptorBindingStorageTexelBufferUpdateAfterBind)
+		{
+			requiredFeatures.add_flag(UABFeature::storage_texel_buffer);
+		}
+		else
+		{
+			vtek_log_error(
+				"UpdateAfterBindFeature::{} required but not supported!",
+				"storage_texel_buffer");
+			support = false;
+		}
+	}
+
+	return support;
+
+#else
+	if (!info->updateAfterBindFeatures.empty())
+	{
+		vtek_log_error(
+			"Physical device support for UpdateAfterBind features {}",
+			"requires >= Vulkan 1.2!");
+		return false;
+	}
+	return true;
+
+#endif
+}
+
 
 
 static bool check_device_suitability(
-	const vtek::PhysicalDeviceInfo* info, vtek::PhysicalDevice* device, VkSurfaceKHR surface)
+	const vtek::PhysicalDeviceInfo* info, vtek::PhysicalDevice* device,
+	VkSurfaceKHR surface)
 {
 	// queue support
 	get_queue_family_support(device, surface);
@@ -521,11 +644,16 @@ static bool check_device_suitability(
 	// features support
 	bool featureSupport = has_required_features(info, device);
 
+	// indexing feature support
+	bool indexingFeatures =
+		has_required_descriptor_indexing_features(info, device);
+
 	// properties support
 	bool propertiesSupport = has_required_properties();
 
 	// NEXT: Could also check memory properties
-	return queueFamilySupport && extensionSupport && featureSupport && propertiesSupport;
+	return queueFamilySupport & extensionSupport & featureSupport
+		& indexingFeatures & propertiesSupport;
 }
 
 
@@ -597,13 +725,7 @@ vtek::PhysicalDevice* vtek::physical_device_pick(
 		weightedDevices.begin(), weightedDevices.end(), [](auto& p1, auto& p2) { return p1.first < p2.first; });
 
 	// Allocate
-	auto [id, physicalDevice] = sAllocator.alloc();
-	if (physicalDevice == nullptr)
-	{
-		vtek_log_fatal("Failed to allocate physical device!");
-		return nullptr;
-	}
-	physicalDevice->id = id;
+	auto physicalDevice = new vtek::PhysicalDevice;
 
 	// Run through them in sorted order and check if the physical device supports:
 	// extensions, features, property coverage, and if so - pick it.
@@ -664,8 +786,7 @@ void vtek::physical_device_release(vtek::PhysicalDevice* physicalDevice)
 	physicalDevice->supportedExtensions.clear();
 	physicalDevice->requiredExtensions.clear();
 
-	sAllocator.free(physicalDevice->id);
-	physicalDevice->id = VTEK_INVALID_ID;
+	delete physicalDevice;
 }
 
 
@@ -692,6 +813,13 @@ const VkPhysicalDeviceFeatures* vtek::physical_device_get_required_features(
 	const vtek::PhysicalDevice* physicalDevice)
 {
 	return &physicalDevice->requiredFeatures;
+}
+
+vtek::EnumBitmask<vtek::UpdateAfterBindFeature>
+vtek::physical_device_get_update_after_bind_features(
+	const vtek::PhysicalDevice* physicalDevice)
+{
+	return physicalDevice->requiredUpdateAfterBindFeatures;
 }
 
 const std::vector<const char*>& vtek::physical_device_get_required_extensions(

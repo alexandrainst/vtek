@@ -1,19 +1,19 @@
-// standard
+#include "vtek_vulkan.pch"
+#include "vtek_device.hpp"
+
+#include "impl/vtek_init.hpp"
+#include "vtek_allocator.hpp"
+#include "vtek_command_scheduler.hpp"
+#include "vtek_instance.hpp"
+#include "vtek_logging.hpp"
+#include "vtek_physical_device.hpp"
+#include "vtek_vulkan_version.hpp"
+
 #include <algorithm>
 #include <map>
 #include <optional>
 #include <set>
 #include <vector>
-
-// vtek
-#include "vtek_device.hpp"
-
-#include "impl/vtek_host_allocator.hpp"
-#include "impl/vtek_init.hpp"
-#include "vtek_instance.hpp"
-#include "vtek_logging.hpp"
-#include "vtek_physical_device.hpp"
-#include "vtek_vulkan_version.hpp"
 
 
 /* queue implementation */
@@ -23,18 +23,13 @@
 /* struct implementation */
 struct vtek::Device
 {
-	uint64_t id {VTEK_INVALID_ID};
 	VkDevice vulkanHandle {VK_NULL_HANDLE};
+	VkPhysicalDevice physicalHandle {VK_NULL_HANDLE};
 	vtek::VulkanVersion vulkanVersion {1, 0, 0};
 
 	VkPhysicalDeviceFeatures enabledFeatures {};
 	vtek::DeviceExtensions enabledExtensions {};
 
-	// TODO: We really **do** need a queue allocator. Example:
-	// Say 1 transfer queue == graphics queue, then destroying graphics queue
-	// would be highly ambiguous!
-	// OKAY: This should be done!
-	vtek::HostAllocator<vtek::Queue>* queueAllocator {nullptr};
 	vtek::Queue graphicsQueue {};
 	vtek::Queue presentQueue {};
 	std::vector<vtek::Queue> transferQueues {};
@@ -43,14 +38,11 @@ struct vtek::Device
 	VkSampleCountFlagBits msaaColorLimit {VK_SAMPLE_COUNT_1_BIT};
 	VkSampleCountFlagBits msaaDepthLimit {VK_SAMPLE_COUNT_1_BIT};
 	VkSampleCountFlagBits msaaStencilLimit {VK_SAMPLE_COUNT_1_BIT};
+
+	vtek::Allocator* allocator {nullptr};
+	vtek::CommandScheduler* scheduler {nullptr};
 };
 
-
-/* host allocator */
-// TODO: Because of the high memory requirement, perhaps this particular allocator
-//       should store a pointer to a vtek::Device instead, as an optimization.
-// OKAY: This should be done!
-static vtek::HostAllocator<vtek::Device> sAllocator("vtek_device");
 
 
 /* helper functions */
@@ -609,6 +601,47 @@ static void get_msaa_limits(
 	device->msaaStencilLimit = get_max(stencil);
 }
 
+static bool use_descriptor_indexing_features(
+	VkPhysicalDeviceDescriptorIndexingFeatures* indexingFeatures,
+	const vtek::PhysicalDevice* physicalDevice)
+{
+	auto required =
+		vtek::physical_device_get_update_after_bind_features(physicalDevice);
+	if (required.empty())
+	{
+		return false;
+	}
+
+	using UABFeature = vtek::UpdateAfterBindFeature;
+
+	if (required.has_flag(UABFeature::uniform_buffer))
+	{
+		indexingFeatures->descriptorBindingUniformBufferUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::sampled_image))
+	{
+		indexingFeatures->descriptorBindingSampledImageUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::storage_image))
+	{
+		indexingFeatures->descriptorBindingStorageImageUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::storage_buffer))
+	{
+		indexingFeatures->descriptorBindingStorageBufferUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::uniform_texel_buffer))
+	{
+		indexingFeatures->descriptorBindingUniformTexelBufferUpdateAfterBind = true;
+	}
+	if (required.has_flag(UABFeature::storage_texel_buffer))
+	{
+		indexingFeatures->descriptorBindingStorageTexelBufferUpdateAfterBind = true;
+	}
+
+	return true;
+}
+
 
 
 /* device interface */
@@ -619,13 +652,7 @@ vtek::Device* vtek::device_create(
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
 
 	// Allocate device
-	auto[id, device] = sAllocator.alloc();
-	if (device == nullptr)
-	{
-		vtek_log_error("Failed to allocate (logical) device!");
-		return nullptr;
-	}
-	device->id = id;
+	auto device = new vtek::Device;
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	QueueFamilySelections queueSelections{};
@@ -633,6 +660,7 @@ vtek::Device* vtek::device_create(
 	{
 		vtek_log_error(
 			"Failed to get device queue infos! Device creation cannot proceed.");
+		delete device;
 		return nullptr;
 	}
 
@@ -667,6 +695,18 @@ vtek::Device* vtek::device_create(
 		createInfo.pNext = &dynRenderInfo;
 	};
 
+	// Descriptor indexing support: update-after-bind
+#if defined(VK_VERSION_1_2)
+	VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{};
+	if (use_descriptor_indexing_features(&indexingFeatures, physicalDevice))
+	{
+		indexingFeatures.sType =
+			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+		indexingFeatures.pNext = const_cast<void*>(createInfo.pNext);
+		createInfo.pNext = &indexingFeatures;
+	}
+#endif
+
 	// Set the actual Vulkan API version.
 	// This is needed for enabling and querying features and extensions.
 	auto physDevProps = vtek::physical_device_get_properties(physicalDevice);
@@ -688,6 +728,7 @@ vtek::Device* vtek::device_create(
 	if (info->enableBindlessTextureSupport)
 	{
 		vtek_log_error("Bindless texture support untested/not implemented");
+		delete device;
 		return nullptr;
 	}
 
@@ -708,11 +749,11 @@ vtek::Device* vtek::device_create(
 	    != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to create logical device!");
+		delete device;
 		return nullptr;
 	}
 
 	// Retrieve device queues
-	device->queueAllocator = new vtek::HostAllocator<vtek::Queue>("vtek_device_queues");
 	create_device_queues(device, info, &queueSelections);
 
 	// Set extensions as enabled
@@ -731,9 +772,36 @@ vtek::Device* vtek::device_create(
 	// Compute limits for multisampling
 	get_msaa_limits(device, physDevProps);
 
+	// Store physical device handle (might be needed later for various purposes)
+	device->physicalHandle = physDev;
+
+	// Create device allocator for buffers and images
+	device->allocator = vtek::allocator_create_default(device, instance);
+	if (device->allocator == nullptr)
+	{
+		vtek_log_error("Failed to create default allocator -- {}",
+		               "Device creation cannot proceed.");
+		vtek::device_destroy(device);
+		return nullptr;
+	}
+
+	// Create command scheduler for submitting single-use command buffers.
+	vtek::CommandSchedulerInfo schedulerInfo{};
+	schedulerInfo.backgroundThread = info->asyncCommandScheduler;
+	device->scheduler = vtek::command_scheduler_create(&schedulerInfo, device);
+	if (device->scheduler == nullptr)
+	{
+		vtek_log_error(
+			"Failed to create command scheduler for single-use submission -- {}",
+			"Device creation cannot proceed.");
+		vtek::device_destroy(device);
+		return nullptr;
+	}
+
 	// Log creation success and Vulkan version
 	auto vs = device->vulkanVersion;
-	vtek_log_info("Created Device with Vulkan v{}.{}.{}", vs.major(), vs.minor(), vs.patch());
+	vtek_log_info("Created Device with Vulkan v{}.{}.{}",
+	              vs.major(), vs.minor(), vs.patch());
 
 	return device;
 }
@@ -744,22 +812,30 @@ void vtek::device_destroy(Device* device)
 {
 	if (device == nullptr || device->vulkanHandle == VK_NULL_HANDLE) return;
 
+	// VMA allocator
+	if (device->allocator != nullptr)
+	{
+		vtek::allocator_destroy(device->allocator);
+		device->allocator = nullptr;
+	}
+
+	device->graphicsQueue = {};
+	device->presentQueue = {};
+	device->transferQueues.clear();
+	device->computeQueues.clear();
+
+	// Command scheduler
+	if (device->scheduler != nullptr)
+	{
+		vtek::command_scheduler_destroy(device->scheduler, device); // TODO: Valgrind complains about this!
+	}
+	device->scheduler = nullptr;
+
+	// Destroy Vulkan device
 	vkDestroyDevice(device->vulkanHandle, nullptr);
 	device->vulkanHandle = VK_NULL_HANDLE;
 
-	if (device->queueAllocator != nullptr)
-	{
-		device->graphicsQueue = {};
-		device->presentQueue = {};
-		device->transferQueues.clear();
-		device->computeQueues.clear();
-
-		delete device->queueAllocator;
-	}
-	device->queueAllocator = nullptr;
-
-	sAllocator.free(device->id);
-	device->id = VTEK_INVALID_ID;
+	delete device;
 }
 
 
@@ -770,9 +846,14 @@ VkDevice vtek::device_get_handle(const vtek::Device* device)
 	return device->vulkanHandle;
 }
 
-const vtek::VulkanVersion* vtek::device_get_vulkan_version(const vtek::Device* device)
+VkPhysicalDevice vtek::device_get_physical_handle(const vtek::Device* device)
 {
-	return &device->vulkanVersion;
+	return device->physicalHandle;
+}
+
+const vtek::VulkanVersion& vtek::device_get_vulkan_version(const vtek::Device* device)
+{
+	return device->vulkanVersion;
 }
 
 const vtek::DeviceExtensions* vtek::device_get_enabled_extensions(
@@ -785,6 +866,17 @@ const VkPhysicalDeviceFeatures* vtek::device_get_enabled_features(
 	const vtek::Device* device)
 {
 	return &device->enabledFeatures;
+}
+
+vtek::Allocator* vtek::device_get_allocator(const vtek::Device* device)
+{
+	return device->allocator;
+}
+
+vtek::CommandScheduler* vtek::device_get_command_scheduler(
+	const vtek::Device* device)
+{
+	return device->scheduler;
 }
 
 vtek::Queue* vtek::device_get_graphics_queue(vtek::Device* device)
@@ -808,8 +900,6 @@ std::vector<vtek::Queue*> vtek::device_get_transfer_queues(vtek::Device* device)
 
 std::vector<vtek::Queue*> vtek::device_get_compute_queues(vtek::Device* device)
 {
-	// TODO: When queues are stored as pointers from a queue allocator,
-	// this can be greatly simplified!
 	std::vector<vtek::Queue*> res;
 	for (vtek::Queue& q : device->computeQueues) { res.emplace_back(&q); }
 	return res;
