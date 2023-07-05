@@ -5,5 +5,4 @@
 		 (eval . (message "Loading .dir-locals.el"))
 		 (eval . (semantic-add-system-include . ("<path/to/vtek/>include/vtek/")))
 		 )
-
 	  ))
