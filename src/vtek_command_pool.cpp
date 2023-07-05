@@ -244,7 +244,7 @@ bool vtek::command_pool_reset_buffer(
 	// flag, which specifies that memory resources owned by the command buffer
 	// should be returned to the parent command pool.
 	VkCommandBufferResetFlags flags = 0;
-	VkResult result = vkResetCommandBuffer(commandBuffer->vulkanHandle, flags);
+	VkResult result = vkResetCommandBuffer(buffer->vulkanHandle, flags);
 	if (result != VK_SUCCESS)
 	{
 		vtek_log_error("Failed to reset command buffer!");
