@@ -515,7 +515,7 @@ int main()
 	vtek::BufferInfo uniformBufferInfo{};
 	uniformBufferInfo.size = uniform.size();
 	uniformBufferInfo.requireHostVisibleStorage = true; // TODO: Test without!
-	uniformBufferInfo.disallowInternalStagingBuffer = true;
+	uniformBufferInfo.disallowInternalStagingBuffer = true; // TODO: Also remove this after testing!
 	uniformBufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
 	uniformBufferInfo.usageFlags
 		= vtek::BufferUsageFlag::transfer_dst
@@ -536,6 +536,11 @@ int main()
 
 
 
+	// Cleanup
+	vtek::device_wait_idle(device);
+
+	log_info("Program Success!");
+	vtek::terminate();
 
 	return 0;
 }
