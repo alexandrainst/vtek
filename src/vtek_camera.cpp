@@ -27,6 +27,11 @@ struct vtek::Camera
 
 
 
+void vtek::camera_set_position(Camera* camera, glm::vec3 position)
+{
+
+}
+
 void vtek::camera_set_orientation_degrees(
 	vtek::Camera* camera, float rightAngle, float upAngle)
 {
@@ -35,7 +40,7 @@ void vtek::camera_set_orientation_degrees(
 }
 
 void vtek::camera_set_orientation_radians(
-	vtek::Camera* camera, float rightAngle,float upAngle)
+	vtek::Camera* camera, float rightAngle, float upAngle)
 {
 	camera->rightAngle = rightAngle;
 	camera->upAngle = upAngle;
