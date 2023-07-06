@@ -12,7 +12,8 @@ namespace vtek
 	// ==================== //
 	enum class UniformBufferType
 	{
-		vec3
+		vec3,
+		mat4
 	};
 
 	uint64_t get_uniform_buffer_size(UniformBufferType type);
@@ -34,11 +35,23 @@ namespace vtek
 		}
 	};
 
+	struct Uniform_m4
+	{
+		alignas(16) glm::mat4 m4;
+
+		constexpr uint64_t size();
+		inline constexpr UniformBufferType type()
+		{
+			return UniformBufferType::mat4;
+		}
+	};
+
 
 	// ========================== //
 	// === Member definitions === //
 	// ========================== //
 	constexpr uint64_t Uniform_v3::size() { return sizeof(Uniform_v3); }
+	constexpr uint64_t Uniform_m4::size() { return sizeof(Uniform_m4); }
 
 
 	// ===================== //
@@ -47,4 +60,8 @@ namespace vtek
 	static_assert(sizeof(Uniform_v3) == 16);
 	static_assert(alignof(Uniform_v3) == 16);
 	static_assert(offsetof(Uniform_v3, v3) == 0);
+
+	static_assert(sizeof(Uniform_m4) == 64);
+	static_assert(alignof(Uniform_m4) == 16);
+	static_assert(offsetof(Uniform_m4, m4) == 0);
 }

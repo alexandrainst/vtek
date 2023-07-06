@@ -12,6 +12,7 @@ uint64_t vtek::get_uniform_buffer_size(vtek::UniformBufferType type)
 	switch (type)
 	{
 	case UBType::vec3: return sizeof(glm::vec3);
+	case UBType::mat4: return sizeof(glm::mat4);
 
 	default:
 		vtek_log_error("vtek_get_uniform_buffer_size(): Invalid enum type!");

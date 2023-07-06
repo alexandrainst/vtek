@@ -1,6 +1,8 @@
 #include "vtek_vulkan.pch"
 #include "vtek_camera.hpp"
 
+#include "vtek_logging.hpp"
+
 
 /* struct implementation */
 struct vtek::Camera
@@ -8,12 +10,20 @@ struct vtek::Camera
 	float rightAngle {0.0f};
 	float upAngle {0.0f};
 	float rollAngle {0.0f};
+	float mouseSensitivity {0.01f};
 
 	bool constrainPitch {false};
 	float pitchUpConstain {glm::half_pi<float>()};
 	float pitchDownConstrain {glm::half_pi<float>()};
 
+	// viewing frustrum
+	glm::vec2 windowSize {500.0, 500.0};
+	float fov = glm::radians(45.0f);
+	float near {0.1f}; // NOTE: This should never be 0!
+	float far = {100.0f};
+
 	glm::mat4 viewMatrix {1.0f};
+	glm::mat4 projectionMatrix {1.0f};
 
 	glm::vec3 position;
 	glm::vec3 view;
@@ -27,9 +37,52 @@ struct vtek::Camera
 
 
 
-void vtek::camera_set_position(Camera* camera, glm::vec3 position)
+/* interface */
+vtek::Camera* vtek::camera_create()
 {
+	return new vtek::Camera;
+}
 
+void vtek::camera_destroy(vtek::Camera* camera)
+{
+	delete camera;
+}
+
+void vtek::camera_set_window_size(
+	vtek::Camera* camera, uint32_t width, uint32_t height)
+{
+	camera->windowSize = glm::vec2((float)width, (float)height);
+
+	camera->projectionMatrix = glm::perspectiveFov(
+		camera->fov, camera->windowSize.x, camera->windowSize.y,
+		camera->near, camera->far);
+}
+
+void vtek::camera_set_perspective_frustrum(
+	vtek::Camera* camera, float fov_degrees, float near, float far)
+{
+	camera->fov = glm::radians(fov_degrees);
+	camera->near = near;
+	camera->far = far;
+
+	camera->projectionMatrix = glm::perspectiveFov(
+		camera->fov, camera->windowSize.x, camera->windowSize.y,
+		camera->near, camera->far);
+}
+
+void vtek::camera_set_position(vtek::Camera* camera, glm::vec3 position)
+{
+	camera->position = position;
+}
+
+void vtek::camera_set_y_up(vtek::Camera* camera)
+{
+	vtek_log_error("vtek::camera_set_y_up(): Not implemented!");
+}
+
+void vtek::camera_set_z_up(vtek::Camera* camera)
+{
+	vtek_log_error("vtek::camera_set_z_up(): Not implemented!");
 }
 
 void vtek::camera_set_orientation_degrees(
@@ -48,14 +101,12 @@ void vtek::camera_set_orientation_radians(
 
 const glm::mat4* vtek::camera_get_view_matrix(vtek::Camera* camera)
 {
-	// TODO: Do in `camera_update` instead.
-	glm::quat q = glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-	q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-	camera->orientation = q;
-	camera->viewMatrix = glm::mat4_cast(q);
+	return &camera->viewMatrix;
+}
 
-	// NOTE: This should be the only thing this function does.
-	return camera->viewMatrix;
+const glm::mat4* vtek::camera_get_projection_matrix(vtek::Camera* camera)
+{
+	return &camera->projectionMatrix;
 }
 
 
@@ -77,9 +128,19 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 	}
 }
 
+void vtek::camera_update(vtek::Camera* camera)
+{
+	glm::quat q = glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+	q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+	camera->orientation = q;
+	camera->viewMatrix = glm::mat4_cast(q);
+}
 
 
 
+
+
+/*
 void procedure()
 {
 	// glm::quatLookAt(View, Up); // TODO: Perhaps this can also be used.
@@ -98,9 +159,12 @@ void procedure()
 	glm::quat viewQuaternion = glm::quat(0.0f, View);
 
 	// We need a vector to rotate about, and the angle to rotate by.
-	glm::quat rotationQuaternion = 
+	glm::quat rotationQuaternion =
 
 }
+
+
+
 
 void test()
 {
@@ -128,7 +192,10 @@ void test()
 	glm::quat myquaternion = glm::quat(glm::vec3(angle.x, angle.y, angle.z));
 }
 
-void construction()
+
+
+
+static void construction()
 {
 	// 1) Create a quaternion to represent the initial orientation of the camera.
 	// This quaternion will store the camera's rotation.
@@ -149,6 +216,9 @@ void construction()
 
 	// A) Ensure that the camera quaternion is kept normalized to maintain its mathematic properties.
 }
+
+
+
 
 void vtek::camera_update(vtek::Camera* camera)
 {
@@ -230,3 +300,4 @@ void RotateCamera(double Angle, double x, double y, double z)
 	View.y = result.y;
 	View.z = result.z;
 }
+*/

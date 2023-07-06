@@ -37,10 +37,15 @@ namespace vtek
 {
 	struct Camera; // opaque handle
 
+	// TODO: Info struct?
 	Camera* camera_create();
 	void camera_destroy(Camera* camera);
 
 	void camera_set_window_size(Camera* camera, uint32_t width, uint32_t height);
+
+	void camera_set_perspective_frustrum(
+		Camera* camera, float fov_degrees, float near, float far);
+
 	void camera_set_position(Camera* camera, glm::vec3 position);
 
 	void camera_set_orientation_degrees(Camera* camera, float rightAngle, float upAngle);
@@ -52,12 +57,26 @@ namespace vtek
 	void camera_set_y_up(Camera* camera);
 	void camera_set_z_up(Camera* camera);
 
+	void camera_set_perspective_frustrum(
+		Camera* camera, float fov_degrees, float near, float far);
+
+	/*
 	enum class MovementDirection
 	{
 		left, right, forward, backward, up, down
 	};
 
+	// TODO: Perhaps this is too simplified, because what for movement spped,
+	// which might be individual for all movement directions.
 	void camera_add_movement(Camera* camera, EnumBitmask<MovementDirection> moveDir);
+	*/
+
+	void camera_move_left(Camera* camera, float distance);
+	void camera_move_right(Camera* camera, float distance);
+	void camera_move_up(Camera* camera, float distance);
+	void camera_move_down(Camera* camera, float distance);
+	void camera_move_forward(Camera* camera, float distance);
+	void camera_move_backward(Camera* camera, float distance);
 
 	void camera_add_roll(Camera* camera, float angle);
 
@@ -66,7 +85,7 @@ namespace vtek
 	void camera_update(Camera* camera);
 
 	const glm::mat4* camera_get_view_matrix(Camera* camera);
-	const glm::mat4& camera_get_projection_matrix(Camera* camera);
+	const glm::mat4* camera_get_projection_matrix(Camera* camera);
 
 	glm::quat camera_get_orientation(Camera* camera);
 }

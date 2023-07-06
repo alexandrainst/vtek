@@ -7,9 +7,14 @@ vtek::ApplicationWindow* gWindow = nullptr;
 uint32_t gFramebufferWidth = 0U;
 uint32_t gFramebufferHeight = 0U;
 vtek::KeyboardMap gKeyboardMap;
+vtek::Camera* gCamera = nullptr;
+vtek::Uniform_m4 uniform;
+bool updateUniformBuffer = false;
+
+
 
 // helper functions
-void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
+void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 {
 	using vtek::KeyboardKey;
 
@@ -31,32 +36,37 @@ void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
 	}
 }
 
+void mouse_move_callback(double x, double y)
+{
+	vtek::camera_on_mouse_move(gCamera, x, y);
+}
+
 void update_movement()
 {
 	using vtek::KeyboardKey;
 
 	// left / right
 	if (gKeyboardMap.get_key(KeyboardKey::left)) {
-		gMoveOffset.x -= gMoveSpeed;
+		// TODO: camera strafe left
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::right)) {
-		gMoveOffset.x += gMoveSpeed;
+		// TODO: camera strafe right
 	}
 
 	// up / down
 	if (gKeyboardMap.get_key(KeyboardKey::up)) {
-		gMoveOffset.y -= gMoveSpeed;
+		// TODO: camera hover up
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::down)) {
-		gMoveOffset.y += gMoveSpeed;
+		// TODO: camera hover down
 	}
 
 	// rotate
-	if (gKeyboardMap.get_key(KeyboardKey::z)) {
-		gRotateAngle += gRotateSpeed;
+	if (gKeyboardMap.get_key(KeyboardKey::q)) {
+		// TODO: camera roll left
 	}
-	else if (gKeyboardMap.get_key(KeyboardKey::x)) {
-		gRotateAngle -= gRotateSpeed;
+	else if (gKeyboardMap.get_key(KeyboardKey::e)) {
+		// TODO: camera roll right
 	}
 }
 
@@ -124,7 +134,7 @@ bool update_uniform_buffer(
 	vtek::device_wait_idle(device);
 
 	// Packed data
-	uniform.v3 = {circleCenter.x, circleCenter.y, circleRadius};
+	uniform.m4 = *(vtek::camera_get_view_matrix(gCamera));
 
 	// Update uniform buffer
 	vtek::BufferRegion region{
@@ -254,7 +264,7 @@ bool record_command_buffers(
 		// TODO: Push constant for model matrix ?
 
 		// draw calls here
-		vkCmdDraw(cmdBuf, vertices.size(), 1, 0, 0);
+		vkCmdDraw(cmdBuf, 108, 1, 0, 0); // NOTE: 108 = 12*9, ie. #vertices in a cube
 
 		// End dynamic rendering
 		vkCmdEndRendering(cmdBuf);
@@ -317,13 +327,14 @@ int main()
 	vtek::WindowCreateInfo windowInfo{};
 	windowInfo.title = "vtek example 05: Camera";
 	windowInfo.resizeable = false;
-	window = vtek::window_create(&windowInfo);
-	if (window == nullptr)
+	gWindow = vtek::window_create(&windowInfo);
+	if (gWindow == nullptr)
 	{
 		log_error("Failed to create window!");
 		return -1;
 	}
-	vtek::window_set_key_handler(window, key_callback);
+	vtek::window_set_key_handler(gWindow, key_callback);
+	vtek::window_set_mouse_move_handler(gWindow, mouse_move_callback);
 
 	// Vulkan instance
 	vtek::InstanceCreateInfo instanceInfo{};
@@ -338,7 +349,7 @@ int main()
 	}
 
 	// Surface
-	VkSurfaceKHR surface = vtek::window_create_surface(window, instance);
+	VkSurfaceKHR surface = vtek::window_create_surface(gWindow, instance);
 	if (surface == VK_NULL_HANDLE)
 	{
 		log_error("Failed to create Vulkan window surface!");
@@ -391,12 +402,16 @@ int main()
 		return -1;
 	}
 
+	// Window size, for swapchain, camera, and other things.
+	glm::uvec2 windowSize;
+	vtek::window_get_framebuffer_size(gWindow, &windowSize.x, &windowSize.y);
+
 	// Swapchain
 	vtek::SwapchainInfo swapchainInfo{};
 	swapchainInfo.vsync = true;
 	swapchainInfo.prioritizeLowLatency = false;
-	vtek::window_get_framebuffer_size(
-		window, &swapchainInfo.framebufferWidth, &swapchainInfo.framebufferHeight);
+	swapchainInfo.framebufferWidth = windowSize.x;
+	swapchainInfo.framebufferHeight = windowSize.y;
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
 		&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)
@@ -489,6 +504,12 @@ int main()
 	}
 
 	// Camera
+	gCamera = vtek::camera_create();
+	vtek::camera_set_z_up(gCamera);
+	vtek::camera_set_position(gCamera, glm::vec3(-2.0f, 0.0f, 0.0f));
+	vtek::camera_set_orientation_degrees(gCamera, 90.0f, 0.0f);
+	vtek::camera_set_window_size(gCamera, windowSize.x, windowSize.y);
+	vtek::camera_update(gCamera);
 
 	// Uniform buffer
 	vtek::BufferInfo uniformBufferInfo{};
