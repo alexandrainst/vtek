@@ -7,8 +7,22 @@ struct vtek::Camera
 {
 	float rightAngle {0.0f};
 	float upAngle {0.0f};
+	float rollAngle {0.0f};
+
+	bool constrainPitch {false};
+	float pitchUpConstain {glm::half_pi<float>()};
+	float pitchDownConstrain {glm::half_pi<float>()};
 
 	glm::mat4 viewMatrix {1.0f};
+
+	glm::vec3 position;
+	glm::vec3 view;
+	glm::vec3 up;
+
+	float yaw {0.0f};
+	float pitch {0.0f};
+
+	glm::quat orientation {0.0f, 1.0f, 0.0f, 0.0f};
 };
 
 
@@ -29,12 +43,37 @@ void vtek::camera_set_orientation_radians(
 
 const glm::mat4* vtek::camera_get_view_matrix(vtek::Camera* camera)
 {
+	// TODO: Do in `camera_update` instead.
 	glm::quat q = glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
 	q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+	camera->orientation = q;
 	camera->viewMatrix = glm::mat4_cast(q);
 
+	// NOTE: This should be the only thing this function does.
 	return camera->viewMatrix;
 }
+
+
+
+void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
+{
+	x *= camera->mouseSensitivity;
+	y *= camera->mouseSensitivity;
+
+	camera->rightAngle += x;
+	camera->upAngle += y;
+
+	if (camera->constrainPitch)
+	{
+		camera->upAngle = glm::clamp(
+			camera->upAngle,            // value
+			camera->pitchDownConstrain, // min
+			camera->pitchUpConstain);   // max
+	}
+}
+
+
+
 
 void procedure()
 {
@@ -53,6 +92,8 @@ void procedure()
 
 	glm::quat viewQuaternion = glm::quat(0.0f, View);
 
+	// We need a vector to rotate about, and the angle to rotate by.
+	glm::quat rotationQuaternion = 
 
 }
 
@@ -73,9 +114,114 @@ void test()
 	// According to tutorial, and as mentioned in header file, this will rotate p:
 	glm::vec3 p;
 	glm::vec3 p_prime = q * p * glm::inverse(q);
+	// NOTE: Since q is (hopefully) a unit-quaternion, we can equally write:
+	glm::vec3 p_prime = q * p * glm::conjugate(q); // <-- NOTE: We should use this!
 
 
 	// Quaternion from Euler angles,
 	// where angle is a glm::vec3 containing pitch, yaw, roll respectively:
 	glm::quat myquaternion = glm::quat(glm::vec3(angle.x, angle.y, angle.z));
+}
+
+void construction()
+{
+	// 1) Create a quaternion to represent the initial orientation of the camera.
+	// This quaternion will store the camera's rotation.
+
+	// 2) Initialize the camera position, and other relevant fields such as FOV, aspect, etc.
+
+	// 3) Capture keyboard inputs to move the camera.
+
+	// 4) Capture mouse input and convert X and Y into yaw and pitch values.
+
+	// 5) Update the quaternion representing the camera's rotation based on received input.
+
+	// 6) Construct a transformation matrix from the quaternion representing the camera's rotation.
+
+	// 7) Combine the transformation matrix with the camera's position to form the camera's view matrix.
+
+	// 8) The view matrix transforms the world coordinates into camera-relative coordinates.
+
+	// A) Ensure that the camera quaternion is kept normalized to maintain its mathematic properties.
+}
+
+void vtek::camera_update(vtek::Camera* camera)
+{
+	// 1) SetViewByMouse
+	// 2) RotateCamera
+	// 3) gluLookAt
+	camera->viewMatrix = glm::lookAt(camera->view, camera->position, camera->up);
+
+
+}
+
+
+
+void Camera::SetViewByMouse(void)
+{
+	// the coordinates of our mouse coordinates
+	int MouseX, MouseY;
+	// the middle of the screen in the x direction
+	int MiddleX = SCREENWIDTH/2;
+	// the middle of the screen in the y direction
+	int MiddleY = SCREENHEIGHT/2;
+	// vector that describes mouseposition - center
+	Vector MouseDirection(0, 0, 0);
+	// static variable to store the rotation about the x-axis, since
+	// we want to limit how far up or down we can look.
+	// We don't need to cap the rotation about the y-axis as we
+	// want to be able to turn around 360 degrees
+	static double CurrentRotationAboutX = 0.0;
+	// The maximum angle we can look up or down, in radians
+	double maxAngle = 1;
+	// This function gets the position of the mouse
+	SDL_GetMouseState(&MouseX, &MouseY);
+	// if the mouse hasn't moved, return without doing
+	// anything to our view
+	if((MouseX == MiddleX) && (MouseY == MiddleY)) return;
+	// otherwise move the mouse back to the middle of the screen
+	SDL_WarpMouse(MiddleX, MiddleY);
+	// get the distance and direction the mouse moved in x (in
+	// pixels). We can't use the actual number of pixels in radians,
+	// as only six pixels would cause a full 360 degree rotation.
+	// So we use a mousesensitivity variable that can be changed to
+	// vary how many radians we want to turn in the x-direction for
+	// a given mouse movement distance
+	// We have to remember that positive rotation is counter-clockwise.
+	// Moving the mouse down is a negative rotation about the x axis
+	// Moving the mouse right is a negative rotation about the y axis
+	MouseDirection.x = (MiddleX - MouseX)/MouseSensitivity;
+	MouseDirection.y = (MiddleY - MouseY)/MouseSensitivity;
+	CurrentRotationX += MouseDirection.y;
+	// We don't want to rotate up more than one radian, so we cap it.
+	if(CurrentRotationX > 1) { CurrentRotationX = 1; return; }
+	// We don't want to rotate down more than one radian, so we cap it.
+	if(CurrentRotationX < -1) { CurrentRotationX = -1; return; } else {
+		// get the axis to rotate around the x-axis.
+		Vector Axis = CrossProduct(View - Position, Up);
+		// To be able to use the quaternion conjugate, the axis to
+		// rotate around must be normalized.
+		Axis = Normalize(Axis);
+		// Rotate around the y axis
+		RotateCamera(MouseDirection.y, Axis.x, Axis.y, Axis.z);
+		// Rotate around the x axis
+		RotateCamera(MouseDirection.x, 0, 1, 0);
+	}
+}
+
+void RotateCamera(double Angle, double x, double y, double z)
+{
+	quaternion temp, quat_view, result;
+	temp.x = x * sin(Angle/2);
+	temp.y = y * sin(Angle/2);
+	temp.z = z * sin(Angle/2);
+	temp.w = cos(Angle/2);
+	quat_view.x = View.x;
+	quat_view.y = View.y;
+	quat_view.z = View.z;
+	quat_view.w = 0;
+	result = mult(mult(temp, quat_view), conjugate(temp));
+	View.x = result.x;
+	View.y = result.y;
+	View.z = result.z;
 }

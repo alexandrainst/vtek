@@ -30,6 +30,8 @@
 
 #include "vtek_glm_includes.hpp"
 
+#include <cstdint>
+
 
 namespace vtek
 {
@@ -38,12 +40,33 @@ namespace vtek
 	Camera* camera_create();
 	void camera_destroy(Camera* camera);
 
+	void camera_set_window_size(Camera* camera, uint32_t width, uint32_t height);
+	void camera_set_position(Camera* camera, glm::vec3 position);
+
 	void camera_set_orientation_degrees(Camera* camera, float rightAngle, float upAngle);
 	void camera_set_orientation_radians(Camera* camera, float rightAngle, float upAngle);
 
-	void camera_mouse_move_input(double x, double y);
+	void camera_set_constrain_pitch(
+		Camera* camera, bool restrict, float angleUpDegrees, float angleDownDegrees);
 
+	void camera_set_y_up(Camera* camera);
+	void camera_set_z_up(Camera* camera);
+
+	enum class MovementDirection
+	{
+		left, right, forward, backward, up, down
+	};
+
+	void camera_add_movement(Camera* camera, EnumBitmask<MovementDirection> moveDir);
+
+	void camera_add_roll(Camera* camera, float angle);
+
+	void camera_on_mouse_move(Camera* camera, double x, double y);
+
+	void camera_update(Camera* camera);
 
 	const glm::mat4* camera_get_view_matrix(Camera* camera);
 	const glm::mat4& camera_get_projection_matrix(Camera* camera);
+
+	glm::quat camera_get_orientation(Camera* camera);
 }

@@ -84,6 +84,7 @@ set (src
     include/vtek/vtek_allocator.hpp
     include/vtek/vtek_application_window.hpp
     include/vtek/vtek_buffer.hpp
+    include/vtek/vtek_camera.hpp
     include/vtek/vtek_command_buffer.hpp
     include/vtek/vtek_command_pool.hpp
     include/vtek/vtek_command_scheduler.hpp
@@ -125,6 +126,7 @@ set (src
     src/vtek_allocator.cpp
     src/vtek_application_window.cpp
     src/vtek_buffer.cpp
+    src/vtek_camera.cpp
     src/vtek_command_buffer.cpp
     src/vtek_command_pool.cpp
     src/vtek_command_scheduler.cpp
@@ -195,6 +197,7 @@ if(VTEK_CREATE_EXAMPLES)
         examples/02_triangle_move.cpp
         examples/03_vertex_buffer.cpp
         examples/04_dynamic_circle.cpp
+        examples/05_camera.cpp
         )
 
     foreach(expath ${examples})

@@ -2,6 +2,64 @@
 #include <iostream>
 #include <vector>
 
+// global data
+vtek::ApplicationWindow* gWindow = nullptr;
+uint32_t gFramebufferWidth = 0U;
+uint32_t gFramebufferHeight = 0U;
+vtek::KeyboardMap gKeyboardMap;
+
+// helper functions
+void keyCallback(vtek::KeyboardKey key, vtek::InputAction action)
+{
+	using vtek::KeyboardKey;
+
+	if (action == vtek::InputAction::press)
+	{
+		switch (key)
+		{
+		case KeyboardKey::escape:
+			vtek::window_set_should_close(gWindow, true);
+			break;
+		default:
+			gKeyboardMap.press_key(key);
+			break;
+		}
+	}
+	else if (action == vtek::InputAction::release)
+	{
+		gKeyboardMap.release_key(key);
+	}
+}
+
+void update_movement()
+{
+	using vtek::KeyboardKey;
+
+	// left / right
+	if (gKeyboardMap.get_key(KeyboardKey::left)) {
+		gMoveOffset.x -= gMoveSpeed;
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::right)) {
+		gMoveOffset.x += gMoveSpeed;
+	}
+
+	// up / down
+	if (gKeyboardMap.get_key(KeyboardKey::up)) {
+		gMoveOffset.y -= gMoveSpeed;
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::down)) {
+		gMoveOffset.y += gMoveSpeed;
+	}
+
+	// rotate
+	if (gKeyboardMap.get_key(KeyboardKey::z)) {
+		gRotateAngle += gRotateSpeed;
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::x)) {
+		gRotateAngle -= gRotateSpeed;
+	}
+}
+
 
 vtek::Buffer* create_vertex_buffer(vtek::Device* device)
 {
@@ -53,6 +111,44 @@ vtek::Buffer* create_vertex_buffer(vtek::Device* device)
 
 	return buffer;
 }
+
+bool update_uniform_buffer(
+	vtek::DescriptorSet* set, vtek::Buffer* buffer, vtek::Device* device)
+{
+	// Wait until the device is finished with all operations
+	// NOTE: This is needed because even with "updateAfterBind" enabled,
+	// it is still not valid to update a bound descriptor set if the command
+	// buffer is pending execution. Exempt to this rule is only updating
+	// descriptors inside the set which are not used by the command buffer,
+	// but that is a subtle nuance and likely not needed for most purposes.
+	vtek::device_wait_idle(device);
+
+	// Packed data
+	uniform.v3 = {circleCenter.x, circleCenter.y, circleRadius};
+
+	// Update uniform buffer
+	vtek::BufferRegion region{
+		.offset = 0,
+		.size = uniform.size()
+	};
+	if (!vtek::buffer_write_data(buffer, &uniform, &region, device))
+	{
+		log_error("Failed to write data to the uniform buffer!");
+		return false;
+	}
+
+	// Update descriptor set
+	if (!vtek::descriptor_set_bind_uniform_buffer(
+		    set, 0, buffer, uniform.type()))
+	{
+		log_error("Failed to add uniform buffer to the descriptor set!");
+		return false;
+	}
+	vtek::descriptor_set_update(set, device);
+
+	return true;
+}
+
 
 
 
@@ -214,6 +310,9 @@ int main()
 		return -1;
 	}
 
+	// Keyboard map
+	gKeyboardMap.reset();
+
 	// Create window
 	vtek::WindowCreateInfo windowInfo{};
 	windowInfo.title = "vtek example 05: Camera";
@@ -323,7 +422,96 @@ int main()
 		return -1;
 	}
 
-	// TODO: For pipeline creation, use push constants for the model matrix!
+	// Shader
+	const char* shaderdirstr = "../shaders/simple_camera/";
+	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
+	if (shaderdir == nullptr)
+	{
+		log_error("Failed to open shader directory!");
+		return -1;
+	}
+	vtek::GraphicsShaderInfo shaderInfo{};
+	shaderInfo.vertex = true;
+	shaderInfo.fragment = true;
+	vtek::GraphicsShader* shader =
+		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
+	if (shader == nullptr)
+	{
+		log_error("Failed to load graphics shader!");
+		return -1;
+	}
+
+	// Descriptor pool
+	vtek::DescriptorPoolInfo descriptorPoolInfo{};
+	descriptorPoolInfo.allowUpdateAfterBind = true;
+	descriptorPoolInfo.descriptorTypes.push_back(
+		{ vtek::DescriptorType::uniform_buffer, 1 });
+	vtek::DescriptorPool* descriptorPool =
+		vtek::descriptor_pool_create(&descriptorPoolInfo, device);
+	if (descriptorPool == nullptr)
+	{
+		log_error("Failed to create descriptor pool!");
+		return -1;
+	}
+
+	// Descriptor set layout
+	vtek::DescriptorSetLayoutInfo descriptorLayoutInfo{};
+	vtek::DescriptorLayoutBinding descriptorBinding{};
+	descriptorBinding.type = vtek::DescriptorType::uniform_buffer;
+	descriptorBinding.binding = 0;
+	descriptorBinding.shaderStages = vtek::ShaderStage::vertex;
+	descriptorBinding.updateAfterBind = true;
+	descriptorLayoutInfo.bindings.emplace_back(descriptorBinding);
+	vtek::DescriptorSetLayout* descriptorSetLayout =
+		vtek::descriptor_set_layout_create(&descriptorLayoutInfo, device);
+	if (descriptorSetLayout == nullptr)
+	{
+		log_error("Failed to create descriptor set layout!");
+		return -1;
+	}
+
+	// Descriptor set
+	// TODO: descriptor_pool_alloc_set(pool, layout, device) - ??
+	// TODO: This is similar to the improved command buffer interface!
+	vtek::DescriptorSet* descriptorSet = vtek::descriptor_set_create(
+		descriptorPool, descriptorSetLayout, device);
+	if (descriptorSet == nullptr)
+	{
+		log_error("Failed to create descriptor set!");
+		return -1;
+	}
+
+	// Vertex buffer
+	vtek::Buffer* vertexBuffer = create_vertex_buffer(device);
+	if (vertexBuffer == nullptr)
+	{
+		return -1;
+	}
+
+	// Camera
+
+	// Uniform buffer
+	vtek::BufferInfo uniformBufferInfo{};
+	uniformBufferInfo.size = uniform.size();
+	uniformBufferInfo.requireHostVisibleStorage = true; // TODO: Test without!
+	uniformBufferInfo.disallowInternalStagingBuffer = true;
+	uniformBufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
+	uniformBufferInfo.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::uniform_buffer;
+	vtek::Buffer* uniformBuffer = vtek::buffer_create(&uniformBufferInfo, device);
+	if (uniformBuffer == nullptr)
+	{
+		log_error("Failed to create uniform buffer!");
+		return -1;
+	}
+	if (!update_uniform_buffer(descriptorSet, uniformBuffer, device))
+	{
+		log_error("Failed to fill uniform buffer!");
+		return -1;
+	}
+
+
 
 
 

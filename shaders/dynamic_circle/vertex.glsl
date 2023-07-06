@@ -2,8 +2,8 @@
 
 layout (location = 0) in vec2 aPosition;
 
-// TODO: Uniform buffer for circle center
-layout (binding = 0) uniform CircleCenterUniform {
+layout (binding = 0) uniform CircleCenterUniform
+{
 	vec3 circleParams; // x,y is center; z is radius
 };
 
