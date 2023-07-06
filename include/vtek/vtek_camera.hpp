@@ -35,9 +35,15 @@ namespace vtek
 {
 	struct Camera; // opaque handle
 
+	Camera* camera_create();
+	void camera_destroy(Camera* camera);
+
+	void camera_set_orientation_degrees(Camera* camera, float rightAngle, float upAngle);
+	void camera_set_orientation_radians(Camera* camera, float rightAngle, float upAngle);
+
 	void camera_mouse_move_input(double x, double y);
 
 
-	const glm::mat4& camera_get_view_matrix(Camera* camera);
+	const glm::mat4* camera_get_view_matrix(Camera* camera);
 	const glm::mat4& camera_get_projection_matrix(Camera* camera);
 }
