@@ -1,5 +1,7 @@
 #include <vtek/vtek.hpp>
+#include <chrono>
 #include <iostream>
+#include <thread>
 #include <vector>
 
 // global data
@@ -9,7 +11,27 @@ uint32_t gFramebufferHeight = 0U;
 vtek::KeyboardMap gKeyboardMap;
 vtek::Camera* gCamera = nullptr;
 vtek::Uniform_m4 uniform;
-bool updateUniformBuffer = false;
+
+std::vector<float> gCubeVertices = {
+	// front
+	-0.5f, -0.5f, -0.5f, -0.5f, -0.5f,  0.5f, 0.5f, -0.5f,  0.5f,
+	-0.5f, -0.5f, -0.5f, 0.5f, -0.5f,  0.5f, 0.5f, -0.5f, -0.5f,
+	// left
+	-0.5f,  0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,  0.5f,
+	-0.5f,  0.5f, -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f,
+	// back
+	0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  0.5f, -0.5f, 0.5f,  0.5f,
+	0.5f, 0.5f, -0.5f, -0.5f, 0.5f,  0.5f, -0.5f, 0.5f, -0.5f,
+	// right
+	0.5f, -0.5f, -0.5f, 0.5f, -0.5f,  0.5f, 0.5f,  0.5f,  0.5f,
+	0.5f, -0.5f, -0.5f, 0.5f,  0.5f,  0.5f, 0.5f,  0.5f, -0.5f,
+	// top
+	-0.5f, -0.5f, 0.5f, -0.5f,  0.5f, 0.5f, 0.5f,  0.5f, 0.5f,
+	-0.5f, -0.5f, 0.5f, 0.5f,  0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
+	// bottom
+	-0.5f,  0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f,
+	-0.5f,  0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f,  0.5f, -0.5f,
+};
 
 
 
@@ -53,6 +75,15 @@ void update_movement()
 		// TODO: camera strafe right
 	}
 
+	// forward / backward
+	if (gKeyboardMap.get_key(KeyboardKey::w)) {
+		vtek::camera_move_forward(gCamera, 0.1f);
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::s)) {
+		vtek::camera_move_backward(gCamera, 0.1f);
+	}
+
+
 	// up / down
 	if (gKeyboardMap.get_key(KeyboardKey::up)) {
 		// TODO: camera hover up
@@ -73,29 +104,8 @@ void update_movement()
 
 vtek::Buffer* create_vertex_buffer(vtek::Device* device)
 {
-	std::vector<float> cubeVertices = {
-		// front
-		-0.5f, -0.5f, -0.5f, -0.5f, -0.5f,  0.5f, 0.5f, -0.5f,  0.5f,
-		-0.5f, -0.5f, -0.5f, 0.5f, -0.5f,  0.5f, 0.5f, -0.5f, -0.5f,
-		// left
-		-0.5f,  0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,  0.5f,
-		-0.5f,  0.5f, -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f,
-		// back
-		0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  0.5f, -0.5f, 0.5f,  0.5f,
-		0.5f, 0.5f, -0.5f, -0.5f, 0.5f,  0.5f, -0.5f, 0.5f, -0.5f,
-		// right
-		0.5f, -0.5f, -0.5f, 0.5f, -0.5f,  0.5f, 0.5f,  0.5f,  0.5f,
-		0.5f, -0.5f, -0.5f, 0.5f,  0.5f,  0.5f, 0.5f,  0.5f, -0.5f,
-		// top
-		-0.5f, -0.5f, 0.5f, -0.5f,  0.5f, 0.5f, 0.5f,  0.5f, 0.5f,
-		-0.5f, -0.5f, 0.5f, 0.5f,  0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
-		// bottom
-		-0.5f,  0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f,
-		-0.5f,  0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f,  0.5f, -0.5f,
-	};
-
 	vtek::BufferInfo info{};
-	info.size = sizeof(float) * cubeVertices.size();
+	info.size = sizeof(float) * gCubeVertices.size();
 	info.writePolicy = vtek::BufferWritePolicy::write_once;
 
 	using BUFlag = vtek::BufferUsageFlag;
@@ -112,7 +122,7 @@ vtek::Buffer* create_vertex_buffer(vtek::Device* device)
 		.offset = 0,
 		.size = info.size
 	};
-	if (!vtek::buffer_write_data(buffer, cubeVertices.data(), &region, device))
+	if (!vtek::buffer_write_data(buffer, gCubeVertices.data(), &region, device))
 	{
 		log_error("Failed to write data to vertex buffer!");
 		vtek::buffer_destroy(buffer);
@@ -134,7 +144,8 @@ bool update_uniform_buffer(
 	vtek::device_wait_idle(device);
 
 	// Packed data
-	uniform.m4 = *(vtek::camera_get_view_matrix(gCamera));
+	uniform.m4 = *(vtek::camera_get_projection_matrix(gCamera));
+	uniform.m4 *= *(vtek::camera_get_view_matrix(gCamera));
 
 	// Update uniform buffer
 	vtek::BufferRegion region{
@@ -264,7 +275,7 @@ bool record_command_buffers(
 		// TODO: Push constant for model matrix ?
 
 		// draw calls here
-		vkCmdDraw(cmdBuf, 108, 1, 0, 0); // NOTE: 108 = 12*9, ie. #vertices in a cube
+		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		// End dynamic rendering
 		vkCmdEndRendering(cmdBuf);
@@ -327,6 +338,7 @@ int main()
 	vtek::WindowCreateInfo windowInfo{};
 	windowInfo.title = "vtek example 05: Camera";
 	windowInfo.resizeable = false;
+	windowInfo.cursorDisabled = true;
 	gWindow = vtek::window_create(&windowInfo);
 	if (gWindow == nullptr)
 	{
@@ -506,16 +518,16 @@ int main()
 	// Camera
 	gCamera = vtek::camera_create();
 	vtek::camera_set_z_up(gCamera);
-	vtek::camera_set_position(gCamera, glm::vec3(-2.0f, 0.0f, 0.0f));
-	vtek::camera_set_orientation_degrees(gCamera, 90.0f, 0.0f);
+	vtek::camera_set_position(gCamera, glm::vec3(0.0f, 0.0f, 0.0f));
+	vtek::camera_set_orientation_degrees(gCamera, 0.0f, 0.0f);
 	vtek::camera_set_window_size(gCamera, windowSize.x, windowSize.y);
+	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
 	vtek::camera_update(gCamera);
 
 	// Uniform buffer
 	vtek::BufferInfo uniformBufferInfo{};
 	uniformBufferInfo.size = uniform.size();
-	uniformBufferInfo.requireHostVisibleStorage = true; // TODO: Test without!
-	uniformBufferInfo.disallowInternalStagingBuffer = true; // TODO: Also remove this after testing!
+	uniformBufferInfo.requireHostVisibleStorage = true;
 	uniformBufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
 	uniformBufferInfo.usageFlags
 		= vtek::BufferUsageFlag::transfer_dst
@@ -560,7 +572,7 @@ int main()
 	// TODO: Rename to `vertexBufferBindings`
 	graphicsPipelineInfo.vertexInputBindings = &bindings;
 	graphicsPipelineInfo.primitiveTopology =
-		vtek::PrimitiveTopology::triangle_fan;
+		vtek::PrimitiveTopology::triangle_list;
 	graphicsPipelineInfo.enablePrimitiveRestart = false;
 	graphicsPipelineInfo.viewportState = &viewport;
 	graphicsPipelineInfo.rasterizationState = &rasterizer;
@@ -577,6 +589,107 @@ int main()
 	{
 		log_error("Failed to create graphics pipeline!");
 		return -1;
+	}
+
+	// Command buffer recording
+	if (!record_command_buffers(
+		    graphicsPipeline, graphicsQueue, commandBuffers,
+		    swapchain, vertexBuffer, descriptorSet))
+	{
+		log_error("Failed to record command buffers!");
+		return -1;
+	}
+
+
+
+
+	// Error tolerance
+	int errors = 10;
+
+	while (vtek::window_get_should_close(gWindow) && errors > 0)
+	{
+		// React to incoming input events
+		vtek::window_poll_events();
+
+		update_movement();
+		vtek::camera_update(gCamera);
+		if (!update_uniform_buffer(descriptorSet, uniformBuffer, device))
+		{
+			log_error("Failed to update uniform buffer!");
+			return -1;
+		}
+
+		// To avoid excessive GPU work we wait until we may begin the frame
+		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
+		if (beginStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait begin frame - swapchain timeout!");
+			// TODO: Probably log an error and then run the loop again.
+			errors--; continue;
+		}
+		else if (beginStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait begin frame - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// Acquire the next available image in the swapchain
+		uint32_t frameIndex;
+		auto acquireStatus =
+			vtek::swapchain_acquire_next_image(swapchain, device, &frameIndex);
+		if (acquireStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_error("Failed to acquire image - swapchain outofdate!");
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (acquireStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to acquire image - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// Wait until any previous operations are finished using this image, for either read or write.
+		// NOTE: We can do command buffer recording or other operations before calling this function.
+		auto readyStatus =
+			vtek::swapchain_wait_image_ready(swapchain, device, frameIndex);
+		if (readyStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait image ready - swapchain timeout!");
+			// TODO: Probably log an error and then run the loop again.
+		}
+		else if (readyStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait image ready - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// Submit the current command buffer for execution on the graphics queue
+		vtek::SubmitInfo submitInfo{};
+		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
+		if (!vtek::queue_submit(
+			    graphicsQueue, commandBuffers[frameIndex], &submitInfo))
+		{
+			log_error("Failed to submit to queue!");
+			// TODO: This is an error.
+		}
+
+		// Wait for command buffer to finish execution, and present frame to screen.
+		auto presentStatus = vtek::swapchain_present_frame(swapchain, frameIndex);
+		if (presentStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_error("Failed to present frame - swapchain outofdate!");
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (presentStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to present frame - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// NOTE: This may be adjusted based on machine CPU speed.. (no timer created yet!)
+		std::this_thread::sleep_for(std::chrono::milliseconds(16));
 	}
 
 

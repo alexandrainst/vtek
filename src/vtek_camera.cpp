@@ -10,7 +10,9 @@ struct vtek::Camera
 	float rightAngle {0.0f};
 	float upAngle {0.0f};
 	float rollAngle {0.0f};
-	float mouseSensitivity {0.01f};
+	float mouseSensitivity {0.001f};
+	float lastX {0.0f};
+	float lastY {0.0f};
 
 	bool constrainPitch {false};
 	float pitchUpConstain {glm::half_pi<float>()};
@@ -115,11 +117,16 @@ const glm::mat4* vtek::camera_get_projection_matrix(vtek::Camera* camera)
 
 void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 {
-	x *= camera->mouseSensitivity;
-	y *= camera->mouseSensitivity;
+	float xOffset = x - camera->lastX;
+	float yOffset = y - camera->lastY;
+	camera->lastX = x;
+	camera->lastY = y;
 
-	camera->rightAngle += x;
-	camera->upAngle += y;
+	xOffset *= camera->mouseSensitivity;
+	yOffset *= camera->mouseSensitivity;
+
+	camera->rightAngle += xOffset;
+	camera->upAngle += yOffset;
 
 	if (camera->constrainPitch)
 	{
@@ -134,8 +141,22 @@ void vtek::camera_update(vtek::Camera* camera)
 {
 	glm::quat q = glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
 	q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+	q = glm::normalize(q);
 	camera->orientation = q;
-	camera->viewMatrix = glm::mat4_cast(q);
+	camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
+}
+
+
+void vtek::camera_move_forward(vtek::Camera* camera, float distance)
+{
+	glm::vec3 dir = glm::axis(camera->orientation);
+	camera->position += dir * distance;
+}
+
+void vtek::camera_move_backward(vtek::Camera* camera, float distance)
+{
+	glm::vec3 dir = glm::axis(camera->orientation);
+	camera->position -= dir * distance;
 }
 
 
