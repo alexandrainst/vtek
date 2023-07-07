@@ -45,6 +45,8 @@ vtek::Camera* vtek::camera_create()
 
 void vtek::camera_destroy(vtek::Camera* camera)
 {
+	if (camera == nullptr) return;
+
 	delete camera;
 }
 

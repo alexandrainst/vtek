@@ -28,7 +28,8 @@ namespace vtek
 	enum class PushConstantType
 	{
 		none, // ie. a pipeline/shader program uses no push constants.
-		vec3
+		vec3,
+		mat4
 	};
 
 
@@ -63,6 +64,13 @@ namespace vtek
 		glm::vec3 v1 {0.0f};
 	};
 
+	struct PushConstant_m4 : public PushConstant<
+		sizeof(glm::mat4), PushConstantType::mat4>
+	{
+		void* data() override { return static_cast<void*>(&m1); }
+		glm::mat4 m1 {0.0f};
+	};
+
 
 	// ============================= //
 	// === Push constant helpers === //
@@ -73,6 +81,7 @@ namespace vtek
 		{
 		case PushConstantType::none: return 0;
 		case PushConstantType::vec3: return PushConstant_v3::static_size();
+		case PushConstantType::mat4: return PushConstant_m4::static_size();
 		default:
 			return 0;
 		}

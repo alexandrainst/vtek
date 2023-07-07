@@ -44,5 +44,5 @@ namespace vtek
 		CommandScheduler* scheduler, Device* device);
 
 	bool command_scheduler_submit_transfer(
-		CommandScheduler* scheduler, CommandBuffer* commandBuffer);
+		CommandScheduler* scheduler, CommandBuffer* commandBuffer, Device* device);
 }

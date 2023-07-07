@@ -391,17 +391,6 @@ int main()
 		return -1;
 	}
 
-	// Graphics command pool
-	vtek::CommandPoolInfo commandPoolInfo{};
-	commandPoolInfo.allowIndividualBufferReset = true;
-	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
-		&commandPoolInfo, device, graphicsQueue);
-	if (graphicsCommandPool == nullptr)
-	{
-		log_error("Failed to create graphics command pool!");
-		return -1;
-	}
-
 	// Window size, for swapchain, camera, and other things.
 	glm::uvec2 windowSize;
 	vtek::window_get_framebuffer_size(gWindow, &windowSize.x, &windowSize.y);
@@ -420,6 +409,17 @@ int main()
 		return -1;
 	}
 
+	// Graphics command pool
+	vtek::CommandPoolInfo commandPoolInfo{};
+	commandPoolInfo.allowIndividualBufferReset = true;
+	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
+		&commandPoolInfo, device, graphicsQueue);
+	if (graphicsCommandPool == nullptr)
+	{
+		log_error("Failed to create graphics command pool!");
+		return -1;
+	}
+
 	// Command buffers
 	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
 	std::vector<vtek::CommandBuffer*> commandBuffers =
@@ -428,7 +428,7 @@ int main()
 			commandBufferCount, device);
 	if (commandBuffers.empty())
 	{
-		log_error("Failed to create command buffer!");
+		log_error("Failed to create command buffers!");
 		return -1;
 	}
 	if (commandBufferCount != commandBuffers.size())
@@ -532,12 +532,75 @@ int main()
 		return -1;
 	}
 
+	// Vulkan graphics pipeline
+	vtek::ViewportState viewport{
+		.viewportRegion = {
+			.offset = {0U, 0U},
+			.extent = {windowSize.x, windowSize.y}
+		},
+	};
+	vtek::VertexBufferBindings bindings{};
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex);
+	vtek::RasterizationState rasterizer{};
+	vtek::MultisampleState multisampling{};
+	vtek::DepthStencilState depthStencil{}; // No depth testing!
+	vtek::ColorBlendState colorBlending{};
+	colorBlending.attachments.emplace_back(
+		vtek::ColorBlendAttachment::GetDefault());
+	vtek::PipelineRendering pipelineRendering{};
+	pipelineRendering.colorAttachmentFormats.push_back(
+		vtek::swapchain_get_image_format(swapchain));
+
+	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	graphicsPipelineInfo.renderPass = nullptr; // Nice!
+	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
+	graphicsPipelineInfo.shader = shader;
+	// TODO: Rename to `vertexBufferBindings`
+	graphicsPipelineInfo.vertexInputBindings = &bindings;
+	graphicsPipelineInfo.primitiveTopology =
+		vtek::PrimitiveTopology::triangle_fan;
+	graphicsPipelineInfo.enablePrimitiveRestart = false;
+	graphicsPipelineInfo.viewportState = &viewport;
+	graphicsPipelineInfo.rasterizationState = &rasterizer;
+	graphicsPipelineInfo.multisampleState = &multisampling;
+	graphicsPipelineInfo.depthStencilState = &depthStencil;
+	graphicsPipelineInfo.colorBlendState = &colorBlending;
+	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayout);
+
+	// TODO: Push constant for the model matrix
+
+	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
+		&graphicsPipelineInfo, device);
+	if (graphicsPipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline!");
+		return -1;
+	}
 
 
 
 
 	// Cleanup
 	vtek::device_wait_idle(device);
+
+	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
+	vtek::buffer_destroy(uniformBuffer);
+	vtek::camera_destroy(gCamera);
+	vtek::buffer_destroy(vertexBuffer);
+	vtek::descriptor_set_destroy(descriptorSet);
+	vtek::descriptor_set_layout_destroy(descriptorSetLayout, device);
+	vtek::descriptor_pool_destroy(descriptorPool, device);
+	vtek::graphics_shader_destroy(shader, device);
+	vtek::swapchain_destroy(swapchain, device);
+	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device);
+	vtek::command_pool_destroy(graphicsCommandPool, device);
+	vtek::device_destroy(device);
+	vtek::physical_device_release(physicalDevice);
+	vtek::window_surface_destroy(surface, instance);
+	vtek::instance_destroy(instance);
+	vtek::window_destroy(gWindow);
 
 	log_info("Program Success!");
 	vtek::terminate();

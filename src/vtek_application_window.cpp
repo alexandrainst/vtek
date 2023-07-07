@@ -60,6 +60,25 @@ bool vtek::glfw_backend_initialize()
 	uint32_t extensionCount = 0;
 	const char** extensions;
 	extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
+	if (extensions == nullptr)
+	{
+		if (!glfwVulkanSupported())
+		{
+			vtek_log_error("Vulkan is not supported on this machine, {}"
+			               "or GLFW backend could find a loader and an ICD.");
+		}
+		else
+		{
+			vtek_log_error(
+				"Creating a Vulkan-compatible surface is not supported {}"
+				"by GLFW on this machine!");
+			vtek_log_error(
+				"However, Vulkan may still be used for off-screen rendering {}",
+				"and compute work. You may disable GLFW backend and try again.");
+		}
+		return false;
+	}
+
 	for (uint32_t i = 0; i < extensionCount; i++)
 	{
 		sRequiredInstanceExtensions.push_back(extensions[i]);
@@ -80,6 +99,8 @@ void vtek::glfw_backend_terminate()
 	}
 	delete spEventMapper;
 	spEventMapper = nullptr;
+
+	sRequiredInstanceExtensions.clear();
 
 	glfwTerminate();
 }

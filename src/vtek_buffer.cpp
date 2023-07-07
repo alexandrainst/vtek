@@ -60,7 +60,8 @@ static bool do_schedule_transfer(
 	copyRegion.size = region->size;
 	vkCmdCopyBuffer(cmdBuf, srcBuf, dstBuf, 1, &copyRegion);
 
-	return vtek::command_scheduler_submit_transfer(scheduler, commandBuffer);
+	return vtek::command_scheduler_submit_transfer(
+		scheduler, commandBuffer, device);
 }
 
 
@@ -193,6 +194,7 @@ bool vtek::buffer_write_data(
 		stagingInfo.disallowInternalStagingBuffer = true;
 		stagingInfo.usageFlags = vtek::BufferUsageFlag::transfer_src;
 
+		// TODO: Dynamic allocation of `tempStaging` is not really necessary here.
 		vtek::Buffer* tempStaging = new vtek::Buffer;
 		tempStaging->stagingBuffer = nullptr;
 
@@ -207,15 +209,20 @@ bool vtek::buffer_write_data(
 
 		if (!do_map_and_copy(tempStaging, data, &finalRegion))
 		{
+			vtek::allocator_buffer_destroy(tempStaging);
+			delete tempStaging;
 			return false;
 		}
 
 		if (!do_schedule_transfer(tempStaging, buffer, &finalRegion, device))
 		{
+			vtek::allocator_buffer_destroy(tempStaging);
+			delete tempStaging;
 			return false;
 		}
 
-		vtek::buffer_destroy(tempStaging);
+		vtek::allocator_buffer_destroy(tempStaging);
+		delete tempStaging;
 
 		return true;
 	}

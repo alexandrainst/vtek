@@ -144,12 +144,14 @@ static bool spirv_reflect_test(const void* spirv_code, size_t spirv_nbytes)
 	//assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
 	SpvReflectInterfaceVariable** input_vars =
-		(SpvReflectInterfaceVariable**)malloc(var_count * sizeof(SpvReflectInterfaceVariable*));
+		(SpvReflectInterfaceVariable**)malloc(
+			var_count * sizeof(SpvReflectInterfaceVariable*));
 	result = spvReflectEnumerateInputVariables(&module, &var_count, input_vars);
 	if (result != SPV_REFLECT_RESULT_SUCCESS)
 	{
 		vtek_log_error("Failed to enumerate shader input variables!");
 		spvReflectDestroyShaderModule(&module);
+		free(input_vars);
 		return false;
 	}
 	//assert(result == SPV_REFLECT_RESULT_SUCCESS);
@@ -159,6 +161,7 @@ static bool spirv_reflect_test(const void* spirv_code, size_t spirv_nbytes)
 
 	// Destroy the reflection data when no longer required.
 	spvReflectDestroyShaderModule(&module);
+	free(input_vars);
 
 	return true;
 }
@@ -659,6 +662,8 @@ void vtek::graphics_shader_destroy(vtek::GraphicsShader* shader, vtek::Device* d
 		vkDestroyShaderModule(dev, module.module, nullptr);
 	}
 	shader->modules.clear();
+
+	delete shader;
 }
 
 const std::vector<vtek::GraphicsShaderModule>& vtek::graphics_shader_get_modules(

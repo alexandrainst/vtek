@@ -290,6 +290,8 @@ int main()
 	vtek::WindowCreateInfo windowInfo{};
 	windowInfo.title = "vtek example 04: Dynamic Circle";
 	windowInfo.resizeable = false;
+	windowInfo.width = 1200;
+	windowInfo.height = 1200;
 	window = vtek::window_create(&windowInfo);
 	if (window == nullptr)
 	{

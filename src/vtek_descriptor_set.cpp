@@ -55,6 +55,10 @@ vtek::DescriptorSet* vtek::descriptor_set_create(
 void vtek::descriptor_set_destroy(vtek::DescriptorSet* set)
 {
 	vtek_log_error("vtek::descriptor_set_destroy(): Not implemented!");
+
+	if (set == nullptr) return;
+
+	delete set;
 }
 
 VkDescriptorSet vtek::descriptor_set_get_handle(vtek::DescriptorSet* set)

@@ -2,12 +2,12 @@
 
 layout (location = 0) in vec3 aPosition;
 
+layout (location = 0) out vec3 color;
+
 layout (binding = 0) uniform CircleCenterUniform
 {
 	mat4 viewProjection;
 };
-
-layout (location = 0) out vec3 color;
 
 
 void main()

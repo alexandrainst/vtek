@@ -44,6 +44,8 @@ bool vtek::initialize(const vtek::InitInfo* info)
 		if (!vtek::glfw_backend_initialize())
 		{
 			vtek_log_fatal("Failed to initialize GLFW window backend!");
+			delete spContext;
+			spContext = nullptr;
 			return false;
 		}
 
@@ -54,6 +56,8 @@ bool vtek::initialize(const vtek::InitInfo* info)
 	if (!initialize_fileio())
 	{
 		vtek_log_fatal("Failed to initialize fileio module!");
+		delete spContext;
+		spContext = nullptr;
 		return false;
 	}
 
@@ -63,6 +67,8 @@ bool vtek::initialize(const vtek::InitInfo* info)
 		if (!vtek::initialize_glsl_shader_loading())
 		{
 			vtek_log_fatal("Failed to initialize GLSL shader loading backend!");
+			delete spContext;
+			spContext = nullptr;
 			return false;
 		}
 
