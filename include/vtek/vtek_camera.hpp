@@ -80,7 +80,8 @@ namespace vtek
 	void camera_move_forward(Camera* camera, float distance);
 	void camera_move_backward(Camera* camera, float distance);
 
-	void camera_add_roll(Camera* camera, float angle);
+	void camera_roll_left_radians(Camera* camera, float angle);
+	void camera_roll_right_radians(Camera* camera, float angle);
 
 	void camera_on_mouse_move(Camera* camera, double x, double y);
 

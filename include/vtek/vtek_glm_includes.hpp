@@ -12,6 +12,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 // The hash functions `std::hash<glm::_types_>` are defined in the gtx/
 // folder which means that it's technically still an experimental

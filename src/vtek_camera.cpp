@@ -152,48 +152,81 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 
 void vtek::camera_update(vtek::Camera* camera)
 {
+	// glm::quat q = glm::angleAxis(camera->rollAngle, glm::vec3(0.0f, 0.0f, 1.0f));
+	// q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+	// q *= glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+
 	glm::quat q = glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
 	q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+	// q *= glm::angleAxis(camera->rollAngle, glm::vec3(0.0f, 0.0f, 1.0f));
+
 	q = glm::normalize(q);
 	camera->orientation = q;
 	camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
-
-	// glm::quat q = glm::quatLookAt(camera->front, camera->up);
-	// q = glm::normalize(q); // TODO: necessary?
-	// camera->orientation = q;
-	// camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
 
 	camera->front.x = 2.0f*(q.x*q.z - q.w*q.y);
 	camera->front.y = 2.0f*(q.y*q.z + q.w*q.x);
 	camera->front.z = 1.0f - 2.0f*(q.x*q.x + q.y*q.y);
 	camera->up = glm::vec3(
-		2.0f * (q.x * q.y - q.w * q.z),
+		2.0f * (q.x * q.y + q.w * q.z),
 		1.0f - 2.0f * (q.x * q.x + q.z * q.z),
-		2.0f * (q.y * q.z + q.w * q.x));
+		2.0f * (q.y * q.z - q.w * q.x));
+
+	// TODO: if (camera->rollEnabled) { }
+	camera->up = glm::rotate(camera->up, camera->rollAngle, camera->front);
+	// TODO: This doesn't affect the view matrix !
+	// TODO: Rotate the orientation quaternion directly !
+
 	camera->right = glm::normalize(glm::cross(camera->up, camera->front));
 }
 
 
 void vtek::camera_move_left(vtek::Camera* camera, float distance)
 {
-	camera->position -= camera->right * distance;
+	camera->position += camera->right * distance;
 }
 
 void vtek::camera_move_right(vtek::Camera* camera, float distance)
 {
-	camera->position += camera->right * distance;
+	camera->position -= camera->right * distance;
+}
+
+void vtek::camera_move_up(vtek::Camera* camera, float distance)
+{
+	camera->position -= camera->up * distance;
+}
+
+void vtek::camera_move_down(vtek::Camera* camera, float distance)
+{
+	camera->position += camera->up * distance;
 }
 
 void vtek::camera_move_forward(vtek::Camera* camera, float distance)
 {
-	//glm::vec3 dir = glm::axis(camera->orientation);
 	camera->position -= camera->front * distance;
 }
 
 void vtek::camera_move_backward(vtek::Camera* camera, float distance)
 {
-	//glm::vec3 dir = glm::axis(camera->orientation);
 	camera->position += camera->front * distance;
+}
+
+void vtek::camera_roll_left_radians(vtek::Camera* camera, float angle)
+{
+	camera->rollAngle -= angle;
+	if (camera->rollAngle > glm::two_pi<float>())
+	{
+		camera->rollAngle -= glm::two_pi<float>();
+	}
+}
+
+void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
+{
+	camera->rollAngle += angle;
+	if (camera->rollAngle > glm::two_pi<float>())
+	{
+		camera->rollAngle += glm::two_pi<float>();
+	}
 }
 
 

@@ -83,21 +83,20 @@ void update_movement()
 		vtek::camera_move_backward(gCamera, 0.1f);
 	}
 
-
 	// up / down
-	if (gKeyboardMap.get_key(KeyboardKey::up)) {
-		// TODO: camera hover up
+	if (gKeyboardMap.get_key(KeyboardKey::space)) {
+		vtek::camera_move_up(gCamera, 0.1f);
 	}
-	else if (gKeyboardMap.get_key(KeyboardKey::down)) {
-		// TODO: camera hover down
+	else if (gKeyboardMap.get_key(KeyboardKey::c)) {
+		vtek::camera_move_down(gCamera, 0.1f);
 	}
 
 	// rotate
 	if (gKeyboardMap.get_key(KeyboardKey::q)) {
-		// TODO: camera roll left
+		vtek::camera_roll_left_radians(gCamera, 0.05f);
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::e)) {
-		// TODO: camera roll right
+		vtek::camera_roll_right_radians(gCamera, 0.05f);
 	}
 }
 
