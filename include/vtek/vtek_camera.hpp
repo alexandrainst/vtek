@@ -47,6 +47,8 @@ namespace vtek
 		Camera* camera, float fov_degrees, float near, float far);
 
 	void camera_set_position(Camera* camera, glm::vec3 position);
+	void camera_set_front(Camera* camera, glm::vec3 front);
+	void camera_set_up(Camera* camera, glm::vec3 up);
 
 	void camera_set_orientation_degrees(Camera* camera, float rightAngle, float upAngle);
 	void camera_set_orientation_radians(Camera* camera, float rightAngle, float upAngle);

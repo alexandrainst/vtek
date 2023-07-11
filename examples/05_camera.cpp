@@ -68,11 +68,11 @@ void update_movement()
 	using vtek::KeyboardKey;
 
 	// left / right
-	if (gKeyboardMap.get_key(KeyboardKey::left)) {
-		// TODO: camera strafe left
+	if (gKeyboardMap.get_key(KeyboardKey::a)) {
+		vtek::camera_move_right(gCamera, 0.1f);
 	}
-	else if (gKeyboardMap.get_key(KeyboardKey::right)) {
-		// TODO: camera strafe right
+	else if (gKeyboardMap.get_key(KeyboardKey::d)) {
+		vtek::camera_move_left(gCamera, 0.1f);
 	}
 
 	// forward / backward
@@ -519,7 +519,9 @@ int main()
 	gCamera = vtek::camera_create();
 	vtek::camera_set_z_up(gCamera);
 	vtek::camera_set_position(gCamera, glm::vec3(0.0f, 0.0f, 0.0f));
-	vtek::camera_set_orientation_degrees(gCamera, 0.0f, 0.0f);
+	vtek::camera_set_front(gCamera, glm::vec3(1.0f, 0.0f, 0.0f));
+	vtek::camera_set_up(gCamera, glm::vec3(0.0f, 0.0f, 1.0f));
+	vtek::camera_set_orientation_degrees(gCamera, 180.0f, 0.0f);
 	vtek::camera_set_window_size(gCamera, windowSize.x, windowSize.y);
 	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
 	vtek::camera_update(gCamera);

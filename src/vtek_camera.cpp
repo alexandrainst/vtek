@@ -27,9 +27,12 @@ struct vtek::Camera
 	glm::mat4 viewMatrix {1.0f};
 	glm::mat4 projectionMatrix {1.0f};
 
-	glm::vec3 position;
-	glm::vec3 view;
-	glm::vec3 up;
+	glm::vec3 globalUp{0.0f, 0.0f, 1.0f}; // z-up is default
+
+	glm::vec3 position {0.0f, 0.0f, 0.0f};
+	glm::vec3 front {1.0f, 0.0f, 0.0f};
+	glm::vec3 up {0.0f, 0.0f, 1.0f};
+	glm::vec3 right {0.0f, 1.0f, 0.0f}; // TODO: left-handed or right-handed?
 
 	float yaw {0.0f};
 	float pitch {0.0f};
@@ -79,14 +82,24 @@ void vtek::camera_set_position(vtek::Camera* camera, glm::vec3 position)
 	camera->position = position;
 }
 
+void vtek::camera_set_front(vtek::Camera* camera, glm::vec3 front)
+{
+	camera->front = glm::normalize(front);
+}
+
+void vtek::camera_set_up(vtek::Camera* camera, glm::vec3 up)
+{
+	camera->up = glm::normalize(up);
+}
+
 void vtek::camera_set_y_up(vtek::Camera* camera)
 {
-	vtek_log_error("vtek::camera_set_y_up(): Not implemented!");
+	camera->globalUp = {0.0f, 1.0f, 0.0f};
 }
 
 void vtek::camera_set_z_up(vtek::Camera* camera)
 {
-	vtek_log_error("vtek::camera_set_z_up(): Not implemented!");
+	camera->globalUp = {0.0f, 0.0f, 1.0f};
 }
 
 void vtek::camera_set_orientation_degrees(
@@ -143,20 +156,44 @@ void vtek::camera_update(vtek::Camera* camera)
 	q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
 	q = glm::normalize(q);
 	camera->orientation = q;
-	camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
+	camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
+
+	// glm::quat q = glm::quatLookAt(camera->front, camera->up);
+	// q = glm::normalize(q); // TODO: necessary?
+	// camera->orientation = q;
+	// camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
+
+	camera->front.x = 2.0f*(q.x*q.z - q.w*q.y);
+	camera->front.y = 2.0f*(q.y*q.z + q.w*q.x);
+	camera->front.z = 1.0f - 2.0f*(q.x*q.x + q.y*q.y);
+	camera->up = glm::vec3(
+		2.0f * (q.x * q.y - q.w * q.z),
+		1.0f - 2.0f * (q.x * q.x + q.z * q.z),
+		2.0f * (q.y * q.z + q.w * q.x));
+	camera->right = glm::normalize(glm::cross(camera->up, camera->front));
 }
 
 
+void vtek::camera_move_left(vtek::Camera* camera, float distance)
+{
+	camera->position -= camera->right * distance;
+}
+
+void vtek::camera_move_right(vtek::Camera* camera, float distance)
+{
+	camera->position += camera->right * distance;
+}
+
 void vtek::camera_move_forward(vtek::Camera* camera, float distance)
 {
-	glm::vec3 dir = glm::axis(camera->orientation);
-	camera->position += dir * distance;
+	//glm::vec3 dir = glm::axis(camera->orientation);
+	camera->position -= camera->front * distance;
 }
 
 void vtek::camera_move_backward(vtek::Camera* camera, float distance)
 {
-	glm::vec3 dir = glm::axis(camera->orientation);
-	camera->position -= dir * distance;
+	//glm::vec3 dir = glm::axis(camera->orientation);
+	camera->position += camera->front * distance;
 }
 
 
