@@ -85,6 +85,7 @@ void vtek::camera_set_position(vtek::Camera* camera, glm::vec3 position)
 void vtek::camera_set_front(vtek::Camera* camera, glm::vec3 front)
 {
 	camera->front = glm::normalize(front);
+	camera->orientation = glm::quat(0.0f, camera->front);
 }
 
 void vtek::camera_set_up(vtek::Camera* camera, glm::vec3 up)
@@ -150,45 +151,107 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 	}
 }
 
+
 void vtek::camera_update(vtek::Camera* camera)
 {
-	// glm::quat q = glm::angleAxis(camera->rollAngle, glm::vec3(0.0f, 0.0f, 1.0f));
-	// q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-	// q *= glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+	// https://stackoverflow.com/questions/52413464/look-at-quaternion-using-up-vector
 
-	glm::quat q = glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-	q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-	// q *= glm::angleAxis(camera->rollAngle, glm::vec3(0.0f, 0.0f, 1.0f));
+	// your code from before
+	glm::vec3 F = glm::normalize(camera->front);
+	glm::vec3 R = glm::normalize(glm::cross(F, camera->up));
+	glm::vec3 U = glm::cross(R, F);
+
+	camera->front = F;
+	camera->right = R;
+	camera->up = U;
+
+	// note that R needed to be re-normalized
+	// since F and worldUp are not necessary perpendicular
+	// so must remove the sin(angle) factor of the cross-product
+	// same not true for U because dot(R, F) = 0
+
+	// adapted source
+	glm::quat& q = camera->orientation;
+	double trace = R.x + U.y + F.z;
+	if (trace > 0.0) {
+		double s = 0.5 / sqrt(trace + 1.0);
+		q.w = 0.25 / s;
+		q.x = (U.z - F.y) * s;
+		q.y = (F.x - R.z) * s;
+		q.z = (R.y - U.x) * s;
+	} else {
+		if (R.x > U.y && R.x > F.z) {
+			double s = 2.0 * sqrt(1.0 + R.x - U.y - F.z);
+			q.w = (U.z - F.y) / s;
+			q.x = 0.25 * s;
+			q.y = (U.x + R.y) / s;
+			q.z = (F.x + R.z) / s;
+		} else if (U.y > F.z) {
+			double s = 2.0 * sqrt(1.0 + U.y - R.x - F.z);
+			q.w = (F.x - R.z) / s;
+			q.x = (U.x + R.y) / s;
+			q.y = 0.25 * s;
+			q.z = (F.y + U.z) / s;
+		} else {
+			double s = 2.0 * sqrt(1.0 + F.z - R.x - U.y);
+			q.w = (R.y - U.x) / s;
+			q.x = (F.x + R.z) / s;
+			q.y = (F.y + U.z) / s;
+			q.z = 0.25 * s;
+		}
+	}
 
 	q = glm::normalize(q);
-	camera->orientation = q;
 	camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
 
-	camera->front.x = 2.0f*(q.x*q.z - q.w*q.y);
-	camera->front.y = 2.0f*(q.y*q.z + q.w*q.x);
-	camera->front.z = 1.0f - 2.0f*(q.x*q.x + q.y*q.y);
-	camera->up = glm::vec3(
-		2.0f * (q.x * q.y + q.w * q.z),
-		1.0f - 2.0f * (q.x * q.x + q.z * q.z),
-		2.0f * (q.y * q.z - q.w * q.x));
+}
+
+
+
+/*
+void vtek::camera_update(vtek::Camera* camera)
+{
+	// camera roll
+	// glm::quat temp()
+
+	// glm::quat q = glm::angleAxis(-camera->upAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+	// q *= glm::angleAxis(camera->rightAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::quat& q = camera->orientation;
+	q = glm::normalize(q);
+	// camera->orientation = q;
+	camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
+
+	// camera->front.x = 2.0f*(q.x*q.z - q.w*q.y);
+	// camera->front.y = 2.0f*(q.y*q.z + q.w*q.x);
+	// camera->front.z = 1.0f - 2.0f*(q.x*q.x + q.y*q.y);
+	// camera->up = glm::vec3(
+	// 	2.0f * (q.x * q.y + q.w * q.z),
+	// 	1.0f - 2.0f * (q.x * q.x + q.z * q.z),
+	// 	2.0f * (q.y * q.z - q.w * q.x));
 
 	// TODO: if (camera->rollEnabled) { }
-	camera->up = glm::rotate(camera->up, camera->rollAngle, camera->front);
+	//camera->up = glm::rotate(camera->up, camera->rollAngle, camera->front);
+	// camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
+	// camera->viewMatrix = glm::rotate(camera->viewMatrix, camera->rollAngle, camera->front);
+
+
 	// TODO: This doesn't affect the view matrix !
 	// TODO: Rotate the orientation quaternion directly !
 
 	camera->right = glm::normalize(glm::cross(camera->up, camera->front));
 }
+*/
+
 
 
 void vtek::camera_move_left(vtek::Camera* camera, float distance)
 {
-	camera->position += camera->right * distance;
+	camera->position -= camera->right * distance;
 }
 
 void vtek::camera_move_right(vtek::Camera* camera, float distance)
 {
-	camera->position -= camera->right * distance;
+	camera->position += camera->right * distance;
 }
 
 void vtek::camera_move_up(vtek::Camera* camera, float distance)
@@ -218,6 +281,8 @@ void vtek::camera_roll_left_radians(vtek::Camera* camera, float angle)
 	{
 		camera->rollAngle -= glm::two_pi<float>();
 	}
+
+	camera->up = glm::rotate(camera->up, angle, camera->front);
 }
 
 void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
@@ -227,6 +292,8 @@ void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
 	{
 		camera->rollAngle += glm::two_pi<float>();
 	}
+
+	camera->up = glm::rotate(camera->up, -angle, camera->front);
 }
 
 
@@ -252,7 +319,7 @@ void procedure()
 	glm::quat viewQuaternion = glm::quat(0.0f, View);
 
 	// We need a vector to rotate about, and the angle to rotate by.
-	glm::quat rotationQuaternion =
+	glm::quat rotationQuaternion = glm::rotate(viewQuaternion, angle, View);
 
 }
 

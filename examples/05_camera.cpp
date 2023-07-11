@@ -517,10 +517,10 @@ int main()
 	// Camera
 	gCamera = vtek::camera_create();
 	vtek::camera_set_z_up(gCamera);
-	vtek::camera_set_position(gCamera, glm::vec3(0.0f, 0.0f, 0.0f));
-	vtek::camera_set_front(gCamera, glm::vec3(1.0f, 0.0f, 0.0f));
-	vtek::camera_set_up(gCamera, glm::vec3(0.0f, 0.0f, 1.0f));
-	vtek::camera_set_orientation_degrees(gCamera, 180.0f, 0.0f);
+	vtek::camera_set_position(gCamera, glm::vec3(3.0f, 0.0f, 0.0f));
+	// vtek::camera_set_up(gCamera, glm::vec3(0.0f, 0.0f, 1.0f));
+	// vtek::camera_set_front(gCamera, glm::vec3(1.0f, 0.0f, 0.0f));
+	//vtek::camera_set_orientation_degrees(gCamera, 180.0f, 0.0f);
 	vtek::camera_set_window_size(gCamera, windowSize.x, windowSize.y);
 	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
 	vtek::camera_update(gCamera);
