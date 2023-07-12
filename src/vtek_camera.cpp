@@ -7,9 +7,6 @@
 /* struct implementation */
 struct vtek::Camera
 {
-	float rightAngle {0.0f};
-	float upAngle {0.0f};
-	float rollAngle {0.0f};
 	float mouseSensitivity {0.001f};
 	float lastX {0.0f};
 	float lastY {0.0f};
@@ -68,9 +65,10 @@ void vtek::camera_set_window_size(
 void vtek::camera_set_perspective_frustrum(
 	vtek::Camera* camera, float fov_degrees, float near, float far)
 {
+	// TODO: Clamp the fov?
 	camera->fov = glm::radians(fov_degrees);
-	camera->near = near;
-	camera->far = far;
+	camera->near = (near < 0.1) ? 0.1 : near;
+	camera->far = glm::max(camera->near, far);
 
 	camera->projectionMatrix = glm::perspectiveFov(
 		camera->fov, camera->windowSize.x, camera->windowSize.y,
@@ -287,10 +285,12 @@ glm::vec3 vtek::camera_get_position(vtek::Camera* camera)
 {
 	return camera->position;
 }
+
 glm::vec3 vtek::camera_get_front(vtek::Camera* camera)
 {
 	return camera->front;
 }
+
 glm::vec3 vtek::camera_get_up(vtek::Camera* camera)
 {
 	return camera->up;

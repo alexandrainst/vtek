@@ -541,10 +541,11 @@ int main()
 	//vtek::camera_set_up(gCamera, glm::vec3(0.0f, 0.0f, 1.0f));
 	//vtek::camera_set_front(gCamera, glm::vec3(1.0f, 0.0f, 0.0f));
 	//vtek::camera_set_orientation_degrees(gCamera, 180.0f, 0.0f);
-	glm::vec3 camPos {0.0f, 0.0f, 0.0f};
-	glm::vec3 camFront {1.0f, 0.0f, 0.0f};
+	glm::vec3 camPos {0.0f, 3.0f, 0.0f};
+	glm::vec3 camFront {1.0f, 0.0f, 0.0f}; // TODO: Bug, front ends up being {0,-1,0}
 	glm::vec3 camUp {0.0f, 0.0f, 1.0f};
 	vtek::camera_set_lookat(gCamera, camPos, camFront, camUp);
+	// TODO: BUG: Y is going to be up, not Z as specified!
 
 	vtek::camera_set_window_size(gCamera, windowSize.x, windowSize.y);
 	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
