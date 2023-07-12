@@ -77,32 +77,67 @@ void vtek::camera_set_perspective_frustrum(
 		camera->near, camera->far);
 }
 
-void vtek::camera_set_position(vtek::Camera* camera, glm::vec3 position)
+void vtek::camera_set_lookat(
+	vtek::Camera* camera, glm::vec3 pos, glm::vec3 front, glm::vec3 up)
 {
-	camera->position = position;
+	camera->position = pos;
+	// NOTE: front = lookTo - lookFrom, perhaps, for orbitation camera!
+
+	// Check if length is valid; Also deals with NaN
+	float frontLength = glm::length(front);
+	if (frontLength <= 0.0001f)
+	{
+		camera->orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+		return;
+	}
+
+	front /= frontLength; // normalize front vector
+
+	// Check if front and up vectors are (nearly) parallel
+	if (glm::abs(glm::dot(front, up)) > 0.9999f)
+	{
+		// Find an alternative up vector, which is not (nearly) parallel to front
+		glm::vec3 alterntiveUp =
+			(glm::abs(glm::dot(front, {1, 0, 0})) > 0.9999f)
+			? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
+
+		camera->orientation = glm::quatLookAt(front, alterntiveUp);
+	}
+	else
+	{
+		camera->orientation = glm::quatLookAt(front, up);
+	}
+
+	camera->orientation = glm::normalize(camera->orientation);
 }
 
-void vtek::camera_set_front(vtek::Camera* camera, glm::vec3 front)
-{
-	camera->front = glm::normalize(front);
-	camera->orientation = glm::quat(0.0f, camera->front);
-}
+// void vtek::camera_set_position(vtek::Camera* camera, glm::vec3 position)
+// {
+// 	camera->position = position;
+// }
 
-void vtek::camera_set_up(vtek::Camera* camera, glm::vec3 up)
-{
-	camera->up = glm::normalize(up);
-}
+// void vtek::camera_set_front(vtek::Camera* camera, glm::vec3 front)
+// {
+// 	camera->front = glm::normalize(front);
+// 	camera->orientation = glm::quat(0.0f, camera->up);
+// }
 
-void vtek::camera_set_y_up(vtek::Camera* camera)
-{
-	camera->globalUp = {0.0f, 1.0f, 0.0f};
-}
+// void vtek::camera_set_up(vtek::Camera* camera, glm::vec3 up)
+// {
+// 	camera->up = glm::normalize(up);
+// }
 
-void vtek::camera_set_z_up(vtek::Camera* camera)
-{
-	camera->globalUp = {0.0f, 0.0f, 1.0f};
-}
+// void vtek::camera_set_y_up(vtek::Camera* camera)
+// {
+// 	camera->globalUp = {0.0f, 1.0f, 0.0f};
+// }
 
+// void vtek::camera_set_z_up(vtek::Camera* camera)
+// {
+// 	camera->globalUp = {0.0f, 0.0f, 1.0f};
+// }
+
+// TODO: Specify with Euler angles instead!
 void vtek::camera_set_orientation_degrees(
 	vtek::Camera* camera, float rightAngle, float upAngle)
 {
@@ -127,8 +162,90 @@ const glm::mat4* vtek::camera_get_projection_matrix(vtek::Camera* camera)
 	return &camera->projectionMatrix;
 }
 
+glm::vec3 vtek::camera_get_position(vtek::Camera* camera)
+{
+	return camera->position;
+}
+glm::vec3 vtek::camera_get_front(vtek::Camera* camera)
+{
+	return camera->front;
+}
+glm::vec3 vtek::camera_get_up(vtek::Camera* camera)
+{
+	return camera->up;
+}
 
 
+
+void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
+{
+
+}
+
+void vtek::camera_update(vtek::Camera* camera)
+{
+	glm::quat& q = camera->orientation;
+	camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
+
+	camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, -1.0f));
+	// camera->front.x = 2.0f*(q.x*q.z - q.w*q.y);
+	// camera->front.y = 2.0f*(q.y*q.z + q.w*q.x);
+	// camera->front.z = 1.0f - 2.0f*(q.x*q.x + q.y*q.y);
+	camera->up.x = 2.0f * (q.x * q.y + q.w * q.z);
+	camera->up.y = 1.0f - 2.0f * (q.x * q.x + q.z * q.z);
+	camera->up.z = 2.0f * (q.y * q.z - q.w * q.x);
+	camera->right = glm::normalize(glm::cross(camera->up, camera->front));
+}
+
+void vtek::camera_move_left(vtek::Camera* camera, float distance)
+{
+	camera->position -= camera->right * distance;
+}
+void vtek::camera_move_right(vtek::Camera* camera, float distance)
+{
+	camera->position += camera->right * distance;
+}
+void vtek::camera_move_up(vtek::Camera* camera, float distance)
+{
+	camera->position -= camera->up * distance;
+}
+void vtek::camera_move_down(vtek::Camera* camera, float distance)
+{
+	camera->position += camera->up * distance;
+}
+void vtek::camera_move_forward(vtek::Camera* camera, float distance)
+{
+	camera->position += camera->front * distance;
+}
+void vtek::camera_move_backward(vtek::Camera* camera, float distance)
+{
+	camera->position -= camera->front * distance;
+}
+
+void vtek::camera_roll_left_radians(vtek::Camera* camera, float angle)
+{
+	angle *= 0.5f;
+	float cos = glm::cos(angle);
+	float sin = glm::sin(angle);
+	glm::quat rotor = glm::normalize(glm::quat(cos, sin*glm::vec3(0, 0, -1)));
+
+	camera->orientation = glm::normalize(rotor * camera->orientation);
+}
+void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
+{
+	angle *= -0.5f;
+	float cos = glm::cos(angle);
+	float sin = glm::sin(angle);
+	glm::quat rotor = glm::normalize(glm::quat(cos, sin*glm::vec3(0, 0, -1)));
+
+	camera->orientation = glm::normalize(rotor * camera->orientation);
+}
+
+
+
+
+
+/*
 void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 {
 	float xOffset = x - camera->lastX;
@@ -205,7 +322,7 @@ void vtek::camera_update(vtek::Camera* camera)
 	camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
 
 }
-
+*/
 
 
 /*
@@ -244,6 +361,7 @@ void vtek::camera_update(vtek::Camera* camera)
 
 
 
+/*
 void vtek::camera_move_left(vtek::Camera* camera, float distance)
 {
 	camera->position -= camera->right * distance;
@@ -295,7 +413,7 @@ void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
 
 	camera->up = glm::rotate(camera->up, -angle, camera->front);
 }
-
+*/
 
 
 

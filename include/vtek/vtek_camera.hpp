@@ -46,9 +46,9 @@ namespace vtek
 	void camera_set_perspective_frustrum(
 		Camera* camera, float fov_degrees, float near, float far);
 
-	void camera_set_position(Camera* camera, glm::vec3 position);
-	void camera_set_front(Camera* camera, glm::vec3 front);
-	void camera_set_up(Camera* camera, glm::vec3 up);
+	// void camera_set_position(Camera* camera, glm::vec3 position);
+	// void camera_set_front(Camera* camera, glm::vec3 front);
+	// void camera_set_up(Camera* camera, glm::vec3 up);
 
 	void camera_set_orientation_degrees(Camera* camera, float rightAngle, float upAngle);
 	void camera_set_orientation_radians(Camera* camera, float rightAngle, float upAngle);
@@ -56,11 +56,14 @@ namespace vtek
 	void camera_set_constrain_pitch(
 		Camera* camera, bool restrict, float angleUpDegrees, float angleDownDegrees);
 
-	void camera_set_y_up(Camera* camera);
-	void camera_set_z_up(Camera* camera);
+	// void camera_set_y_up(Camera* camera);
+	// void camera_set_z_up(Camera* camera);
 
 	void camera_set_perspective_frustrum(
 		Camera* camera, float fov_degrees, float near, float far);
+
+	void camera_set_lookat(
+		Camera* camera, glm::vec3 pos, glm::vec3 front, glm::vec3 up);
 
 	/*
 	enum class MovementDirection
@@ -91,4 +94,8 @@ namespace vtek
 	const glm::mat4* camera_get_projection_matrix(Camera* camera);
 
 	glm::quat camera_get_orientation(Camera* camera);
+
+	glm::vec3 camera_get_position(Camera* camera);
+	glm::vec3 camera_get_front(Camera* camera);
+	glm::vec3 camera_get_up(Camera* camera);
 }

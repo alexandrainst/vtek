@@ -47,6 +47,16 @@ void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 		case KeyboardKey::escape:
 			vtek::window_set_should_close(gWindow, true);
 			break;
+		case KeyboardKey::p:
+			{
+				glm::vec3 pos = vtek::camera_get_position(gCamera);
+				glm::vec3 front = vtek::camera_get_front(gCamera);
+				glm::vec3 up = vtek::camera_get_up(gCamera);
+
+				log_debug("[Camera] pos=({},{},{}), front=({},{},{}), up=({},{},{})",
+				          pos.x, pos.y, pos.z, front.x, front.y, front.z, up.x, up.y, up.z);
+			}
+			break;
 		default:
 			gKeyboardMap.press_key(key);
 			break;
@@ -516,11 +526,17 @@ int main()
 
 	// Camera
 	gCamera = vtek::camera_create();
-	vtek::camera_set_z_up(gCamera);
-	vtek::camera_set_position(gCamera, glm::vec3(3.0f, 0.0f, 0.0f));
-	// vtek::camera_set_up(gCamera, glm::vec3(0.0f, 0.0f, 1.0f));
-	// vtek::camera_set_front(gCamera, glm::vec3(1.0f, 0.0f, 0.0f));
+	//vtek::camera_set_z_up(gCamera);
+	//vtek::camera_set_position(gCamera, glm::vec3(-3.0f, 0.0f, 0.0f));
+
+	//vtek::camera_set_up(gCamera, glm::vec3(0.0f, 0.0f, 1.0f));
+	//vtek::camera_set_front(gCamera, glm::vec3(1.0f, 0.0f, 0.0f));
 	//vtek::camera_set_orientation_degrees(gCamera, 180.0f, 0.0f);
+	glm::vec3 camPos {0.0f, 0.0f, 0.0f};
+	glm::vec3 camFront {1.0f, 0.0f, 0.0f};
+	glm::vec3 camUp {0.0f, 0.0f, 1.0f};
+	vtek::camera_set_lookat(gCamera, camPos, camFront, camUp);
+
 	vtek::camera_set_window_size(gCamera, windowSize.x, windowSize.y);
 	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
 	vtek::camera_update(gCamera);
