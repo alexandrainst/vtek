@@ -57,6 +57,15 @@ void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 				          pos.x, pos.y, pos.z, front.x, front.y, front.z, up.x, up.y, up.z);
 			}
 			break;
+
+		// NOTE: Un-comment for checking correct angular displacement.
+		// case KeyboardKey::q:
+		// 	vtek::camera_roll_left_radians(gCamera, glm::pi<float>() * 0.25f);
+		// 	break;
+		// case KeyboardKey::e:
+		// 	vtek::camera_roll_right_radians(gCamera, glm::pi<float>() * 0.25f);
+		// 	break;
+
 		default:
 			gKeyboardMap.press_key(key);
 			break;

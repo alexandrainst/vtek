@@ -179,6 +179,35 @@ glm::vec3 vtek::camera_get_up(vtek::Camera* camera)
 
 void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 {
+	static bool first = true;
+	if (first)
+	{
+		camera->lastX = x;
+		camera->lastY = y;
+		first = false;
+	}
+
+	float xOffset = x - camera->lastX;
+	float yOffset = y - camera->lastY;
+	camera->lastX = x;
+	camera->lastY = y;
+
+	xOffset *= camera->mouseSensitivity;
+	yOffset *= camera->mouseSensitivity;
+
+	//vtek_log_debug("({}, {})", xOffset, yOffset);
+
+	// I guess we apply x first, then y, and see what happens.
+
+	float xCos = glm::cos(xOffset);
+	float xSin = glm::sin(xOffset);
+	glm::quat xRotor = glm::normalize(glm::quat(xCos, xSin*glm::vec3(0, 1, 0)));
+	camera->orientation = glm::normalize(xRotor * camera->orientation);
+
+	float yCos = glm::cos(-yOffset);
+	float ySin = glm::sin(-yOffset);
+	glm::quat yRotor = glm::normalize(glm::quat(yCos, ySin*glm::vec3(1, 0, 0)));
+	camera->orientation = glm::normalize(yRotor * camera->orientation);
 
 }
 
