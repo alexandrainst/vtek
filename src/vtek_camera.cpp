@@ -155,7 +155,7 @@ void vtek::camera_set_mouse_sensitivity(vtek::Camera* camera, float sensitivity)
 // ================== //
 void vtek::camera_update(vtek::Camera* camera)
 {
-	glm::quat& q = camera->orientation;
+	const glm::quat& q = camera->orientation;
 	camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
 
 	camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, -1.0f));
@@ -203,7 +203,7 @@ void vtek::camera_roll_left_radians(vtek::Camera* camera, float angle)
 	angle *= 0.5f;
 	float cos = glm::cos(angle);
 	float sin = glm::sin(angle);
-	glm::quat rotor = glm::normalize(glm::quat(cos, sin*glm::vec3(0, 0, -1)));
+	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
 
 	camera->orientation = glm::normalize(rotor * camera->orientation);
 }
@@ -213,7 +213,7 @@ void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
 	angle *= -0.5f;
 	float cos = glm::cos(angle);
 	float sin = glm::sin(angle);
-	glm::quat rotor = glm::normalize(glm::quat(cos, sin*glm::vec3(0, 0, -1)));
+	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
 
 	camera->orientation = glm::normalize(rotor * camera->orientation);
 }
@@ -247,12 +247,12 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 
 	float xCos = glm::cos(xOffset);
 	float xSin = glm::sin(xOffset);
-	glm::quat xRotor = glm::normalize(glm::quat(xCos, xSin*glm::vec3(0, 1, 0)));
+	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
 	camera->orientation = glm::normalize(xRotor * camera->orientation);
 
 	float yCos = glm::cos(-yOffset);
 	float ySin = glm::sin(-yOffset);
-	glm::quat yRotor = glm::normalize(glm::quat(yCos, ySin*glm::vec3(1, 0, 0)));
+	glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
 	camera->orientation = glm::normalize(yRotor * camera->orientation);
 }
 
