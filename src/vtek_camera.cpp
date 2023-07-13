@@ -248,7 +248,7 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 	float xCos = glm::cos(xOffset);
 	float xSin = glm::sin(xOffset);
 	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
-	camera->orientation = glm::normalize(xRotor * camera->orientation);
+	camera->orientation = xRotor * camera->orientation;
 
 	float yCos = glm::cos(-yOffset);
 	float ySin = glm::sin(-yOffset);
