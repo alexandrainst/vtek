@@ -25,6 +25,8 @@ namespace vtek
 	// ========================== //
 	// === Push constant enum === //
 	// ========================== //
+	// NOTE: Certain types are NOT recommended, such as mat3. It might, or might
+	// not, work depending on driver/hardware/etc. Best to just avoid them.
 	enum class PushConstantType
 	{
 		none, // ie. a pipeline/shader program uses no push constants.
@@ -38,6 +40,7 @@ namespace vtek
 	{
 		// NOTE: Size must always be a multiple of 4.
 		static_assert(Size % 4 == 0);
+		static_assert(Type != PushConstantType::none); // TODO: Is this reasonable?
 
 		constexpr uint32_t size() { return Size; }
 		static constexpr uint32_t static_size() { return Size; }
@@ -68,7 +71,7 @@ namespace vtek
 		sizeof(glm::mat4), PushConstantType::mat4>
 	{
 		void* data() override { return static_cast<void*>(&m1); }
-		glm::mat4 m1 {0.0f};
+		alignas(16) glm::mat4 m1 {1.0f};
 	};
 
 

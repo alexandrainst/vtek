@@ -192,17 +192,13 @@ bool update_uniform_buffer(
 
 
 bool record_command_buffers(
-	vtek::GraphicsPipeline* pipeline, vtek::Queue* queue,
+	vtek::GraphicsPipeline* pipeline,
 	std::vector<vtek::CommandBuffer*> commandBuffers, vtek::Swapchain* swapchain,
 	vtek::Buffer* vertexBuffer, vtek::DescriptorSet* descriptorSet)
 {
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
-	uint32_t queueIndex = vtek::queue_get_family_index(queue);
 	uint32_t commandBufferCount = commandBuffers.size();
-	VkExtent2D swapchainExtent = vtek::swapchain_get_image_extent(swapchain);
-	const uint32_t width = swapchainExtent.width;
-	const uint32_t height = swapchainExtent.height;
 
 	for (uint32_t i = 0; i < commandBufferCount; i++)
 	{
@@ -234,9 +230,28 @@ bool record_command_buffers(
 			cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipLayout, 0, 1,
 			descriptorSets, 0, nullptr);
 
-		// TODO: Push constant for model matrix ?
+		// Cube 1
+		vtek::PushConstant_m4 pc{};
+		pc.m1 = glm::mat4(1.0f); // unit matrix
+		pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
+		pc.cmdPush(cmdBuf, pipLayout);
+		//
+		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
-		// draw calls here
+		// Cube 2 - translated along the Z-axis
+		vtek::PushConstant_m4 pc2{};
+		pc2.m1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 1.5f));
+		pc2.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
+		pc2.cmdPush(cmdBuf, pipLayout);
+		//
+		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
+
+		// Cube 3 - translated along the Y-axis
+		vtek::PushConstant_m4 pc3{};
+		pc3.m1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.5f, 0.0f));
+		pc3.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
+		pc3.cmdPush(cmdBuf, pipLayout);
+		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		vtek::swapchain_dynamic_rendering_end(swapchain, i, commandBuffer);
@@ -454,18 +469,10 @@ int main()
 
 	// Camera
 	gCamera = vtek::camera_create();
-	//vtek::camera_set_z_up(gCamera);
-	//vtek::camera_set_position(gCamera, glm::vec3(-3.0f, 0.0f, 0.0f));
-
-	//vtek::camera_set_up(gCamera, glm::vec3(0.0f, 0.0f, 1.0f));
-	//vtek::camera_set_front(gCamera, glm::vec3(1.0f, 0.0f, 0.0f));
-	//vtek::camera_set_orientation_degrees(gCamera, 180.0f, 0.0f);
-	glm::vec3 camPos {0.0f, 3.0f, 0.0f};
-	glm::vec3 camFront {1.0f, 0.0f, 0.0f}; // TODO: Bug, front ends up being {0,-1,0}
+	glm::vec3 camPos {8.0f, 0.0f, 0.0f};
+	glm::vec3 camFront {-1.0f, 0.0f, 0.0f};
 	glm::vec3 camUp {0.0f, 0.0f, 1.0f};
 	vtek::camera_set_lookat(gCamera, camPos, camFront, camUp);
-	// TODO: BUG: Y is going to be up, not Z as specified!
-
 	vtek::camera_set_window_size(gCamera, windowSize.x, windowSize.y);
 	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
 	vtek::camera_update(gCamera);
@@ -526,8 +533,9 @@ int main()
 	graphicsPipelineInfo.depthStencilState = &depthStencil;
 	graphicsPipelineInfo.colorBlendState = &colorBlending;
 	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayout);
-
-	// TODO: Push constant for the model matrix
+	graphicsPipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
+	graphicsPipelineInfo.pushConstantShaderStages =
+		vtek::ShaderStageGraphics::vertex;
 
 	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
 		&graphicsPipelineInfo, device);
@@ -539,8 +547,7 @@ int main()
 
 	// Command buffer recording
 	if (!record_command_buffers(
-		    graphicsPipeline, graphicsQueue, commandBuffers,
-		    swapchain, vertexBuffer, descriptorSet))
+		    graphicsPipeline, commandBuffers, swapchain, vertexBuffer, descriptorSet))
 	{
 		log_error("Failed to record command buffers!");
 		return -1;

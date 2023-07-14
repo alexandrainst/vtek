@@ -99,11 +99,16 @@ void vtek::camera_set_lookat(
 			(glm::abs(glm::dot(front, {1, 0, 0})) > 0.9999f)
 			? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
 
-		camera->orientation = glm::quatLookAt(front, alterntiveUp);
+		glm::vec3 right = glm::cross(front, -alterntiveUp);
+		camera->orientation = glm::quatLookAt(-right, -front);
 	}
 	else
 	{
-		camera->orientation = glm::quatLookAt(front, up);
+		// NOTE: glm::quatLookAt doesn't play well with Vulkan handedness, so
+		// we perform a few tricks to construct the correct coordinate space.
+		// Same above.
+		glm::vec3 right = glm::cross(front, -up);
+		camera->orientation = glm::quatLookAt(-right, -front);
 	}
 
 	camera->orientation = glm::normalize(camera->orientation);
@@ -156,21 +161,21 @@ void vtek::camera_set_mouse_sensitivity(vtek::Camera* camera, float sensitivity)
 void vtek::camera_update(vtek::Camera* camera)
 {
 	const glm::quat& q = camera->orientation;
-	camera->viewMatrix = glm::translate(glm::mat4_cast(q), -camera->position);
+	camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
 
-	camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, -1.0f));
-	camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 1.0f, 0.0f));
+	camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, 1.0f));
+	camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, -1.0f, 0.0f));
 	camera->right = glm::normalize(glm::cross(camera->up, camera->front));
 }
 
 void vtek::camera_move_left(vtek::Camera* camera, float distance)
 {
-	camera->position -= camera->right * distance;
+	camera->position += camera->right * distance;
 }
 
 void vtek::camera_move_right(vtek::Camera* camera, float distance)
 {
-	camera->position += camera->right * distance;
+	camera->position -= camera->right * distance;
 }
 
 void vtek::camera_move_up(vtek::Camera* camera, float distance)
@@ -203,7 +208,7 @@ void vtek::camera_roll_left_radians(vtek::Camera* camera, float angle)
 	angle *= 0.5f;
 	float cos = glm::cos(angle);
 	float sin = glm::sin(angle);
-	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
+	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, 1));
 
 	camera->orientation = glm::normalize(rotor * camera->orientation);
 }
@@ -213,7 +218,7 @@ void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
 	angle *= -0.5f;
 	float cos = glm::cos(angle);
 	float sin = glm::sin(angle);
-	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
+	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, 1));
 
 	camera->orientation = glm::normalize(rotor * camera->orientation);
 }

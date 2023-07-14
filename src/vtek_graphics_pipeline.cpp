@@ -545,8 +545,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
-		// NOTE: Only 1 push constant is supported, and not multiple ranges!
-		// This could be changed, if the need arises.
+		// NOTE: vtek supports only 1 push constant, and not multiple ranges!
+		// This could be changed if the need arises.
 		pushConstantRange.stageFlags =
 			vtek::get_shader_stage_flags_graphics(info->pushConstantShaderStages);
 		pushConstantRange.offset = 0;
