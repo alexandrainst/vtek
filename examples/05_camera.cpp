@@ -215,65 +215,9 @@ bool record_command_buffers(
 			return false;
 		}
 
-		// NEXT: Cleanup a bit
-		//VkImage image = vtek::swapchain_get_image(swapchain, i);
-		//VkImageView imageView = vtek::swapchain_get_image_view(swapchain, i);
-		//vtek::swapchain_barrier_prerendering(i);
-		//render...
-		//vtek::swapchain_barrier_postrendering(i);
-
-		// Transition from whatever (probably present src) to color attachment
-		VkImageMemoryBarrier beginBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = 0,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.srcQueueFamilyIndex = queueIndex,
-			.dstQueueFamilyIndex = queueIndex,
-			.image = vtek::swapchain_get_image(swapchain, i),
-			.subresourceRange = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1
-			}
-		};
-		// TODO: Also use barrier for depth/stencil image!
-
-		vkCmdPipelineBarrier(
-			cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
-			0, nullptr, 1, &beginBarrier);
-
-		VkRenderingAttachmentInfo colorAttachmentInfo{
-			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
-			.pNext = nullptr,
-			.imageView = vtek::swapchain_get_image_view(swapchain, i),
-			.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-			.resolveMode = VK_RESOLVE_MODE_NONE,
-			.resolveImageView = VK_NULL_HANDLE,
-			.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-			.clearValue = { .color = { .float32 = {0.3f, 0.3f, 0.3f, 1.0f} } },
-		};
-
-		VkRenderingInfo renderingInfo{};
-		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderingInfo.pNext = nullptr;
-		renderingInfo.flags = 0;
-		renderingInfo.renderArea = { 0U, 0U, width, height };
-		renderingInfo.layerCount = 1;
-		renderingInfo.viewMask = 0;
-		renderingInfo.colorAttachmentCount = 1;
-		renderingInfo.pColorAttachments = &colorAttachmentInfo;
-		renderingInfo.pDepthAttachment = nullptr;
-		renderingInfo.pStencilAttachment = nullptr;
-
-		vkCmdBeginRendering(cmdBuf, &renderingInfo);
+		glm::vec3 clearColor(0.3f, 0.3f, 0.3f);
+		vtek::swapchain_dynamic_rendering_begin(
+			swapchain, i, commandBuffer, clearColor);
 
 		vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 
@@ -295,33 +239,7 @@ bool record_command_buffers(
 		// draw calls here
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
-		// End dynamic rendering
-		vkCmdEndRendering(cmdBuf);
-
-		// Transition from color attachment to present src
-		// PROG: We can extract function from this pipeline barrier (vtek::dynamic_rendering_insert_barrier(), etc.).
-		VkImageMemoryBarrier endBarrier{};
-		endBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		endBarrier.pNext = nullptr;
-		endBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		endBarrier.dstAccessMask = 0;
-		endBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		endBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		endBarrier.srcQueueFamilyIndex = queueIndex;
-		endBarrier.dstQueueFamilyIndex = queueIndex;
-		endBarrier.image = vtek::swapchain_get_image(swapchain, i);
-		endBarrier.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1
-		};
-		// TODO: Also use barrier for depth/stencil image!
-
-		vkCmdPipelineBarrier(
-			cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &endBarrier);
+		vtek::swapchain_dynamic_rendering_end(swapchain, i, commandBuffer);
 
 		if (!vtek::command_buffer_end(commandBuffer))
 		{
@@ -431,6 +349,7 @@ int main()
 	swapchainInfo.prioritizeLowLatency = false;
 	swapchainInfo.framebufferWidth = windowSize.x;
 	swapchainInfo.framebufferHeight = windowSize.y;
+	swapchainInfo.createDepthBuffers = true;
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
 		&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)

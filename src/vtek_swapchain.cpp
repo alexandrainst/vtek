@@ -2,6 +2,7 @@
 #include "vtek_swapchain.hpp"
 
 #include "impl/vtek_vulkan_helpers.hpp"
+#include "vtek_command_buffer.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_physical_device.hpp"
@@ -32,6 +33,7 @@ struct vtek::Swapchain
 	bool isInvalidated {false};
 
 	VkQueue presentQueue {VK_NULL_HANDLE};
+	uint32_t graphicsQueueIndex {0};
 
 	// ============================ //
 	// === Frame syncronization === //
@@ -726,6 +728,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	swapchain->length = swapchainLength;
 	swapchain->isInvalidated = false;
 	swapchain->presentQueue = vtek::queue_get_handle(presentQueue);
+	swapchain->graphicsQueueIndex = qf_indices[0];
 	swapchain->vsync = info->vsync;
 	swapchain->prioritizeLowLatency = info->prioritizeLowLatency;
 	swapchain->physDev = physDev;
@@ -749,9 +752,12 @@ vtek::Swapchain* vtek::swapchain_create(
 	// linked to the framebuffers that use the swapchain, so this is a
 	// logical place to determine depth format.
 	std::vector<VkFormat> depthFormatCandidates = {
+		// Place first because it's more performant, and should be used unless
+		// the extra precision is really needed.
+		VK_FORMAT_D24_UNORM_S8_UINT,
+
 		VK_FORMAT_D32_SFLOAT,
-		VK_FORMAT_D32_SFLOAT_S8_UINT,
-		VK_FORMAT_D24_UNORM_S8_UINT
+		VK_FORMAT_D32_SFLOAT_S8_UINT
 	};
 	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 	VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -761,6 +767,14 @@ vtek::Swapchain* vtek::swapchain_create(
 	{
 		vtek_log_error("Failed to find supported depth image format!");
 		return nullptr;
+	}
+
+	// ============================== //
+	// === Optional depth buffers === //
+	// ============================== //
+	if (info->createDepthBuffers)
+	{
+		// TODO: Dedicated allocation from VMA
 	}
 
 
@@ -888,6 +902,7 @@ bool vtek::swapchain_recreate(
 	swapchain->imageExtent = imageExtent;
 	swapchain->length = swapchainLength;
 	swapchain->isInvalidated = false;
+	swapchain->graphicsQueueIndex = qf_indices[0];
 
 	// Create image views
 	if (!create_image_views(swapchain, dev))
@@ -1099,4 +1114,103 @@ vtek::SwapchainStatus vtek::swapchain_present_frame(
 	default:
 		return vtek::SwapchainStatus::error;
 	}
+}
+
+
+void vtek::swapchain_dynamic_rendering_begin(
+	vtek::Swapchain* swapchain, uint32_t imageIndex,
+	vtek::CommandBuffer* commandBuffer, glm::vec3 clearColor)
+{
+	uint32_t queueIndex = swapchain->graphicsQueueIndex;
+	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	const glm::vec3& c = clearColor;
+	VkExtent2D extent = swapchain->imageExtent;
+
+	// Transition from whatever (probably present src) to color attachment
+	VkImageMemoryBarrier barrier{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.pNext = nullptr,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		.srcQueueFamilyIndex = queueIndex,
+		.dstQueueFamilyIndex = queueIndex,
+		.image = swapchain->images[imageIndex],
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+	// TODO: Also use barrier for depth/stencil image!
+
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
+		0, nullptr, 1, &barrier);
+
+	VkRenderingAttachmentInfo colorAttachmentInfo{
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
+		.pNext = nullptr,
+		.imageView = swapchain->imageViews[imageIndex],
+		.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+		.resolveMode = VK_RESOLVE_MODE_NONE,
+		.resolveImageView = VK_NULL_HANDLE,
+		.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		.clearValue = { .color = { .float32 = {c.x, c.y, c.z, 1.0f} } },
+	};
+
+	VkRenderingInfo renderingInfo{};
+	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderingInfo.pNext = nullptr;
+	renderingInfo.flags = 0;
+	renderingInfo.renderArea = { 0U, 0U, extent.width, extent.height };
+	renderingInfo.layerCount = 1;
+	renderingInfo.viewMask = 0;
+	renderingInfo.colorAttachmentCount = 1;
+	renderingInfo.pColorAttachments = &colorAttachmentInfo;
+	renderingInfo.pDepthAttachment = nullptr;
+	renderingInfo.pStencilAttachment = nullptr;
+
+	vkCmdBeginRendering(cmdBuf, &renderingInfo);
+}
+
+void vtek::swapchain_dynamic_rendering_end(
+	vtek::Swapchain* swapchain, uint32_t imageIndex, vtek::CommandBuffer* commandBuffer)
+{
+	uint32_t queueIndex = swapchain->graphicsQueueIndex;
+	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+
+	// End dynamic rendering
+	vkCmdEndRendering(cmdBuf);
+
+	// Transition from color attachment to present src
+	VkImageMemoryBarrier barrier{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.pNext = nullptr,
+		.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		.dstAccessMask = 0,
+		.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		.srcQueueFamilyIndex = queueIndex,
+		.dstQueueFamilyIndex = queueIndex,
+		.image = swapchain->images[imageIndex],
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+	// TODO: Also use barrier for depth/stencil image!
+
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }

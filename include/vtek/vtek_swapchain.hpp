@@ -35,6 +35,12 @@ namespace vtek
 
 		uint32_t framebufferWidth {0};
 		uint32_t framebufferHeight {0};
+
+		// If no deferred technique is used, default depth buffers may be
+		// created with and managed by the swapchain. This should be disabled
+		// if render passes together with swapchain framebuffers are used, and
+		// might be enabled if dynamic rendering is used.
+		bool createDepthBuffers {false};
 	};
 
 
@@ -96,4 +102,17 @@ namespace vtek
 	// queue, to which the swapchain internally stores a handle, to wait for the
 	// rendering queue to finishe execution before presenting the frame.
 	SwapchainStatus swapchain_present_frame(Swapchain* swapchain, uint32_t frameIndex);
+
+
+	// Explicit image barriers for using the swapchain images in command buffers.
+	// NOTE: Only use these functions wherever dynamic rendering is applied, and
+	// use them as the first and last step, respectively, in the recording sequence.
+	// NOTE: For rendering setups with render passes and swapchain framebuffers,
+	// this step should be handled with subpass dependencies instead.
+	void swapchain_dynamic_rendering_begin(
+		Swapchain* swapchain, uint32_t imageIndex, CommandBuffer* commandBuffer,
+		glm::vec3 clearColor);
+
+	void swapchain_dynamic_rendering_end(
+		Swapchain* swapchain, uint32_t imageIndex, CommandBuffer* commandBuffer);
 }

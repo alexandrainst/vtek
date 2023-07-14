@@ -16,13 +16,13 @@ namespace vtek
 			vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &properties);
 
 			if (tiling == VK_IMAGE_TILING_LINEAR &&
-				(properties.linearTilingFeatures & features) == features)
+			    (properties.linearTilingFeatures & features) == features)
 			{
 				*outFormat = format;
 				return true;
 			}
 			else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-					 (properties.optimalTilingFeatures & features) == features)
+			         (properties.optimalTilingFeatures & features) == features)
 			{
 				*outFormat = format;
 				return true;
