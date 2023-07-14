@@ -115,7 +115,6 @@ set (src
 
     src/impl/vtek_command_buffer_struct.hpp
     src/impl/vtek_glfw_backend.hpp
-    src/impl/vtek_host_allocator.hpp
     src/impl/vtek_init.hpp
     src/impl/vtek_queue_struct.hpp
     src/impl/vtek_vma_helpers.hpp
@@ -137,7 +136,6 @@ set (src
     src/vtek_device.cpp
     src/vtek_fileio.cpp
     src/vtek_graphics_pipeline.cpp
-    src/vtek_host_allocator.cpp
     src/vtek_instance.cpp
     src/vtek_logging.cpp
     src/vtek_main.cpp

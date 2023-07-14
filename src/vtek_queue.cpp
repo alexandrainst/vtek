@@ -1,3 +1,4 @@
+#include "vtek_vulkan.pch"
 #include "vtek_queue.hpp"
 
 #include "vtek_command_buffer.hpp"

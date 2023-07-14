@@ -1,3 +1,4 @@
+#include "vtek_vulkan.pch"
 #include "vtek_graphics_pipeline.hpp"
 
 #include "impl/vtek_vulkan_helpers.hpp"

@@ -1,3 +1,4 @@
+#include "vtek_vulkan.pch"
 #include "vtek_vertex_data.hpp"
 #include "vtek_logging.hpp"
 

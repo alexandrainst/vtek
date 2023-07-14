@@ -1,3 +1,4 @@
+#include "vtek_vulkan.pch"
 #include "vtek_shaders.hpp"
 
 #include "glsl/vtek_glsl_shader_utils.hpp"

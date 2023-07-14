@@ -1,3 +1,4 @@
+#include "vtek_vulkan.pch"
 #include "vtek_render_pass.hpp"
 
 #include "vtek_logging.hpp"
