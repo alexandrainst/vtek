@@ -532,7 +532,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_glsl(
 	// VkDescriptorSetAllocateInfo
 	// TODO: Create descriptor pool!
 
-	vtek_log_info("Loaded SPIR-V shader(s) from directory \"{}\".",
+	vtek_log_info("Loaded GLSL shader(s) from directory \"{}\".",
 	              vtek::directory_get_path(shaderdir));
 
 	return shader;
