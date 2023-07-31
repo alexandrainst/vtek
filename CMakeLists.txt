@@ -19,7 +19,7 @@ endif()
 # Project configuration
 # --------------------------------------------------------------------------------
 option(VTEK_BUILD_WARNINGS "Enable compiler warnings" ON)
-option(VTEK_SHARED_LIB "Build vtek as shared library" OFF)
+option(VTEK_SHARED_LIB "Build vtek as shared library" ON)
 option(VTEK_CREATE_EXAMPLES "Build example programs" ${VTEK_EXAMPLES_CONF})
 
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
@@ -34,6 +34,13 @@ find_package(glslang REQUIRED)
 
 # spdlog submodule
 add_subdirectory(external/spdlog REQUIRED)
+
+# Assimp submodule
+option(ASSIMP_SHARED_LIBS "Build as shared library" ON)
+option(ASSIMP_BUILD_TESTS "Tests probably only useful when developing on Assimp" OFF)
+option(ASSIMP_INSTALL "Will install Assimp library, but we use submodule instead" OFF)
+# More options: https://github.com/assimp/assimp/blob/master/Build.md
+add_subdirectory(external/assimp ASSIMP_REQUIRED)
 
 # glm as either local installation or CMake subcontent
 find_package(glm QUIET)
@@ -59,9 +66,13 @@ endif()
 set (vma_src
     external/vma/vk_mem_alloc.h
     external/vma/vk_mem_alloc.cpp
-    )
+)
 
-add_library(vma STATIC ${vma_src})
+if(VTEK_SHARED_LIB)
+    add_library(vma SHARED ${vma_src})
+else()
+    add_library(vma STATIC ${vma_src})
+endif()
 set_target_properties(vma PROPERTIES CXX_STANDARD 20)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     # NOTE: building vma yields some warnings, just disable them here because they
@@ -79,6 +90,7 @@ set (src
     external/spirv_reflect/spirv_reflect.h
     external/spirv_reflect/spirv_reflect.cpp
 
+    include/vtek/api.hpp
     include/vtek/version.hpp
     include/vtek/vtek.hpp
     include/vtek/vtek_allocator.hpp
@@ -155,17 +167,19 @@ else()
     message("Build vtek as static library")
     add_library(vtek STATIC ${src})
 endif()
+unset(VTEK_SHARED_LIB CACHE) # remove from cache to force reset each time we run cmake
 
 add_library(vtek::vtek ALIAS vtek)
 
 set_target_properties(vtek PROPERTIES CXX_STANDARD 20)
 target_include_directories(vtek PRIVATE
-	${PROJECT_SOURCE_DIR}/include/vtek
+    ${PROJECT_SOURCE_DIR}/include/vtek
     ${PROJECT_SOURCE_DIR}/external/spirv_reflect
     ${PROJECT_SOURCE_DIR}/external/vma
     ${PROJECT_SOURCE_DIR}/pchs
 )
 target_include_directories(vtek PUBLIC
+    ${PROJECT_SOURCE_DIR}/external/assimp/include
     ${PROJECT_SOURCE_DIR}/external/spdlog/include
     ${PROJECT_SOURCE_DIR}/include
     ${Vulkan_INCLUDE_DIRS}
@@ -182,7 +196,7 @@ if(VTEK_BUILD_WARNINGS)
 endif()
 
 target_link_libraries(vtek LINK_PUBLIC
-    spdlog::spdlog glfw Vulkan::Vulkan vma
+    spdlog::spdlog glfw Vulkan::Vulkan vma assimp::assimp
     glslang::glslang glslang::SPIRV glslang::glslang-default-resource-limits)
 
 

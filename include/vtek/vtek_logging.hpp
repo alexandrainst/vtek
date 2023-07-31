@@ -31,6 +31,8 @@
 #include <string_view>
 #include <spdlog/spdlog.h>
 
+#include "api.hpp"
+
 
 /*
  * NOTE:
@@ -108,7 +110,7 @@ inline void vtek_log_fatal(const char* message, const Args &... args)
  * These are provided by DLL-export annotations and should be used by client apps.
  */
 template<typename... Args>
-inline void log_trace(const char* message, const Args &... args)
+VTEK_API inline void log_trace(const char* message, const Args &... args)
 {
 	//#if defined(YGG_DEBUG) && !defined(YGG_DISABLE_LOGGING)
 	vtek::LogContainer::sClientLogger->trace(
@@ -117,35 +119,35 @@ inline void log_trace(const char* message, const Args &... args)
 }
 
 template<typename... Args>
-inline void log_debug(const char* message, const Args &... args)
+VTEK_API inline void log_debug(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sClientLogger->debug(
 		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
-inline void log_info(const char* message, const Args &... args)
+VTEK_API inline void log_info(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sClientLogger->info(
 		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
-inline void log_warn(const char* message, const Args &... args)
+VTEK_API inline void log_warn(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sClientLogger->warn(
 		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
-inline void log_error(const char* message, const Args &... args)
+VTEK_API inline void log_error(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sClientLogger->error(
 		SPDLOG_FMT_RUNTIME(message), args...);
 }
 
 template<typename... Args>
-inline void log_fatal(const char* message, const Args &... args)
+VTEK_API inline void log_fatal(const char* message, const Args &... args)
 {
 	vtek::LogContainer::sClientLogger->critical(
 		SPDLOG_FMT_RUNTIME(message), args...);
