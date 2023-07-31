@@ -38,6 +38,7 @@
 #include "vtek_input.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_models.hpp"
 #include "vtek_queue.hpp"
 #include "vtek_render_pass.hpp"
 #include "vtek_physical_device.hpp"

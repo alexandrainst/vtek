@@ -112,6 +112,7 @@ set (src
     include/vtek/vtek_instance.hpp
     include/vtek/vtek_logging.hpp
     include/vtek/vtek_main.hpp
+    include/vtek/vtek_models.hpp
     include/vtek/vtek_physical_device.hpp
     include/vtek/vtek_push_constants.hpp
     include/vtek/vtek_queue.hpp
@@ -151,6 +152,7 @@ set (src
     src/vtek_instance.cpp
     src/vtek_logging.cpp
     src/vtek_main.cpp
+    src/vtek_models.cpp
     src/vtek_physical_device.cpp
     src/vtek_queue.cpp
     src/vtek_render_pass.cpp
@@ -210,6 +212,7 @@ if(VTEK_CREATE_EXAMPLES)
         examples/03_vertex_buffer.cpp
         examples/04_dynamic_circle.cpp
         examples/05_camera.cpp
+        examples/06_model.cpp
         )
 
     foreach(expath ${examples})
