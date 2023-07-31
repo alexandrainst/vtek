@@ -58,6 +58,69 @@ void mouse_move_callback(double x, double y)
 }
 
 
+bool record_command_buffers(
+	vtek::GraphicsPipeline* pipeline,
+	std::vector<vtek::CommandBuffer*> commandBuffers, vtek::Swapchain* swapchain,
+	vtek::Buffer* vertexBuffer, vtek::DescriptorSet* descriptorSet)
+{
+	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
+	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
+	uint32_t commandBufferCount = commandBuffers.size();
+
+	for (uint32_t i = 0; i < commandBufferCount; i++)
+	{
+		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
+		VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+
+		if (!vtek::command_buffer_begin(commandBuffer))
+		{
+			log_error("Failed to begin command buffer {} recording!", i);
+			return false;
+		}
+
+		glm::vec3 clearColor(0.3f, 0.3f, 0.3f);
+		// TODO: Ensure the swapchain has a depth buffer (or several!)
+		vtek::swapchain_dynamic_rendering_begin(
+			swapchain, i, commandBuffer, clearColor);
+
+		vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
+
+		// TODO: Bind vertex buffer for model
+		VkBuffer buffers[1] = { vtek::buffer_get_handle(vertexBuffer) };
+		VkDeviceSize offsets[1] = { 0 };
+		vkCmdBindVertexBuffers(cmdBuf, 0, 1, buffers, offsets);
+
+		// TODO: Bind descriptor set for the pipeline:
+		// TODO: m4 push constant, m4 uniform
+		VkDescriptorSet descriptorSets[1] = {
+			vtek::descriptor_set_get_handle(descriptorSet)
+		};
+		vkCmdBindDescriptorSets(
+			cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipLayout, 0, 1,
+			descriptorSets, 0, nullptr);
+
+		// Push constant for the model, ie. transformation matrix
+		vtek::PushConstant_m4 pc{};
+		pc.m1 = glm::mat4(1.0f); // unit matrix
+		pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
+		pc.cmdPush(cmdBuf, pipLayout);
+
+		// Draw the model
+		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
+
+		vtek::swapchain_dynamic_rendering_end(swapchain, i, commandBuffer);
+
+		if (!vtek::command_buffer_end(commandBuffer))
+		{
+			log_error("Failed to end command buffer {} recording!", i);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+
 
 
 

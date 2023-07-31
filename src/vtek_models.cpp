@@ -13,11 +13,20 @@
 #include <assimp/GltfMaterial.h>
 #include <assimp/StringUtils.h>
 
+// STANDARD
+#include <vector>
+
 
 /* struct implementation */
+// TODO: Temporary placement and idea
+struct Mesh
+{
+	std::vector<glm::vec3> vertices;
+};
+
 struct vtek::Model
 {
-
+	std::vector<Mesh> meshes;
 };
 
 
@@ -31,6 +40,12 @@ static bool load_scene_node()
 static bool load_scene_meshes(vtek::Model* model, const aiScene* scene)
 {
 	aiNode* node = scene->mRootNode;
+
+	// A node contains 0..x meshes, each of which we add to the model
+	// for (unsigned int i = 0; i < node->mNumMeshes; i++)
+	// {
+	// 	aiMesh* ai_mesh = scene->mMeshes[node->mMeshes[i]];
+	// }
 
 	return false;
 }
@@ -86,9 +101,12 @@ vtek::Model* vtek::model_load_obj(
 		return nullptr;
 	}
 
+	auto model = new vtek::Model;
 	if (!load_scene_meshes(model, scene))
 	{
-		
+
+
+		delete model;
 	}
 
 	return nullptr;
