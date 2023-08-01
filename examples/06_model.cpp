@@ -106,7 +106,7 @@ bool record_command_buffers(
 		pc.cmdPush(cmdBuf, pipLayout);
 
 		// Draw the model
-		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
+		//vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		vtek::swapchain_dynamic_rendering_end(swapchain, i, commandBuffer);
 
