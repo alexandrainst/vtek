@@ -7,7 +7,12 @@ uint32_t gFramebufferWidth = 0U;
 uint32_t gFramebufferHeight = 0U;
 vtek::KeyboardMap gKeyboardMap;
 vtek::Camera* gCamera = nullptr;
-vtek::Uniform_m4 gUniform;
+vtek::Uniform_m4 gCameraUniform;
+vtek::Uniform_PointLight gLightUniform;
+glm::vec3 gLightPosition(0.0f, 0.0, 5.0f);
+float gLightFalloff = 1.0f;
+glm::vec3 gLightColor = glm::vec3(1.0f, 0.54902f, 0.0f); // DarkOrange
+float gLightIntensity = 1.0f;
 
 
 /* Input handling */
@@ -59,7 +64,7 @@ void mouse_move_callback(double x, double y)
 
 
 /* Helper functions */
-bool update_uniform_buffer(
+bool update_camera_uniform(
 	vtek::DescriptorSet* set, vtek::Buffer* buffer, vtek::Device* device)
 {
 	// Wait until the device is finished with all operations
@@ -71,25 +76,57 @@ bool update_uniform_buffer(
 	vtek::device_wait_idle(device);
 
 	// Packed data
-	gUniform.m4 = *(vtek::camera_get_projection_matrix(gCamera));
-	gUniform.m4 *= *(vtek::camera_get_view_matrix(gCamera));
+	gCameraUniform.m4 = *(vtek::camera_get_projection_matrix(gCamera));
+	gCameraUniform.m4 *= *(vtek::camera_get_view_matrix(gCamera));
 
 	// Update uniform buffer
 	vtek::BufferRegion region{
 		.offset = 0,
-		.size = gUniform.size()
+		.size = gCameraUniform.size()
 	};
-	if (!vtek::buffer_write_data(buffer, &gUniform, &region, device))
+	if (!vtek::buffer_write_data(buffer, &gCameraUniform, &region, device))
 	{
-		log_error("Failed to write data to the uniform buffer!");
+		log_error("Failed to write data to the uniform buffer (Camera)!");
 		return false;
 	}
 
 	// Update descriptor set
 	if (!vtek::descriptor_set_bind_uniform_buffer(
-		    set, 0, buffer, gUniform.type()))
+		    set, 0, buffer, gCameraUniform.type()))
 	{
-		log_error("Failed to add uniform buffer to the descriptor set!");
+		log_error("Failed to add uniform buffer to the descriptor set (Camera)!");
+		return false;
+	}
+	vtek::descriptor_set_update(set, device);
+
+	return true;
+}
+
+bool update_light_uniform(
+	vtek::DescriptorSet* set, vtek::Buffer* buffer, vtek::Device* device)
+{
+	vtek::device_wait_idle(device);
+
+	// Packed data
+	gLightUniform.positionFalloff = glm::vec4(gLightPosition, gLightFalloff);
+	gLightUniform.colorIntensity = glm::vec4(gLightColor, gLightIntensity);
+
+	// Update uniform buffer
+	vtek::BufferRegion region{
+		.offset = 0,
+		.size = gLightUniform.size()
+	};
+	if (!vtek::buffer_write_data(buffer, &gLightUniform, &region, device))
+	{
+		log_error("Failed to write data to the uniform buffer (Light)!");
+		return false;
+	}
+
+	// Update descriptor set
+	if (!vtek::descriptor_set_bind_uniform_buffer(
+		    set, 1, buffer, gLightUniform.type()))
+	{
+		log_error("Failed to add uniform buffer to the descriptor set (Light)!");
 		return false;
 	}
 	vtek::descriptor_set_update(set, device);
@@ -100,7 +137,7 @@ bool update_uniform_buffer(
 bool record_command_buffers(
 	vtek::GraphicsPipeline* pipeline,
 	std::vector<vtek::CommandBuffer*> commandBuffers, vtek::Swapchain* swapchain,
-	vtek::Buffer* vertexBuffer, vtek::DescriptorSet* descriptorSet)
+	vtek::Model* model, vtek::DescriptorSet* descriptorSets[2])
 {
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
@@ -117,7 +154,7 @@ bool record_command_buffers(
 			return false;
 		}
 
-		glm::vec3 clearColor(0.3f, 0.3f, 0.3f);
+		glm::vec3 clearColor(0.15f, 0.15f, 0.15f);
 		// TODO: Ensure the swapchain has a depth buffer (or several!)
 		vtek::swapchain_dynamic_rendering_begin(
 			swapchain, i, commandBuffer, clearColor);
@@ -125,27 +162,34 @@ bool record_command_buffers(
 		vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 
 		// TODO: Bind vertex buffer for model
-		VkBuffer buffers[1] = { vtek::buffer_get_handle(vertexBuffer) };
-		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(cmdBuf, 0, 1, buffers, offsets);
+		VkBuffer buffers[2] = {
+			vtek::buffer_get_handle(vtek::model_get_vertex_buffer(model)),
+			vtek::buffer_get_handle(vtek::model_get_normal_buffer(model))
+		};
+		VkDeviceSize offsets[2] = { 0, 0 };
+		vkCmdBindVertexBuffers(cmdBuf, 0, 2, buffers, offsets);
 
 		// TODO: Bind descriptor set for the pipeline:
 		// TODO: m4 push constant, m4 uniform
-		VkDescriptorSet descriptorSets[1] = {
-			vtek::descriptor_set_get_handle(descriptorSet)
+		VkDescriptorSet descriptorSetHandles[2] = {
+			vtek::descriptor_set_get_handle(descriptorSets[0]),
+			vtek::descriptor_set_get_handle(descriptorSets[1]),
 		};
 		vkCmdBindDescriptorSets(
-			cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipLayout, 0, 1,
-			descriptorSets, 0, nullptr);
+			cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipLayout, 0, 2,
+			descriptorSetHandles, 0, nullptr); // NOTE: Dynamic offset unused
 
 		// Push constant for the model, ie. transformation matrix
+		// TODO: Later also add vertex color
 		vtek::PushConstant_m4 pc{};
 		pc.m1 = glm::mat4(1.0f); // unit matrix
+		// TODO: Bitflag for also fragment shader access (vertex color)
 		pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
 		pc.cmdPush(cmdBuf, pipLayout);
 
 		// Draw the model
-		//vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
+		uint32_t numVertices = vtek::model_get_num_vertices(model);
+		vkCmdDraw(cmdBuf, numVertices, 1, 0, 0);
 
 		vtek::swapchain_dynamic_rendering_end(swapchain, i, commandBuffer);
 
@@ -160,7 +204,8 @@ bool record_command_buffers(
 }
 
 // TODO: Remove when done.
-vtek::Buffer* create_vertex_buffer(vtek::Device* device)
+vtek::Buffer* create_vertex_buffer(
+	vtek::Device* device, std::vector<glm::vec3> gCubeVertices)
 {
 	vtek::BufferInfo info{};
 	info.size = sizeof(float) * gCubeVertices.size();
@@ -375,26 +420,6 @@ int main()
 		return -1;
 	}
 
-	// Uniform buffer
-	vtek::BufferInfo uniformBufferInfo{};
-	uniformBufferInfo.size = uniform.size();
-	uniformBufferInfo.requireHostVisibleStorage = true;
-	uniformBufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
-	uniformBufferInfo.usageFlags
-		= vtek::BufferUsageFlag::transfer_dst
-		| vtek::BufferUsageFlag::uniform_buffer;
-	vtek::Buffer* uniformBuffer = vtek::buffer_create(&uniformBufferInfo, device);
-	if (uniformBuffer == nullptr)
-	{
-		log_error("Failed to create uniform buffer!");
-		return -1;
-	}
-	if (!update_uniform_buffer(descriptorSet, uniformBuffer, device))
-	{
-		log_error("Failed to fill uniform buffer!");
-		return -1;
-	}
-
 	// Descriptor pool
 	vtek::DescriptorPoolInfo descriptorPoolInfo{};
 	descriptorPoolInfo.allowUpdateAfterBind = true;
@@ -462,11 +487,53 @@ int main()
 		return -1;
 	}
 
+	// Uniform buffer (Camera transform)
+	vtek::BufferInfo uniformBufferInfoCamera{};
+	uniformBufferInfoCamera.size = gCameraUniform.size();
+	uniformBufferInfoCamera.requireHostVisibleStorage = true;
+	uniformBufferInfoCamera.writePolicy = vtek::BufferWritePolicy::overwrite_often;
+	uniformBufferInfoCamera.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::uniform_buffer;
+	vtek::Buffer* uniformBufferCamera =
+		vtek::buffer_create(&uniformBufferInfoCamera, device);
+	if (uniformBufferCamera == nullptr)
+	{
+		log_error("Failed to create uniform buffer (Camera)!");
+		return -1;
+	}
+	if (!update_camera_uniform(descriptorSet, uniformBufferCamera, device))
+	{
+		log_error("Failed to fill uniform buffer (Camera)!");
+		return -1;
+	}
+
+	// Uniform buffer (Point light)
+	vtek::BufferInfo uniformBufferInfoLight{};
+	uniformBufferInfoLight.size = gLightUniform.size();
+	uniformBufferInfoLight.requireHostVisibleStorage = true;
+	uniformBufferInfoLight.writePolicy = vtek::BufferWritePolicy::overwrite_often;
+	uniformBufferInfoLight.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::uniform_buffer;
+	vtek::Buffer* uniformBufferLight =
+		vtek::buffer_create(&uniformBufferInfoLight, device);
+	if (uniformBufferLight == nullptr)
+	{
+		log_error("Failed to create uniform buffer (Light)!");
+		return -1;
+	}
+	if (!update_light_uniform(descriptorSet, uniformBufferLight, device))
+	{
+		log_error("Failed to fill uniform buffer (Light)!");
+		return -1;
+	}
+
 	// Graphics pipeline
 	vtek::ViewportState viewport{
 		.viewportRegion = {
 			.offset = {0U, 0U},
-			.extent = {windowSize.x, windowSize.y}
+			.extent = {gFramebufferWidth, gFramebufferHeight}
 		},
 	};
 	vtek::VertexBufferBindings bindings{};
@@ -501,6 +568,7 @@ int main()
 	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutCamera);
 	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutLight);
 	graphicsPipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
+	// TODO: Push constant m4_v4, for transform _and_ vertex color?
 	graphicsPipelineInfo.pushConstantShaderStages =
 		vtek::ShaderStageGraphics::vertex;
 
@@ -513,8 +581,11 @@ int main()
 	}
 
 	// Command buffer recording
+	vtek::DescriptorSet* descriptorSets[2] = {
+		descriptorSetCamera, descriptorSetLight
+	};
 	if (!record_command_buffers(
-		    graphicsPipeline, commandBuffers, swapchain, vertexBuffer, descriptorSet))
+		    graphicsPipeline, commandBuffers, swapchain, model, descriptorSets))
 	{
 		log_error("Failed to record command buffers!");
 		return -1;
@@ -527,8 +598,9 @@ int main()
 	// Cleanup
 	vtek::device_wait_idle(device);
 
+	// TODO: Destroy stuff!
 
-
+	vtek::descriptor_pool_destroy(descriptorPool, device);
 	vtek::model_destroy(model); // TODO: Device handle
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::camera_destroy(gCamera);

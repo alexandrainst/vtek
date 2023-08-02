@@ -8,7 +8,7 @@
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
 #include <assimp/version.h>
-// #include <assimp/pbrmaterial.h> // <deprecated>
+// #include <assimp/pbrmaterial.h> // <deprecated> // TODO: Remove!
 #include <assimp/material.h>
 #include <assimp/GltfMaterial.h>
 #include <assimp/StringUtils.h>
@@ -18,15 +18,13 @@
 
 
 /* struct implementation */
-// TODO: Temporary placement and idea
-struct Mesh
-{
-	std::vector<glm::vec3> vertices;
-};
-
 struct vtek::Model
 {
-	std::vector<Mesh> meshes;
+	std::vector<glm::vec3> vertices;
+	std::vector<glm::vec3> normals;
+
+	vtek::Buffer* vertexBuffer {nullptr};
+	vtek::Buffer* normalBuffer {nullptr};
 };
 
 

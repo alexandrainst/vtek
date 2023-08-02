@@ -13,7 +13,9 @@ namespace vtek
 	enum class UniformBufferType
 	{
 		vec3,
-		mat4
+		mat4,
+
+		point_light
 	};
 
 	uint64_t get_uniform_buffer_size(UniformBufferType type);
@@ -46,12 +48,27 @@ namespace vtek
 		}
 	};
 
+	struct Uniform_PointLight
+	{
+		alignas(16) glm::vec4 positionFalloff; // {x,y,z}: position; TODO: w: falloff ?
+		alignas(16) glm::vec4 colorIntensity; // {x,y,z}: color; w: intensity
+
+		constexpr uint64_t size();
+		inline constexpr UniformBufferType type()
+		{
+			return UniformBufferType::point_light;
+		}
+	};
+
 
 	// ========================== //
 	// === Member definitions === //
 	// ========================== //
 	constexpr uint64_t Uniform_v3::size() { return sizeof(Uniform_v3); }
 	constexpr uint64_t Uniform_m4::size() { return sizeof(Uniform_m4); }
+	constexpr uint64_t Uniform_PointLight::size() {
+		return sizeof(Uniform_PointLight);
+	}
 
 
 	// ===================== //
@@ -64,4 +81,9 @@ namespace vtek
 	static_assert(sizeof(Uniform_m4) == 64);
 	static_assert(alignof(Uniform_m4) == 16);
 	static_assert(offsetof(Uniform_m4, m4) == 0);
+
+	static_assert(sizeof(Uniform_PointLight) == 32);
+	static_assert(alignof(Uniform_PointLight) == 16);
+	static_assert(offsetof(Uniform_PointLight, positionFalloff) == 0);
+	static_assert(offsetof(Uniform_PointLight, colorIntensity) == 16);
 }

@@ -18,6 +18,8 @@ namespace vtek
 		// If for some reason the vertex data should reside in main memory
 		// after loading a model, enable this value.
 		bool keepVertexDataInMemory {false};
+
+		bool loadNormals {false};  // TODO: ?
 	};
 
 	// Loads an obj model from disk and buffer its vertex data to GPU memory.
@@ -27,5 +29,9 @@ namespace vtek
 
 	void model_destroy(Model* model);
 
-	Buffer* model_get_buffer_handle(Model* model);
+	// TODO: To const or not to const?
+	const Buffer* model_get_vertex_buffer(Model* model);
+	const Buffer* model_get_normal_buffer(Model* model);
+
+	uint32_t model_get_num_vertices(Model* model);
 }
