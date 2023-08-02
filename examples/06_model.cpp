@@ -7,7 +7,7 @@ uint32_t gFramebufferWidth = 0U;
 uint32_t gFramebufferHeight = 0U;
 vtek::KeyboardMap gKeyboardMap;
 vtek::Camera* gCamera = nullptr;
-vtek::Uniform_m4 gCameraUniform;
+vtek::Uniform_m4_v4 gCameraUniform;
 vtek::Uniform_PointLight gLightUniform;
 glm::vec3 gLightPosition(0.0f, 0.0, 5.0f);
 float gLightFalloff = 1.0f;
@@ -78,6 +78,7 @@ bool update_camera_uniform(
 	// Packed data
 	gCameraUniform.m4 = *(vtek::camera_get_projection_matrix(gCamera));
 	gCameraUniform.m4 *= *(vtek::camera_get_view_matrix(gCamera));
+	gCameraUniform.v4 = glm::vec4(vtek::camera_get_position(gCamera), 0.0f);
 
 	// Update uniform buffer
 	vtek::BufferRegion region{
@@ -539,8 +540,9 @@ int main()
 	};
 	vtek::VertexBufferBindings bindings{};
 	bindings.add_buffer(
-		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex);
-	// TODO: Also add vertex normal
+		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex); // vertex
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex); // normal
 	vtek::RasterizationState rasterizer{};
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{}; // No depth testing!
