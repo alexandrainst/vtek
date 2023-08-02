@@ -20,6 +20,8 @@ namespace vtek
 		bool keepVertexDataInMemory {false};
 
 		bool loadNormals {false};  // TODO: ?
+
+		bool loadTextureCoordinates {false};
 	};
 
 	// Loads an obj model from disk and buffer its vertex data to GPU memory.
@@ -27,9 +29,8 @@ namespace vtek
 		const ModelInfo* info, Directory* directory, std::string_view filename,
 		Device* device);
 
-	void model_destroy(Model* model);
+	void model_destroy(Model* model, Device* device);
 
-	// TODO: To const or not to const?
 	const Buffer* model_get_vertex_buffer(Model* model);
 	const Buffer* model_get_normal_buffer(Model* model);
 

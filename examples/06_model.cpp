@@ -412,6 +412,7 @@ int main()
 	}
 	vtek::ModelInfo modelInfo{};
 	modelInfo.keepVertexDataInMemory = false; // Preferred usage
+	modelInfo.loadNormals = true;
 	vtek::Model* model = vtek::model_load_obj(
 		&modelInfo, modeldir, "armored_car.obj", device);
 	if (model == nullptr)
@@ -502,7 +503,7 @@ int main()
 		log_error("Failed to create uniform buffer (Camera)!");
 		return -1;
 	}
-	if (!update_camera_uniform(descriptorSet, uniformBufferCamera, device))
+	if (!update_camera_uniform(descriptorSetCamera, uniformBufferCamera, device))
 	{
 		log_error("Failed to fill uniform buffer (Camera)!");
 		return -1;
@@ -523,7 +524,7 @@ int main()
 		log_error("Failed to create uniform buffer (Light)!");
 		return -1;
 	}
-	if (!update_light_uniform(descriptorSet, uniformBufferLight, device))
+	if (!update_light_uniform(descriptorSetLight, uniformBufferLight, device))
 	{
 		log_error("Failed to fill uniform buffer (Light)!");
 		return -1;
@@ -598,10 +599,16 @@ int main()
 	// Cleanup
 	vtek::device_wait_idle(device);
 
-	// TODO: Destroy stuff!
-
+	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
+	vtek::buffer_destroy(uniformBufferCamera);
+	vtek::buffer_destroy(uniformBufferLight);
+	// TODO: descriptor_pool_free_set(pool, set, device) - ??
+	vtek::descriptor_set_destroy(descriptorSetCamera);
+	vtek::descriptor_set_destroy(descriptorSetLight);
+	vtek::descriptor_set_layout_destroy(descriptorSetLayoutCamera, device);
+	vtek::descriptor_set_layout_destroy(descriptorSetLayoutLight, device);
 	vtek::descriptor_pool_destroy(descriptorPool, device);
-	vtek::model_destroy(model); // TODO: Device handle
+	vtek::model_destroy(model, device);
 	vtek::graphics_shader_destroy(shader, device);
 	vtek::camera_destroy(gCamera);
 	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device);
