@@ -1,6 +1,6 @@
 #pragma once
 
-
+// TODO: Consider renaming this file to vtek_opaque_handles.hpp (?)
 namespace vtek
 {
 	// ============================= //
@@ -24,4 +24,9 @@ namespace vtek
 	struct RenderPass;
 	struct Swapchain;
 	// TODO: struct SwapchainFramebuffers;
+
+	// ============================== //
+	// === Opaque Utility Handles === //
+	// ============================== //
+	struct Model;
 }

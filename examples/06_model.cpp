@@ -1,16 +1,16 @@
 #include <vtek/vtek.hpp>
 #include <iostream>
 
-// global data
+/* global data */
 vtek::ApplicationWindow* gWindow = nullptr;
 uint32_t gFramebufferWidth = 0U;
 uint32_t gFramebufferHeight = 0U;
 vtek::KeyboardMap gKeyboardMap;
 vtek::Camera* gCamera = nullptr;
-vtek::Uniform_m4 uniform;
+vtek::Uniform_m4 gUniform;
 
 
-// helper functions
+/* Input handling */
 void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 {
 	using vtek::KeyboardKey;
@@ -57,6 +57,45 @@ void mouse_move_callback(double x, double y)
 	vtek::camera_on_mouse_move(gCamera, x, y);
 }
 
+
+/* Helper functions */
+bool update_uniform_buffer(
+	vtek::DescriptorSet* set, vtek::Buffer* buffer, vtek::Device* device)
+{
+	// Wait until the device is finished with all operations
+	// NOTE: This is needed because even with "updateAfterBind" enabled,
+	// it is still not valid to update a bound descriptor set if the command
+	// buffer is pending execution. Exempt to this rule is only updating
+	// descriptors inside the set which are not used by the command buffer,
+	// but that is a subtle nuance and likely not needed for most purposes.
+	vtek::device_wait_idle(device);
+
+	// Packed data
+	gUniform.m4 = *(vtek::camera_get_projection_matrix(gCamera));
+	gUniform.m4 *= *(vtek::camera_get_view_matrix(gCamera));
+
+	// Update uniform buffer
+	vtek::BufferRegion region{
+		.offset = 0,
+		.size = gUniform.size()
+	};
+	if (!vtek::buffer_write_data(buffer, &gUniform, &region, device))
+	{
+		log_error("Failed to write data to the uniform buffer!");
+		return false;
+	}
+
+	// Update descriptor set
+	if (!vtek::descriptor_set_bind_uniform_buffer(
+		    set, 0, buffer, gUniform.type()))
+	{
+		log_error("Failed to add uniform buffer to the descriptor set!");
+		return false;
+	}
+	vtek::descriptor_set_update(set, device);
+
+	return true;
+}
 
 bool record_command_buffers(
 	vtek::GraphicsPipeline* pipeline,
@@ -118,6 +157,37 @@ bool record_command_buffers(
 	}
 
 	return true;
+}
+
+// TODO: Remove when done.
+vtek::Buffer* create_vertex_buffer(vtek::Device* device)
+{
+	vtek::BufferInfo info{};
+	info.size = sizeof(float) * gCubeVertices.size();
+	info.writePolicy = vtek::BufferWritePolicy::write_once;
+
+	using BUFlag = vtek::BufferUsageFlag;
+	info.usageFlags = BUFlag::transfer_dst | BUFlag::vertex_buffer;
+
+	vtek::Buffer* buffer = vtek::buffer_create(&info, device);
+	if (buffer == nullptr)
+	{
+		log_error("Failed to create vertex buffer!");
+		return nullptr;
+	}
+
+	vtek::BufferRegion region {
+		.offset = 0,
+		.size = info.size
+	};
+	if (!vtek::buffer_write_data(buffer, gCubeVertices.data(), &region, device))
+	{
+		log_error("Failed to write data to vertex buffer!");
+		vtek::buffer_destroy(buffer);
+		return nullptr;
+	}
+
+	return buffer;
 }
 
 
@@ -219,7 +289,7 @@ int main()
 	swapchainInfo.prioritizeLowLatency = false;
 	swapchainInfo.framebufferWidth = gFramebufferWidth;
 	swapchainInfo.framebufferHeight = gFramebufferHeight;
-	swapchainInfo.createDepthBuffers = true;
+	swapchainInfo.createDepthBuffers = true; // TODO: Yes, we want this!
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
 		&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)
@@ -265,6 +335,27 @@ int main()
 	vtek::camera_set_window_size(gCamera, gFramebufferWidth, gFramebufferHeight);
 	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
 	vtek::camera_update(gCamera);
+	// TODO: Maybe for this application, use FPS-game style camera instead?
+	// TODO: It's also a good opportunity to test if the camera supports it properly
+
+	// Shader
+	const char* shaderdirstr = "../shaders/06_simple_model/";
+	vtek::Directory* shaderdir = vtek::directory_open(shaderdirstr);
+	if (shaderdir == nullptr)
+	{
+		log_error("Failed to open shader directory!");
+		return -1;
+	}
+	vtek::GraphicsShaderInfo shaderInfo{};
+	shaderInfo.vertex = true;
+	shaderInfo.fragment = true;
+	vtek::GraphicsShader* shader =
+		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdir, device);
+	if (shader == nullptr)
+	{
+		log_error("Failed to load graphics shader!");
+		return -1;
+	}
 
 	// Model
 	const char* modeldirstr = "../models/";
@@ -274,10 +365,155 @@ int main()
 		log_error("Failed to open model directory!");
 		return -1;
 	}
-	vtek::Model* model = vtek::model_load_obj(modeldir, "armored_car.obj");
+	vtek::Model* model = vtek::model_load_obj(modeldir, "armored_car.obj", device);
 	if (model == nullptr)
 	{
 		log_error("Failed to load obj model!");
+		return -1;
+	}
+
+	// Uniform buffer
+	vtek::BufferInfo uniformBufferInfo{};
+	uniformBufferInfo.size = uniform.size();
+	uniformBufferInfo.requireHostVisibleStorage = true;
+	uniformBufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
+	uniformBufferInfo.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::uniform_buffer;
+	vtek::Buffer* uniformBuffer = vtek::buffer_create(&uniformBufferInfo, device);
+	if (uniformBuffer == nullptr)
+	{
+		log_error("Failed to create uniform buffer!");
+		return -1;
+	}
+	if (!update_uniform_buffer(descriptorSet, uniformBuffer, device))
+	{
+		log_error("Failed to fill uniform buffer!");
+		return -1;
+	}
+
+	// Descriptor pool
+	vtek::DescriptorPoolInfo descriptorPoolInfo{};
+	descriptorPoolInfo.allowUpdateAfterBind = true;
+	descriptorPoolInfo.descriptorTypes.push_back(
+		{ vtek::DescriptorType::uniform_buffer, 2 }); // NOTE: Leave place for light
+	vtek::DescriptorPool* descriptorPool =
+		vtek::descriptor_pool_create(&descriptorPoolInfo, device);
+	if (descriptorPool == nullptr)
+	{
+		log_error("Failed to create descriptor pool!");
+		return -1;
+	}
+
+	// Descriptor set layout (Camera transform)
+	vtek::DescriptorSetLayoutInfo descriptorLayoutInfoCamera{};
+	vtek::DescriptorLayoutBinding descriptorBindingCamera{};
+	descriptorBindingCamera.type = vtek::DescriptorType::uniform_buffer;
+	descriptorBindingCamera.binding = 0;
+	descriptorBindingCamera.shaderStages = vtek::ShaderStage::vertex;
+	descriptorBindingCamera.updateAfterBind = true;
+	descriptorLayoutInfoCamera.bindings.emplace_back(descriptorBindingCamera);
+	vtek::DescriptorSetLayout* descriptorSetLayoutCamera =
+		vtek::descriptor_set_layout_create(&descriptorLayoutInfoCamera, device);
+	if (descriptorSetLayoutCamera == nullptr)
+	{
+		log_error("Failed to create descriptor set layout (Camera)!");
+		return -1;
+	}
+
+	// Descriptor set layout (Point light)
+	vtek::DescriptorSetLayoutInfo descriptorLayoutInfoLight{};
+	vtek::DescriptorLayoutBinding descriptorBindingLight{};
+	descriptorBindingLight.type = vtek::DescriptorType::uniform_buffer;
+	descriptorBindingLight.binding = 1;
+	descriptorBindingLight.shaderStages = vtek::ShaderStage::fragment;
+	descriptorBindingLight.updateAfterBind = true;
+	descriptorLayoutInfoLight.bindings.emplace_back(descriptorBindingLight);
+	vtek::DescriptorSetLayout* descriptorSetLayoutLight =
+		vtek::descriptor_set_layout_create(&descriptorLayoutInfoLight, device);
+	if (descriptorSetLayoutLight == nullptr)
+	{
+		log_error("Failed to create descriptor set layout (Light)!");
+		return -1;
+	}
+
+	// Descriptor set (Camera transform)
+	// TODO: descriptor_pool_alloc_set(pool, layout, device) - ??
+	// TODO: This is similar to the improved command buffer interface!
+	vtek::DescriptorSet* descriptorSetCamera = vtek::descriptor_set_create(
+		descriptorPool, descriptorSetLayoutCamera, device);
+	if (descriptorSetCamera == nullptr)
+	{
+		log_error("Failed to create descriptor set (Camera)!");
+		return -1;
+	}
+
+	// Descriptor set (Point light)
+	// TODO: descriptor_pool_alloc_set(pool, layout, device) - ??
+	// TODO: This is similar to the improved command buffer interface!
+	vtek::DescriptorSet* descriptorSetLight = vtek::descriptor_set_create(
+		descriptorPool, descriptorSetLayoutLight, device);
+	if (descriptorSetLight == nullptr)
+	{
+		log_error("Failed to create descriptor set (Light)!");
+		return -1;
+	}
+
+	// Graphics pipeline
+	vtek::ViewportState viewport{
+		.viewportRegion = {
+			.offset = {0U, 0U},
+			.extent = {windowSize.x, windowSize.y}
+		},
+	};
+	vtek::VertexBufferBindings bindings{};
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex);
+	// TODO: Also add vertex normal
+	vtek::RasterizationState rasterizer{};
+	vtek::MultisampleState multisampling{};
+	vtek::DepthStencilState depthStencil{}; // No depth testing!
+	vtek::ColorBlendState colorBlending{};
+	colorBlending.attachments.emplace_back(
+		vtek::ColorBlendAttachment::GetDefault());
+	vtek::PipelineRendering pipelineRendering{};
+	pipelineRendering.colorAttachmentFormats.push_back(
+		vtek::swapchain_get_image_format(swapchain));
+
+	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	graphicsPipelineInfo.renderPass = nullptr; // Nice!
+	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
+	graphicsPipelineInfo.shader = shader;
+	// TODO: Rename to `vertexBufferBindings`
+	graphicsPipelineInfo.vertexInputBindings = &bindings;
+	graphicsPipelineInfo.primitiveTopology =
+		vtek::PrimitiveTopology::triangle_list;
+	graphicsPipelineInfo.enablePrimitiveRestart = false;
+	graphicsPipelineInfo.viewportState = &viewport;
+	graphicsPipelineInfo.rasterizationState = &rasterizer;
+	graphicsPipelineInfo.multisampleState = &multisampling;
+	graphicsPipelineInfo.depthStencilState = &depthStencil;
+	graphicsPipelineInfo.colorBlendState = &colorBlending;
+	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutCamera);
+	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutLight);
+	graphicsPipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
+	graphicsPipelineInfo.pushConstantShaderStages =
+		vtek::ShaderStageGraphics::vertex;
+
+	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
+		&graphicsPipelineInfo, device);
+	if (graphicsPipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline!");
+		return -1;
+	}
+
+	// Command buffer recording
+	if (!record_command_buffers(
+		    graphicsPipeline, commandBuffers, swapchain, vertexBuffer, descriptorSet))
+	{
+		log_error("Failed to record command buffers!");
 		return -1;
 	}
 
@@ -288,6 +524,10 @@ int main()
 	// Cleanup
 	vtek::device_wait_idle(device);
 
+
+
+	vtek::model_destroy(model); // TODO: Device handle
+	vtek::graphics_shader_destroy(shader, device);
 	vtek::camera_destroy(gCamera);
 	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);

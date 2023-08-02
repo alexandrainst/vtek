@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "vtek_fileio.hpp"
+#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek
@@ -12,9 +13,13 @@ namespace vtek
 
 	};
 
-	struct Model; // opaque handle
+	struct ModelInfo
+	{
 
-	Model* model_load_obj(Directory* directory, std::string_view filename);
+	};
+
+	Model* model_load_obj(
+		Directory* directory, std::string_view filename, Device* device);
 
 	void model_destroy(Model* model);
 }

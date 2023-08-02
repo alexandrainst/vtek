@@ -42,10 +42,10 @@ static bool load_scene_meshes(vtek::Model* model, const aiScene* scene)
 	aiNode* node = scene->mRootNode;
 
 	// A node contains 0..x meshes, each of which we add to the model
-	// for (unsigned int i = 0; i < node->mNumMeshes; i++)
-	// {
-	// 	aiMesh* ai_mesh = scene->mMeshes[node->mMeshes[i]];
-	// }
+	for (unsigned int i = 0; i < node->mNumMeshes; i++)
+	{
+		aiMesh* ai_mesh = scene->mMeshes[node->mMeshes[i]];
+	}
 
 	return false;
 }
@@ -54,7 +54,7 @@ static bool load_scene_meshes(vtek::Model* model, const aiScene* scene)
 
 /* models interface */
 vtek::Model* vtek::model_load_obj(
-	vtek::Directory* directory, std::string_view filename)
+	vtek::Directory* directory, std::string_view filename, vtek::Device* device)
 {
 	Assimp::Importer importer;
 
