@@ -1,11 +1,11 @@
 #pragma once
 
-// TODO: Consider renaming this file to vtek_object_handles.hpp (?)
+
 namespace vtek
 {
-	// ============================= //
-	// === Opaque vulkan handles === //
-	// ============================= //
+	// ====================== //
+	// === Vulkan handles === //
+	// ====================== //
 	struct Allocator;
 	struct ApplicationWindow;
 	struct Buffer;
@@ -25,8 +25,8 @@ namespace vtek
 	struct Swapchain;
 	// TODO: struct SwapchainFramebuffers;
 
-	// ============================== //
-	// === Opaque Utility Handles === //
-	// ============================== //
+	// ======================= //
+	// === Utility Handles === //
+	// ======================= //
 	struct Model;
 }

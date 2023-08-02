@@ -22,7 +22,12 @@ option(VTEK_BUILD_WARNINGS "Enable compiler warnings" ON)
 option(VTEK_SHARED_LIB "Build vtek as shared library" ON)
 option(VTEK_CREATE_EXAMPLES "Build example programs" ${VTEK_EXAMPLES_CONF})
 
-set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+if(VTEK_SHARED_LIB)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+else()
+    set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+endif()
+
 
 
 # --------------------------------------------------------------------------------
@@ -30,7 +35,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 # --------------------------------------------------------------------------------
 find_package(Vulkan REQUIRED)
 find_package(Threads REQUIRED)
-find_package(glslang REQUIRED)
+
+# glslang
+# NOTE: If the installed version of glslang is old, then it provides no cmake script,
+# and generation will fail. This repository provides an alternative:
+# https://github.com/v1993/GLSLang-cmake/
+#LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+#include("${CMAKE_CURRENT_LIST_DIR}/cmake/Findglslang.cmake")
+#find_package(GLSLang COMPONENTS GLSLang SPIRV)
+# NOTE: It's probably better, still, to install from source, or include as git submodule.
+find_package(glslang CONFIG REQUIRED)
 
 # spdlog submodule
 add_subdirectory(external/spdlog REQUIRED)
@@ -62,7 +76,7 @@ if(VTEK_CREATE_EXAMPLES)
     find_package(glfw3 REQUIRED)
 endif()
 
-# Vulkan Memory Allocator (vma) as independent static lib
+# Vulkan Memory Allocator (vma) as independent shared/static lib
 set (vma_src
     external/vma/vk_mem_alloc.h
     external/vma/vk_mem_alloc.cpp

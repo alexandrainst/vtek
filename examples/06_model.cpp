@@ -145,7 +145,7 @@ bool record_command_buffers(
 		pc.cmdPush(cmdBuf, pipLayout);
 
 		// Draw the model
-		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
+		//vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		vtek::swapchain_dynamic_rendering_end(swapchain, i, commandBuffer);
 
@@ -365,7 +365,10 @@ int main()
 		log_error("Failed to open model directory!");
 		return -1;
 	}
-	vtek::Model* model = vtek::model_load_obj(modeldir, "armored_car.obj", device);
+	vtek::ModelInfo modelInfo{};
+	modelInfo.keepVertexDataInMemory = false; // Preferred usage
+	vtek::Model* model = vtek::model_load_obj(
+		&modelInfo, modeldir, "armored_car.obj", device);
 	if (model == nullptr)
 	{
 		log_error("Failed to load obj model!");

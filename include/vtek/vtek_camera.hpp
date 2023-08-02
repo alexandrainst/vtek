@@ -41,21 +41,28 @@ namespace vtek
 	Camera* camera_create();
 	void camera_destroy(Camera* camera);
 
-	// ========================== //
-	// === Camera Orientation === //
-	// ========================== //
+	// ======================== //
+	// === Camera Behaviour === //
+	// ======================== //
 	void camera_set_window_size(Camera* camera, uint32_t width, uint32_t height);
 
 	void camera_set_perspective_frustrum(
 		Camera* camera, float fov_degrees, float near, float far);
 
+	// Default behaviour: No restriction on pitch, and roll is enabled.
 	void camera_set_lookat(
 		Camera* camera, glm::vec3 pos, glm::vec3 front, glm::vec3 up);
 
 	// The camera will perform in orbiting mode, instead of maintaining a particular
 	// view direction.
+	// TODO: This should probably disable movement and translation.
 	void camera_set_lookat_orbit(
 		Camera* camera, glm::vec3 orbitPoint, glm::vec3 eulerAngles);
+
+	// Alternative behaviour: Restrict pitch, disable roll, and specify up vector
+	// for an FPS-game style camera.
+	void camera_set_lookat_fps(
+		Camera* camera, glm::vec3 pos, glm::vec3 front, glm::vec3 up);
 
 	void camera_set_constrain_pitch(
 		Camera* camera, bool restrict, float angleUpDegrees, float angleDownDegrees);

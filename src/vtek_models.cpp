@@ -54,7 +54,8 @@ static bool load_scene_meshes(vtek::Model* model, const aiScene* scene)
 
 /* models interface */
 vtek::Model* vtek::model_load_obj(
-	vtek::Directory* directory, std::string_view filename, vtek::Device* device)
+	const vtek::ModelInfo* info, vtek::Directory* directory,
+	std::string_view filename, vtek::Device* device)
 {
 	Assimp::Importer importer;
 
