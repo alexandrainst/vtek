@@ -62,6 +62,44 @@ void mouse_move_callback(double x, double y)
 	vtek::camera_on_mouse_move(gCamera, x, y);
 }
 
+void update_movement()
+{
+	using vtek::KeyboardKey;
+
+	// left / right
+	if (gKeyboardMap.get_key(KeyboardKey::a)) {
+		vtek::camera_move_right(gCamera, 0.1f);
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::d)) {
+		vtek::camera_move_left(gCamera, 0.1f);
+	}
+
+	// forward / backward
+	if (gKeyboardMap.get_key(KeyboardKey::w)) {
+		vtek::camera_move_forward(gCamera, 0.1f);
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::s)) {
+		vtek::camera_move_backward(gCamera, 0.1f);
+	}
+
+	// up / down
+	if (gKeyboardMap.get_key(KeyboardKey::space)) {
+		vtek::camera_move_up(gCamera, 0.1f);
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::c)) {
+		vtek::camera_move_down(gCamera, 0.1f);
+	}
+
+	// rotate
+	if (gKeyboardMap.get_key(KeyboardKey::q)) {
+		vtek::camera_roll_left_radians(gCamera, 0.05f);
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::e)) {
+		vtek::camera_roll_right_radians(gCamera, 0.05f);
+	}
+}
+
+
 
 /* Helper functions */
 bool update_camera_uniform(
@@ -594,6 +632,96 @@ int main()
 		return -1;
 	}
 
+
+
+	// Error tolerance
+	int errors = 10;
+
+	while (vtek::window_get_should_close(gWindow) && errors > 0)
+	{
+		// React to incoming input events
+		vtek::window_poll_events();
+
+		update_movement();
+		vtek::camera_update(gCamera);
+		if (!update_camera_uniform(descriptorSetCamera, uniformBufferCamera, device))
+		{
+			log_error("Failed to update uniform buffer!");
+			return -1;
+		}
+
+		// To avoid excessive GPU work we wait until we may begin the frame
+		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
+		if (beginStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait begin frame - swapchain timeout!");
+			// TODO: Probably log an error and then run the loop again.
+			errors--; continue;
+		}
+		else if (beginStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait begin frame - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// Acquire the next available image in the swapchain
+		uint32_t frameIndex;
+		auto acquireStatus =
+			vtek::swapchain_acquire_next_image(swapchain, device, &frameIndex);
+		if (acquireStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_error("Failed to acquire image - swapchain outofdate!");
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (acquireStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to acquire image - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// Wait until any previous operations are finished using this image, for either read or write.
+		// NOTE: We can do command buffer recording or other operations before calling this function.
+		auto readyStatus =
+			vtek::swapchain_wait_image_ready(swapchain, device, frameIndex);
+		if (readyStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait image ready - swapchain timeout!");
+			// TODO: Probably log an error and then run the loop again.
+		}
+		else if (readyStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait image ready - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// Submit the current command buffer for execution on the graphics queue
+		vtek::SubmitInfo submitInfo{};
+		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
+		if (!vtek::queue_submit(
+			    graphicsQueue, commandBuffers[frameIndex], &submitInfo))
+		{
+			log_error("Failed to submit to queue!");
+			// TODO: This is an error.
+		}
+
+		// Wait for command buffer to finish execution, and present frame to screen.
+		auto presentStatus = vtek::swapchain_present_frame(swapchain, frameIndex);
+		if (presentStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_error("Failed to present frame - swapchain outofdate!");
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (presentStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to present frame - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// NOTE: This may be adjusted based on machine CPU speed.. (no timer created yet!)
+		std::this_thread::sleep_for(std::chrono::milliseconds(16));
+	}
 
 
 

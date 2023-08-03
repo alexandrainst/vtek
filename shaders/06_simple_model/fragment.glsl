@@ -9,7 +9,7 @@ layout (location = 2) flat in vec3 viewPos;
 
 layout (location = 0) out vec4 fColor;
 
-layout (set = 0, binding = 1) uniform LightUniform
+layout (set = 1, binding = 1) uniform LightUniform
 {
 	vec4 positionFalloff;
 	vec4 colorIntensity;
