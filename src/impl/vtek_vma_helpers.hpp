@@ -40,6 +40,23 @@ namespace vtek
 		vtek::Allocator* allocator {nullptr};
 	};
 
+	struct Image2D
+	{
+		VkImage vulkanHandle {VK_NULL_HANDLE};
+		VmaAllocation vmaHandle {VK_NULL_HANDLE};
+
+		VkExtent2D size {0U, 0U};
+
+		// The image knows who created it. Same as for buffer.
+		vtek::Allocator* allocator {nullptr};
+	};
+
+	// TODO: Remove?
+	struct Attachment
+	{
+
+	};
+
 	// ========================= //
 	// === Buffer management === //
 	// ========================= //
@@ -51,6 +68,13 @@ namespace vtek
 	void* allocator_buffer_map(Buffer* buffer);
 	void allocator_buffer_unmap(Buffer* buffer);
 	void allocator_buffer_flush(Buffer* buffer, const BufferRegion* region);
+
+	// ========================= //
+	// === Image attachments === //
+	// ========================= //
+
+	Attachment* allocator_depth_attachment_create(
+		Allocator* allocator);
 
 	// ======================== //
 	// === Image management === //

@@ -358,9 +358,17 @@ static void destroy_swapchain_handle(vtek::Swapchain* swapchain, VkDevice dev)
 
 static bool create_depth_images(vtek::Swapchain* swapchain, VkDevice dev)
 {
+	vtek::Allocator* allocator = vtek::device_get_allocator(dev);
+
 	// TODO: Dedicated allocation from VMA
 
+	vtek::Image2DInfo imageInfo{};
+	imageInfo.requireDedicatedAllocation = true;
 
+	for (uint32_t i = 0; i < swapchain->length; i++)
+	{
+		vtek::allocator_depth_attachment_create(allocator);
+	}
 
 
 }
