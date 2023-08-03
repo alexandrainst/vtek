@@ -11,7 +11,7 @@ vtek::Uniform_m4_v4 gCameraUniform;
 vtek::Uniform_PointLight gLightUniform;
 glm::vec3 gLightPosition(0.0f, 0.0, 5.0f);
 float gLightFalloff = 1.0f;
-glm::vec3 gLightColor = glm::vec3(1.0f, 0.54902f, 0.0f); // DarkOrange
+glm::vec3 gLightColor = vtek::Colors::Linen;
 float gLightIntensity = 1.0f;
 
 
@@ -299,6 +299,8 @@ int main()
 	windowInfo.title = "vtek example 06: Model loading";
 	windowInfo.resizeable = false;
 	windowInfo.cursorDisabled = true;
+	windowInfo.width = 1024;
+	windowInfo.height = 1024;
 	gWindow = vtek::window_create(&windowInfo);
 	if (gWindow == nullptr)
 	{
@@ -453,7 +455,7 @@ int main()
 	modelInfo.keepVertexDataInMemory = false; // Preferred usage
 	modelInfo.loadNormals = true;
 	vtek::Model* model = vtek::model_load_obj(
-		&modelInfo, modeldir, "armored_car.obj", device);
+		&modelInfo, modeldir, "armored_car.glb", device);
 	if (model == nullptr)
 	{
 		log_error("Failed to load obj model!");
@@ -582,6 +584,7 @@ int main()
 	bindings.add_buffer(
 		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex); // normal
 	vtek::RasterizationState rasterizer{};
+	rasterizer.cullMode = vtek::CullMode::back;
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{}; // No depth testing!
 	vtek::ColorBlendState colorBlending{};

@@ -157,7 +157,7 @@ vtek::Model* vtek::model_load_obj(
 	read_flags |= aiProcess_Triangulate;
 
 	// Save some space
-	read_flags |= aiProcess_JoinIdenticalVertices;
+	//read_flags |= aiProcess_JoinIdenticalVertices;
 
 	// NOTE: Optional UV-flip, might not be needed for Vulkan!
 	//read_flags |= aiProcess_FlipUVs;

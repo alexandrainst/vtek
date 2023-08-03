@@ -19,6 +19,7 @@
 
 #include "vtek_glm_includes.hpp"
 
+#include "vtek_colors.hpp"
 #include "vtek_main.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vulkan_handles.hpp"
