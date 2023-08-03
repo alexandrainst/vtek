@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
+#include "vtek_object_handles.hpp"
 #include "vtek_submit_info.hpp"
-#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek
@@ -23,6 +23,25 @@ namespace vtek
 	// reduce rendering latency and increase memory usage.
 	static constexpr uint32_t kMaxFramesInFlight = 2;
 
+	enum class SwapchainDepthBuffer
+	{
+		// The swapchain creates and maintains no depth images. This is the
+		// default, and ideal if all rendering goes to an external framebuffer
+		// (e.g. deferred rendering OR render pass + swapchain framebuffers),
+		// or if no depth buffering is needed.
+		none,
+
+		// All swapchain images will share the same single depth buffer. This
+		// saves some memory but forces in some extra synchronization which may
+		// slow down rendering times slightly.
+		// TODO: This is not currently implemented!
+		single_shared,
+
+		// The swapchain maintains one depth buffer per swapchain image. This
+		// results in the most optimized rendering but incurs extra memory usage.
+		one_per_image
+	};
+
 	struct SwapchainInfo
 	{
 		bool vsync {false};
@@ -40,7 +59,8 @@ namespace vtek
 		// created with and managed by the swapchain. This should be disabled
 		// if render passes together with swapchain framebuffers are used, and
 		// might be enabled if dynamic rendering is used.
-		bool createDepthBuffers {false};
+		// TODO: `single_shared` is not implemented!
+		SwapchainDepthBuffer depthBuffer {SwapchainDepthBuffer::none};
 	};
 
 

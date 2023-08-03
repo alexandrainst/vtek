@@ -18,6 +18,7 @@ namespace vtek
 	struct Device;
 	struct GraphicsPipeline;
 	struct GraphicsShader;
+	struct Image2D;
 	struct Instance;
 	struct PhysicalDevice;
 	struct Queue;

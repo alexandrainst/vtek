@@ -4,8 +4,8 @@
 #include <optional>
 #include <vector>
 
-#include "vtek_vulkan_handles.hpp"
 #include "vtek_descriptor_type.hpp"
+#include "vtek_object_handles.hpp"
 
 
 namespace vtek

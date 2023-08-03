@@ -5,8 +5,8 @@
 #include <utility>
 #include <vulkan/vulkan.h>
 
+#include "vtek_object_handles.hpp"
 #include "vtek_submit_info.hpp"
-#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek

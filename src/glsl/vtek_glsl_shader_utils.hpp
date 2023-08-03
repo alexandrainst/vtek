@@ -2,7 +2,7 @@
 
 #include "vtek_fileio.hpp"
 #include "vtek_shaders.hpp"
-#include "vtek_vulkan_handles.hpp"
+#include "vtek_object_handles.hpp"
 #include "vtek_vulkan_version.hpp"
 
 #include <cstdint>

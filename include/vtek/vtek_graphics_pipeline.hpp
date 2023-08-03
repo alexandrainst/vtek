@@ -6,11 +6,12 @@
 #include <vulkan/vulkan.h>
 
 #include "vtek_descriptor_set_layout.hpp"
+#include "vtek_object_handles.hpp"
 #include "vtek_push_constants.hpp"
 #include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
-#include "vtek_vulkan_handles.hpp"
+
 
 
 namespace vtek

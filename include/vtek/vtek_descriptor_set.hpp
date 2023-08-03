@@ -1,7 +1,7 @@
 #pragma once
 
+#include "vtek_object_handles.hpp"
 #include "vtek_uniform_data.hpp"
-#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek

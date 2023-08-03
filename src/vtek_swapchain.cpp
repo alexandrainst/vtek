@@ -25,15 +25,22 @@ struct vtek::Swapchain
 	VkExtent2D imageExtent {0, 0};
 	VkFormat imageFormat;
 	VkFormat depthImageFormat;
-
-	std::vector<VkImage> images;
-	std::vector<VkImageView> imageViews;
-	uint32_t currentImageIndex {0};
+	SwapchainDepthBuffer depthBuffer {vtek::SwapchainDepthBuffer::none};
 
 	bool isInvalidated {false};
 
 	VkQueue presentQueue {VK_NULL_HANDLE};
 	uint32_t graphicsQueueIndex {0};
+
+	// =================== //
+	// === Attachments === //
+	// =================== //
+	std::vector<VkImage> images;
+	std::vector<VkImageView> imageViews;
+	uint32_t currentImageIndex {0};
+
+	std::vector<VkImage> depthImages;
+	std::vector<VkImageView> depthImageViews;
 
 	// ============================ //
 	// === Frame syncronization === //
@@ -347,6 +354,36 @@ static void destroy_swapchain_handle(vtek::Swapchain* swapchain, VkDevice dev)
 		vkDestroySwapchainKHR(dev, swapchain->vulkanHandle, nullptr);
 		swapchain->vulkanHandle = VK_NULL_HANDLE;
 	}
+}
+
+static bool create_depth_images(vtek::Swapchain* swapchain, VkDevice dev)
+{
+	// TODO: Dedicated allocation from VMA
+
+
+
+
+}
+
+static void destroy_depth_images(vtek::Swapchain* swapchain, VkDevice dev)
+{
+	for (auto& view : swapchain->depthImageViews)
+	{
+		if (view != VK_NULL_HANDLE)
+		{
+			vkDestroyImageView(dev, view, nullptr);
+		}
+	}
+	for (auto& image : swapchain->depthImages)
+	{
+		if (image != VK_NULL_HANDLE)
+		{
+			vkDestroyImage(dev, image, nullptr);
+		}
+	}
+
+	swapchain->depthImageViews.clear();
+	swapchain->depthImages.clear();
 }
 
 static uint32_t choose_swapchain_length(bool mayTripleBuffer, VkSurfaceCapabilitiesKHR& capabilities)
@@ -733,6 +770,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	swapchain->prioritizeLowLatency = info->prioritizeLowLatency;
 	swapchain->physDev = physDev;
 
+
 	// ========================== //
 	// === Create image views === //
 	// ========================== //
@@ -743,9 +781,9 @@ vtek::Swapchain* vtek::swapchain_create(
 	}
 
 
-	// =========================== //
-	// === Depth buffer format === //
-	// =========================== //
+	// ======================= //
+	// === Depth buffering === //
+	// ======================= //
 
 	// Determine image format for framebuffer depth attachments.
 	// Even though depth images are not used by the swapchain, they are
@@ -769,12 +807,24 @@ vtek::Swapchain* vtek::swapchain_create(
 		return nullptr;
 	}
 
-	// ============================== //
-	// === Optional depth buffers === //
-	// ============================== //
-	if (info->createDepthBuffers)
+	swapchain->depthBuffer = info->depthBuffer;
+	if (swapchain->depthBuffer == vtek::SwapchainDepthBuffer::single_shared)
 	{
-		// TODO: Dedicated allocation from VMA
+		vtek_log_error("Single shared swapchain depth buffer is not implemented!");
+		vtek_log_warn("No depth buffer(s) will be created. {}",
+		              "Alternatively, specify one_per_image instead.");
+		swapchain->depthBuffer = vtek::SwapchainDepthBuffer::none;
+	}
+	else if (swapchain->depthBuffer == vtek::SwapchainDepthBuffer::one_per_image)
+	{
+		if (!create_depth_images(swapchain, dev))
+		{
+			vtek_log_error("Failed to create swapchain depth buffers!");
+			destroy_swapchain_image_views(swapchain, dev);
+			destroy_swapchain_handle(swapchain, dev);
+			delete swapchain;
+			return nullptr;
+		}
 	}
 
 

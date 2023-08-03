@@ -127,6 +127,7 @@ set (src
     include/vtek/vtek_logging.hpp
     include/vtek/vtek_main.hpp
     include/vtek/vtek_models.hpp
+    include/vtek/vtek_object_handles.hpp
     include/vtek/vtek_physical_device.hpp
     include/vtek/vtek_push_constants.hpp
     include/vtek/vtek_queue.hpp
@@ -137,7 +138,6 @@ set (src
     include/vtek/vtek_types.hpp
     include/vtek/vtek_uniform_data.hpp
     include/vtek/vtek_vertex_data.hpp
-    include/vtek/vtek_vulkan_handles.hpp
     include/vtek/vtek_vulkan_version.hpp
 
     src/impl/vtek_command_buffer_struct.hpp

@@ -4,11 +4,10 @@
 #include <glm/glm.hpp>
 
 
-// Color values found at:
-// https://www.rapidtables.com/web/color/RGB_Color.html
-
 namespace vtek
 {
+	// Color values found at:
+	// https://www.rapidtables.com/web/color/RGB_Color.html
 	class Colors
 	{
 	public:

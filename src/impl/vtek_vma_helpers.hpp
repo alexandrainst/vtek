@@ -4,7 +4,7 @@
 #include "vtek_vulkan.pch"
 
 #include "vtek_buffer.hpp"
-#include "vtek_vulkan_handles.hpp"
+#include "vtek_object_handles.hpp"
 
 
 namespace vtek
@@ -51,4 +51,13 @@ namespace vtek
 	void* allocator_buffer_map(Buffer* buffer);
 	void allocator_buffer_unmap(Buffer* buffer);
 	void allocator_buffer_flush(Buffer* buffer, const BufferRegion* region);
+
+	// ======================== //
+	// === Image management === //
+	// ======================== //
+
+	bool allocator_image2d_create(Image2D* outImage);
+	void allocator_image2d_destroy(Image2D* image);
+
+	// TODO: Image map and layout transition into optimal tiling !!!
 }

@@ -1,7 +1,7 @@
 #include "vtek_vulkan.pch"
 #include "vtek_allocator.hpp"
 
-#include "impl/vtek_vma_helpers.hpp"
+#include "impl/vtek_vma_helpers.hpp" // Provides VMA include
 #include "vtek_device.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
@@ -241,3 +241,15 @@ void vtek::allocator_buffer_flush(
 		               "data will likely not be visible!");
 	}
 }
+
+bool vtek::allocator_image2d_create(vtek::Image2D* outImage)
+{
+
+}
+
+void vtek::allocator_image2d_destroy(vtek::Image2D* image)
+{
+
+}
+
+// TODO: Image map and layout transition into optimal tiling !!!
