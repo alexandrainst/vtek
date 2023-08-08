@@ -143,6 +143,8 @@ static VkImageUsageFlags get_image_usage_flags(vtek::EnumBitmask<IUFlag> mask)
 	return flags;
 }
 
+
+
 static const char* get_image_layout_str(vtek::ImageLayout layout)
 {
 	switch (layout)
@@ -455,6 +457,7 @@ bool vtek::allocator_image2d_create(
 	outImage->vulkanHandle = image;
 	outImage->vmaHandle = allocation;
 	outImage->extent = info->extent;
+	outImage->format = imageInfo.format;
 	outImage->allocator = allocator;
 
 	return true;

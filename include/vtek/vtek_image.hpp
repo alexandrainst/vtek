@@ -43,6 +43,21 @@ namespace vtek
 		input_attachment         = 0x0080
 	};
 
+	enum class ImageAspectFlag : uint32_t
+	{
+		// Possible bit-masking of the 3 major attachment types.
+		color    = 0x0001,
+		depth    = 0x0002,
+		stencil  = 0x0004,
+		// Specifies the metadata aspect used for sparse resource operations.
+		metadata = 0x0008,
+		// Image aspects for multi-planar image formats.
+		// NOTE: plane 0/1 requires Vulkan >= 1.1, plane 2 requires Vulkan >= 1.3.
+		plane_0  = 0x0010,
+		plane_1  = 0x0020,
+		plane_2  = 0x0040
+	};
+
 	enum class ImageInitialLayout
 	{
 		// Default initial layout. It means that the image is neither valid
@@ -92,6 +107,19 @@ namespace vtek
 		exclusive, concurrent
 	};
 
+	struct Image2DViewInfo
+	{
+		uint32_t baseMipLevel {0}; // aka. mip-lod-bias
+		uint32_t baseArrayLayer {0}; // only applicable for image arrays.
+
+		// Optional aspect flags, specifies which aspect(s) of the image are
+		// included in a view created on the image.
+		// NOTE: The aspect flags MUST be compatible with the format specified
+		// for image creation, but MAY be a valid subset e.g. specifying only
+		// depth for a depth/stencil image used as an attachment.
+		EnumBitmask<ImageAspectFlag> aspectFlags {0U};
+	};
+
 	struct Image2DInfo
 	{
 		// Some resources, e.g. render targets, depth-stencil, UAV, very large
@@ -121,8 +149,12 @@ namespace vtek
 		MultisampleType multisampling {MultisampleType::none};
 		// This is only relevant for images that are shared between multiple
 		// queue families, in which case sharing mode should be `concurrent`.
+		// NOTE: When sharing mode is `exclusive`, the queue indices are ignored.
 		ImageSharingMode sharingMode {ImageSharingMode::exclusive};
 		std::vector<uint32_t> sharingQueueIndices;
+
+		bool createImageView {true};
+		Image2DViewInfo imageViewInfo {};
 	};
 
 	Image2D* image2d_create(const Image2DInfo* info, Device* device);

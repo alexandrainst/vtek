@@ -62,9 +62,11 @@ namespace vtek
 	struct Image2D
 	{
 		VkImage vulkanHandle {VK_NULL_HANDLE};
+		VkImageView viewHandle {VK_NULL_HANDLE};
 		VmaAllocation vmaHandle {VK_NULL_HANDLE};
 
 		VkExtent2D extent {0U, 0U};
+		VkFormat format {VK_FORMAT_UNDEFINED};
 
 		// The image knows who created it. Same as for buffer.
 		vtek::Allocator* allocator {nullptr};
