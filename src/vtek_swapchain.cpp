@@ -4,6 +4,7 @@
 #include "impl/vtek_vulkan_helpers.hpp"
 #include "vtek_command_buffer.hpp"
 #include "vtek_device.hpp"
+#include "vtek_image.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_physical_device.hpp"
 #include "vtek_queue.hpp"
@@ -25,7 +26,7 @@ struct vtek::Swapchain
 	VkExtent2D imageExtent {0, 0};
 	VkFormat imageFormat;
 	VkFormat depthImageFormat;
-	SwapchainDepthBuffer depthBuffer {vtek::SwapchainDepthBuffer::none};
+	SwapchainDepthBuffer depthBufferType {vtek::SwapchainDepthBuffer::none};
 
 	bool isInvalidated {false};
 
@@ -39,8 +40,8 @@ struct vtek::Swapchain
 	std::vector<VkImageView> imageViews;
 	uint32_t currentImageIndex {0};
 
-	std::vector<VkImage> depthImages;
-	std::vector<VkImageView> depthImageViews;
+	std::vector<vtek::Image2D*> depthImages;
+	std::vector<VkImageView> depthImageViews; // TODO: View inside image instead?
 
 	// ============================ //
 	// === Frame syncronization === //
@@ -356,21 +357,30 @@ static void destroy_swapchain_handle(vtek::Swapchain* swapchain, VkDevice dev)
 	}
 }
 
-static bool create_depth_images(vtek::Swapchain* swapchain, VkDevice dev)
+static bool create_depth_images(vtek::Swapchain* swapchain, vtek::Device* device)
 {
-	vtek::Allocator* allocator = vtek::device_get_allocator(dev);
-
-	// TODO: Dedicated allocation from VMA
-
 	vtek::Image2DInfo imageInfo{};
 	imageInfo.requireDedicatedAllocation = true;
+	imageInfo.size = swapchain->imageExtent;
+	imageInfo.format = swapchain->depthImageFormat;
+	imageInfo.usageFlags = vtek::ImageUsageFlag::depth_stencil_attachment;
+	imageInfo.initialLayout = vtek::ImageLayout::depth_stencil_attachment_optimal;
+
+	swapchain->depthImages.resize(swapchain->length, nullptr);
 
 	for (uint32_t i = 0; i < swapchain->length; i++)
 	{
-		vtek::allocator_depth_attachment_create(allocator);
+		swapchain->depthImages[i] = vtek::image2d_create(&imageInfo, device);
+
+		if (swapchain->depthImages[i] == nullptr)
+		{
+			vtek_log_error("Failed to create swapchain depth image {} -- {}",
+			               i, "cannot complete swapchain creation!");
+			return false;
+		}
 	}
 
-
+	return true;
 }
 
 static void destroy_depth_images(vtek::Swapchain* swapchain, VkDevice dev)
@@ -384,10 +394,7 @@ static void destroy_depth_images(vtek::Swapchain* swapchain, VkDevice dev)
 	}
 	for (auto& image : swapchain->depthImages)
 	{
-		if (image != VK_NULL_HANDLE)
-		{
-			vkDestroyImage(dev, image, nullptr);
-		}
+		vtek::image2d_destroy(image);
 	}
 
 	swapchain->depthImageViews.clear();
@@ -809,23 +816,25 @@ vtek::Swapchain* vtek::swapchain_create(
 	VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
 	if (!findSupportedImageFormat(
-		    physDev, depthFormatCandidates, tiling, features, &swapchain->depthImageFormat))
+		physDev, depthFormatCandidates, tiling, features,
+		&swapchain->depthImageFormat))
 	{
 		vtek_log_error("Failed to find supported depth image format!");
 		return nullptr;
 	}
 
-	swapchain->depthBuffer = info->depthBuffer;
-	if (swapchain->depthBuffer == vtek::SwapchainDepthBuffer::single_shared)
+	swapchain->depthBufferType = info->depthBuffer;
+	if (swapchain->depthBufferType == vtek::SwapchainDepthBuffer::single_shared)
 	{
 		vtek_log_error("Single shared swapchain depth buffer is not implemented!");
 		vtek_log_warn("No depth buffer(s) will be created. {}",
 		              "Alternatively, specify one_per_image instead.");
-		swapchain->depthBuffer = vtek::SwapchainDepthBuffer::none;
+		swapchain->depthBufferType = vtek::SwapchainDepthBuffer::none;
 	}
-	else if (swapchain->depthBuffer == vtek::SwapchainDepthBuffer::one_per_image)
+	else if (swapchain->depthBufferType ==
+		vtek::SwapchainDepthBuffer::one_per_image)
 	{
-		if (!create_depth_images(swapchain, dev))
+		if (!create_depth_images(swapchain, device))
 		{
 			vtek_log_error("Failed to create swapchain depth buffers!");
 			destroy_swapchain_image_views(swapchain, dev);

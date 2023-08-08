@@ -4,6 +4,7 @@
 #include "vtek_vulkan.pch"
 
 #include "vtek_buffer.hpp"
+#include "vtek_image.hpp"
 #include "vtek_object_handles.hpp"
 
 
@@ -84,4 +85,6 @@ namespace vtek
 	void allocator_image2d_destroy(Image2D* image);
 
 	// TODO: Image map and layout transition into optimal tiling !!!
+
+	// TODO: Mipmap generation. Two strategies: blit and compute - try both?
 }

@@ -69,6 +69,7 @@ vtek::Allocator* vtek::allocator_create_default(
 
 /* helper functions */
 using BUFlag = vtek::BufferUsageFlag;
+using IUFlag = vtek::ImageUsageFlag;
 
 static VkBufferUsageFlags get_buffer_usage_flags(vtek::EnumBitmask<BUFlag> mask)
 {
@@ -103,6 +104,39 @@ static VkBufferUsageFlags get_buffer_usage_flags(vtek::EnumBitmask<BUFlag> mask)
 	}
 	if (mask.has_flag(BUFlag::shader_device_address)) {
 		flags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	}
+
+	return flags;
+}
+
+static VkImageUsageFlags get_image_usage_flags(vtek::EnumBitmask<IUFlag> mask)
+{
+
+	VkImageUsageFlags flags {0};
+
+	if (mask.has_flag(IUFlag::transfer_src)) {
+		flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	}
+	if (mask.has_flag(IUFlag::transfer_dst)) {
+		flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	}
+	if (mask.has_flag(IUFlag::sampled)) {
+		flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+	}
+	if (mask.has_flag(IUFlag::storage)) {
+		flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+	}
+	if (mask.has_flag(IUFlag::color_attachment)) {
+		flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	}
+	if (mask.has_flag(IUFlag::depth_stencil_attachment)) {
+		flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	}
+	if (mask.has_flag(IUFlag::transient_attachment)) {
+		flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+	}
+	if (mask.has_flag(IUFlag::input_attachment)) {
+		flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
 	}
 
 	return flags;

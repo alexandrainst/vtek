@@ -238,6 +238,7 @@ if(VTEK_CREATE_EXAMPLES)
         # target_link_libraries(${exname} PUBLIC vtek::vtek spdlog::spdlog Vulkan::Vulkan)
         target_link_directories(${exname} PUBLIC ${CMAKE_OUTPUT_DIR})
         target_compile_options(${exname} PRIVATE -ggdb3)
+        target_precompile_headers(${exname} REUSE_FROM vtek)
     endforeach()
 
 endif()

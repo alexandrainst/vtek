@@ -9,7 +9,7 @@
 
 namespace vtek
 {
-	enum class ImageChannels : U8
+	enum class ImageChannels : uint32_t
 	{
 		channels_1 = 1,
 		channels_2 = 2,
@@ -32,22 +32,19 @@ namespace vtek
 
 	enum class ImageUsageFlag : uint32_t
 	{
-		sampled                  = 0x0001,
-		storage                  = 0x0002,
-		atomic_storage           = 0x0004,
-		color_attachment         = 0x0008,
-		depth_attachment         = 0x0010,
-		stencil_attachment       = 0x0020,
-		depth_stencil_attachment = 0x0040,
-		blit_src                 = 0x0080,
-		blit_dst                 = 0x0100,
-		sampled_linear_filter    = 0x0200,
-		transfer_src             = 0x0400,
-		transfer_dst             = 0x0800
+		transfer_src             = 0x0001,
+		transfer_dst             = 0x0002,
+		sampled                  = 0x0004,
+		storage                  = 0x0008,
+		color_attachment         = 0x0010,
+		depth_stencil_attachment = 0x0020,
+		transient_attachment     = 0x0040,
+		input_attachment         = 0x0080
 	};
 
 	enum class ImageLayout
 	{
+		// Standard values, provided by Vulkan >= 1.0
 		undefined,
 		general,
 		color_attachment_optimal,
@@ -57,12 +54,20 @@ namespace vtek
 		transfer_src_optimal,
 		transfer_dst_optimal,
 		preinitialized,
+
+		// Provided by Vulkan >= 1.1
 		depth_readonly_stencil_attachment_optimal,
 		depth_attachment_stencil_readonly_optimal,
+
+		// Provided by Vulkan >= 1.2
 		depth_attachment_optimal,
 		depth_readonly_optimal,
 		stencil_attachment_optimal,
-		stencil_readonly_optimal
+		stencil_readonly_optimal,
+
+		// Provided by Vulkan >= 1.3
+		readonly_optimal,
+		attachment_optimal
 	};
 
 	struct Image2DInfo
@@ -87,12 +92,18 @@ namespace vtek
 		// Specify how the image should be used. At least one flag must be set.
 		EnumBitmask<ImageUsageFlag> usageFlags {0U};
 
-		ImageLayout initialLayout {ImageLayout::undefined}
+		ImageLayout initialLayout {ImageLayout::undefined};
 
 	};
 
 	Image2D* image2d_create(const Image2DInfo* info, Device* device);
 	void image2d_destroy(Image2D* image);
+
+	// TODO: Alternative image creation, using a specific allocator
+	Image2D* image2d_create(const Image2DInfo* info, Allocator* allocator);
+
+	VkImage image2d_get_handle(const Image2D* image);
+	VkImageView image2d_get_view_handle(const Image2D* image);
 
 
 	// ======================== //
