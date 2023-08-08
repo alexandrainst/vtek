@@ -375,7 +375,7 @@ int main()
 	swapchainInfo.prioritizeLowLatency = false;
 	swapchainInfo.framebufferWidth = gFramebufferWidth;
 	swapchainInfo.framebufferHeight = gFramebufferHeight;
-	swapchainInfo.createDepthBuffers = true; // TODO: Yes, we want this!
+	swapchainInfo.depthBuffer = vtek::SwapchainDepthBuffer::one_per_image;
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
 		&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)

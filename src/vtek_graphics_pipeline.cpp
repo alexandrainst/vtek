@@ -154,23 +154,6 @@ static VkFrontFace get_front_face(vtek::FrontFace face)
 	}
 }
 
-static VkSampleCountFlagBits get_multisample_count(vtek::MultisampleType sample)
-{
-	switch (sample)
-	{
-	case vtek::MultisampleType::none:     return VK_SAMPLE_COUNT_1_BIT;
-	case vtek::MultisampleType::msaa_x2:  return VK_SAMPLE_COUNT_2_BIT;
-	case vtek::MultisampleType::msaa_x4:  return VK_SAMPLE_COUNT_4_BIT;
-	case vtek::MultisampleType::msaa_x8:  return VK_SAMPLE_COUNT_8_BIT;
-	case vtek::MultisampleType::msaa_x16: return VK_SAMPLE_COUNT_16_BIT;
-	case vtek::MultisampleType::msaa_x32: return VK_SAMPLE_COUNT_32_BIT;
-	case vtek::MultisampleType::msaa_x64: return VK_SAMPLE_COUNT_64_BIT;
-	default:
-		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid multisample count!");
-		return VK_SAMPLE_COUNT_1_BIT;
-	}
-}
-
 static VkCompareOp get_depth_compare_op(vtek::DepthCompareOp op)
 {
 	switch (op)
@@ -389,7 +372,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisample.pNext = nullptr;
 	multisample.flags = 0U;
-	multisample.rasterizationSamples = get_multisample_count(multisampleState.numSamples);
+	multisample.rasterizationSamples =
+		vtek::get_multisample_count(multisampleState.numSamples);
 	multisample.sampleShadingEnable = multisampleState.enableSampleRateShading.get();
 	multisample.pSampleMask = nullptr;
 	multisample.alphaToCoverageEnable = multisampleState.enableAlphaToCoverage.get();

@@ -70,6 +70,7 @@ vtek::Allocator* vtek::allocator_create_default(
 /* helper functions */
 using BUFlag = vtek::BufferUsageFlag;
 using IUFlag = vtek::ImageUsageFlag;
+using ILayout = vtek::ImageLayout;
 
 static VkBufferUsageFlags get_buffer_usage_flags(vtek::EnumBitmask<BUFlag> mask)
 {
@@ -142,6 +143,110 @@ static VkImageUsageFlags get_image_usage_flags(vtek::EnumBitmask<IUFlag> mask)
 	return flags;
 }
 
+static const char* get_image_layout_str(vtek::ImageLayout layout)
+{
+	switch (layout)
+	{
+	case ILayout::undefined:
+		return "undefined";
+	case ILayout::general:
+		return "general";
+	case ILayout::color_attachment_optimal:
+		return "color_attachment_optimal";
+	case ILayout::depth_stencil_attachment_optimal:
+		return "depth_stencil_attachment_optimal";
+	case ILayout::depth_stencil_readonly_optimal:
+		return "depth_stencil_readonly_optimal";
+	case ILayout::shader_readonly_optimal:
+		return "shader_readonly_optimal";
+	case ILayout::transfer_src_optimal:
+		return "transfer_src_optimal";
+	case ILayout::transfer_dst_optimal:
+		return "transfer_dst_optimal";
+	case ILayout::preinitialized:
+		return "preinitialized";
+	case ILayout::depth_readonly_stencil_attachment_optimal:
+		return "depth_readonly_stencil_attachment_optimal";
+	case ILayout::depth_attachment_stencil_readonly_optimal:
+		return "depth_attachment_stencil_readonly_optimal";
+	case ILayout::depth_attachment_optimal:
+		return "depth_attachment_optimal";
+	case ILayout::depth_readonly_optimal:
+		return "depth_readonly_optimal";
+	case ILayout::stencil_attachment_optimal:
+		return "stencil_attachment_optimal";
+	case ILayout::stencil_readonly_optimal:
+		return "stencil_readonly_optimal";
+	case ILayout::readonly_optimal:
+		return "readonly_optimal";
+	case ILayout::attachment_optimal:
+		return "attachment_optimal";
+	default:
+		return "<default: missing switch-case>";
+	}
+}
+
+static VkImageLayout get_image_layout(vtek::ImageLayout layout)
+{
+	switch (layout)
+	{
+		// Standard values, provided by Vulkan >= 1.0
+	case ILayout::undefined:
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	case ILayout::general:
+		return VK_IMAGE_LAYOUT_GENERAL;
+	case ILayout::color_attachment_optimal:
+		return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	case ILayout::depth_stencil_attachment_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	case ILayout::depth_stencil_readonly_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	case ILayout::shader_readonly_optimal:
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	case ILayout::transfer_src_optimal:
+		return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	case ILayout::transfer_dst_optimal:
+		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	case ILayout::preinitialized:
+		return VK_IMAGE_LAYOUT_PREINITIALIZED;
+
+		// Provided by Vulkan >= 1.1
+#if defined(VK_API_VERSION_1_1)
+	case ILayout::depth_readonly_stencil_attachment_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+	case ILayout::depth_attachment_stencil_readonly_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
+#endif
+
+		// Provided by Vulkan >= 1.2
+#if defined(VK_API_VERSION_1_2)
+	case ILayout::depth_attachment_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+	case ILayout::depth_readonly_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+	case ILayout::stencil_attachment_optimal:
+		return VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+	case ILayout::stencil_readonly_optimal:
+		return VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL;
+#endif
+
+		// Provided by Vulkan >= 1.3
+#if defined(VK_API_VERSION_1_3)
+	case ILayout::readonly_optimal:
+		return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+	case ILayout::attachment_optimal:
+		return VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+#endif
+
+	default:
+		vtek_log_error(
+			"get_image_layout(): Unrecognized enum: {} --",
+			get_image_layout_str(layout),
+			"Check if the installed Vulkan version supports this flag!");
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+}
+
 // A staging buffer that will be filled via mapped pointer and then used as a source
 // of transfer to the buffer can be created like this. It will likely end up in a
 // memory type that is HOST_VISIBLE and HOST_COHERENT, but not HOST_CACHED (meaning
@@ -197,7 +302,6 @@ bool vtek::allocator_buffer_create(
 		&allocation, nullptr);
 	if (buffer == VK_NULL_HANDLE || allocation == VK_NULL_HANDLE)
 	{
-		// TODO: Leaks ?
 		vtek_log_error("Failed to create buffer with vma!");
 		return false;
 	}
@@ -276,14 +380,88 @@ void vtek::allocator_buffer_flush(
 	}
 }
 
-bool vtek::allocator_image2d_create(vtek::Image2D* outImage)
+bool vtek::allocator_image2d_create(
+	vtek::Allocator* allocator, const vtek::Image2DInfo* info,
+	vtek::Image2D* outImage)
 {
+	// 1) Fill `VkImageCreateInfo` struct
+	VkImageCreateInfo imageInfo{};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.pNext = nullptr;
+	imageInfo.flags = 0; // TODO: Optional `VkImageCreateFlagBits`
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.extent = { info->extent.width, info->extent.height, 1 };
+	imageInfo.arrayLayers = 1;
+	imageInfo.samples = vtek::get_multisample_count(info->multisampling);
+	imageInfo.usage = get_image_usage_flags(info->usageFlags);
+	imageInfo.initialLayout = get_image_layout(info->initialLayout);
 
+	if (info->format != VK_FORMAT_UNDEFINED) {
+		imageInfo.format = info->format;
+	}
+	else {
+		// TODO: Calculate format!
+	}
+
+	if (info->useMipmaps) {
+		imageInfo.mipLevels = 4; // TODO: Perform proper calculation!
+	}
+	else {
+		imageInfo.mipLevels = 1;
+	}
+
+	if (info->usageFlags.has_flag(vtek::ImageUsageFlag::transfer_dst)) {
+		// TODO: Is this a sensible choice?
+		imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+	}
+	else {
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	}
+
+	// Sharing mode, if the image is accessed by multiple queue families
+	if (info->sharingMode == vtek::ImageSharingMode::exclusive) {
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageInfo.queueFamilyIndexCount = 0;
+		imageInfo.pQueueFamilyIndices = nullptr;
+	}
+	else {
+		imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+		imageInfo.queueFamilyIndexCount = info->sharingQueueIndices.size();
+		imageInfo.pQueueFamilyIndices = info->sharingQueueIndices.data();
+	}
+
+	// 2) Fill `VmaAllocationCreateinfo` struct
+	VmaAllocationCreateInfo createInfo{};
+	createinfo_devicelocal(&createInfo); // NOTE: Device-local preference assumed!
+	if (info->requireDedicatedAllocation)
+	{
+		createInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+	}
+
+	// 3) Create allocation and image
+	VkImage image;
+	VmaAllocation allocation;
+	vmaCreateImage(allocator->vmaHandle, &imageInfo, &createInfo, &image,
+		&allocation, nullptr);
+	if (image == VK_NULL_HANDLE || allocation == VK_NULL_HANDLE)
+	{
+		vtek_log_error("Failed to create 2D image with vma!");
+		return false;
+	}
+
+	outImage->vulkanHandle = image;
+	outImage->vmaHandle = allocation;
+	outImage->extent = info->extent;
+	outImage->allocator = allocator;
+
+	return true;
 }
 
 void vtek::allocator_image2d_destroy(vtek::Image2D* image)
 {
+	VmaAllocator alloc = image->allocator->vmaHandle;
 
+	vmaDestroyImage(alloc, image->vulkanHandle, image->vmaHandle);
 }
 
 // TODO: Image map and layout transition into optimal tiling !!!

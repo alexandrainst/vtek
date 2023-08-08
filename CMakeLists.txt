@@ -122,6 +122,7 @@ set (src
     include/vtek/vtek_fileio.hpp
     include/vtek/vtek_glm_includes.hpp
     include/vtek/vtek_graphics_pipeline.hpp
+    include/vtek/vtek_image.hpp
     include/vtek/vtek_input.hpp
     include/vtek/vtek_instance.hpp
     include/vtek/vtek_logging.hpp
@@ -138,6 +139,7 @@ set (src
     include/vtek/vtek_types.hpp
     include/vtek/vtek_uniform_data.hpp
     include/vtek/vtek_vertex_data.hpp
+    include/vtek/vtek_vulkan_types.hpp
     include/vtek/vtek_vulkan_version.hpp
 
     src/impl/vtek_command_buffer_struct.hpp
@@ -163,6 +165,7 @@ set (src
     src/vtek_device.cpp
     src/vtek_fileio.cpp
     src/vtek_graphics_pipeline.cpp
+    src/vtek_image.cpp
     src/vtek_instance.cpp
     src/vtek_logging.cpp
     src/vtek_main.cpp
@@ -174,6 +177,7 @@ set (src
     src/vtek_swapchain.cpp
     src/vtek_uniform_data.cpp
     src/vtek_vertex_data.cpp
+    src/vtek_vulkan_types.cpp
     )
 
 if(VTEK_SHARED_LIB)
@@ -238,7 +242,6 @@ if(VTEK_CREATE_EXAMPLES)
         # target_link_libraries(${exname} PUBLIC vtek::vtek spdlog::spdlog Vulkan::Vulkan)
         target_link_directories(${exname} PUBLIC ${CMAKE_OUTPUT_DIR})
         target_compile_options(${exname} PRIVATE -ggdb3)
-        target_precompile_headers(${exname} REUSE_FROM vtek)
     endforeach()
 
 endif()

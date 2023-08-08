@@ -5,6 +5,7 @@
 
 #include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
+#include "vtek_vulkan_types.hpp"
 
 
 namespace vtek
@@ -70,6 +71,11 @@ namespace vtek
 		attachment_optimal
 	};
 
+	enum class ImageSharingMode
+	{
+		exclusive, concurrent
+	};
+
 	struct Image2DInfo
 	{
 		// Some resources, e.g. render targets, depth-stencil, UAV, very large
@@ -78,7 +84,7 @@ namespace vtek
 		// from a bigger block.
 		bool requireDedicatedAllocation {false};
 
-		VkExtent2D size {0U, 0U};
+		VkExtent2D extent {0U, 0U};
 
 		// NOTE: Format specification: either directly choose a `VkFormat` type,
 		// or let vtek figure out a supported format which most closely matches
@@ -91,9 +97,15 @@ namespace vtek
 
 		// Specify how the image should be used. At least one flag must be set.
 		EnumBitmask<ImageUsageFlag> usageFlags {0U};
-
 		ImageLayout initialLayout {ImageLayout::undefined};
-
+		bool useMipmaps {false};
+		// The `samples` flag is related to multisampling. This is only relevant
+		// for images that will be used as attachments,
+		MultisampleType multisampling {MultisampleType::none};
+		// This is only relevant for images that are shared between multiple
+		// queue families, in which case sharing mode should be `concurrent`.
+		ImageSharingMode sharingMode {ImageSharingMode::exclusive};
+		std::vector<uint32_t> sharingQueueIndices;
 	};
 
 	Image2D* image2d_create(const Image2DInfo* info, Device* device);
@@ -110,7 +122,8 @@ namespace vtek
 	// === Image operations === //
 	// ======================== //
 
-	bool image_transition_layout(
+	// TODO: `image_transition_layout` ?
+	bool image_layout_transition(
 		Image2D* image, ImageLayout oldLayout, ImageLayout newLayout,
 		Device* device);
 }

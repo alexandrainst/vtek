@@ -361,10 +361,11 @@ static bool create_depth_images(vtek::Swapchain* swapchain, vtek::Device* device
 {
 	vtek::Image2DInfo imageInfo{};
 	imageInfo.requireDedicatedAllocation = true;
-	imageInfo.size = swapchain->imageExtent;
+	imageInfo.extent = swapchain->imageExtent;
 	imageInfo.format = swapchain->depthImageFormat;
 	imageInfo.usageFlags = vtek::ImageUsageFlag::depth_stencil_attachment;
 	imageInfo.initialLayout = vtek::ImageLayout::depth_stencil_attachment_optimal;
+	imageInfo.useMipmaps = false;
 
 	swapchain->depthImages.resize(swapchain->length, nullptr);
 
@@ -1010,6 +1011,7 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	destroy_frame_sync_objects(swapchain, dev);
 
 	destroy_swapchain_image_views(swapchain, dev);
+	destroy_depth_images(swapchain, dev);
 	destroy_swapchain_handle(swapchain, dev);
 	swapchain->isInvalidated = false;
 

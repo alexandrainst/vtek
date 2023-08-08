@@ -21,8 +21,8 @@
 
 #include "vtek_colors.hpp"
 #include "vtek_main.hpp"
+#include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
-#include "vtek_vulkan_handles.hpp"
 #include "vtek_vulkan_version.hpp"
 
 #include "vtek_application_window.hpp"

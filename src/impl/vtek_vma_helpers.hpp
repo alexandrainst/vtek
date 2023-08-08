@@ -23,6 +23,11 @@ namespace vtek
 		memory_protected = 0x0020U
 	};
 
+
+	// ========================= //
+	// === Buffer management === //
+	// ========================= //
+
 	struct Buffer
 	{
 		VkBuffer vulkanHandle {VK_NULL_HANDLE};
@@ -41,27 +46,6 @@ namespace vtek
 		vtek::Allocator* allocator {nullptr};
 	};
 
-	struct Image2D
-	{
-		VkImage vulkanHandle {VK_NULL_HANDLE};
-		VmaAllocation vmaHandle {VK_NULL_HANDLE};
-
-		VkExtent2D size {0U, 0U};
-
-		// The image knows who created it. Same as for buffer.
-		vtek::Allocator* allocator {nullptr};
-	};
-
-	// TODO: Remove?
-	struct Attachment
-	{
-
-	};
-
-	// ========================= //
-	// === Buffer management === //
-	// ========================= //
-
 	bool allocator_buffer_create(
 		Allocator* allocator, const BufferInfo* info, Buffer* outBuffer);
 	void allocator_buffer_destroy(Buffer* buffer);
@@ -70,18 +54,24 @@ namespace vtek
 	void allocator_buffer_unmap(Buffer* buffer);
 	void allocator_buffer_flush(Buffer* buffer, const BufferRegion* region);
 
-	// ========================= //
-	// === Image attachments === //
-	// ========================= //
-
-	Attachment* allocator_depth_attachment_create(
-		Allocator* allocator);
 
 	// ======================== //
 	// === Image management === //
 	// ======================== //
 
-	bool allocator_image2d_create(Image2D* outImage);
+	struct Image2D
+	{
+		VkImage vulkanHandle {VK_NULL_HANDLE};
+		VmaAllocation vmaHandle {VK_NULL_HANDLE};
+
+		VkExtent2D extent {0U, 0U};
+
+		// The image knows who created it. Same as for buffer.
+		vtek::Allocator* allocator {nullptr};
+	};
+
+	bool allocator_image2d_create(
+		Allocator* allocator, const Image2DInfo* info, Image2D* outImage);
 	void allocator_image2d_destroy(Image2D* image);
 
 	// TODO: Image map and layout transition into optimal tiling !!!

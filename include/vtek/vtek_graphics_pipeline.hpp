@@ -11,7 +11,7 @@
 #include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
-
+#include "vtek_vulkan_types.hpp"
 
 
 namespace vtek
@@ -42,14 +42,6 @@ namespace vtek
 	enum class FrontFace
 	{
 		clockwise, counter_clockwise
-	};
-
-	// Multisampling is one way to perform anti-aliasing, by sampling multiple
-	// fragments per-pixel, and then resolving those fragments. This smooths out
-	// polygon edges. Multisampling is not recommended for deferred rendering.
-	enum class MultisampleType
-	{
-		none, msaa_x2, msaa_x4, msaa_x8, msaa_x16, msaa_x32, msaa_x64
 	};
 
 	enum class DepthCompareOp
