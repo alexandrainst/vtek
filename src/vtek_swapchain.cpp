@@ -364,7 +364,7 @@ static bool create_depth_images(vtek::Swapchain* swapchain, vtek::Device* device
 	imageInfo.extent = swapchain->imageExtent;
 	imageInfo.format = swapchain->depthImageFormat;
 	imageInfo.usageFlags = vtek::ImageUsageFlag::depth_stencil_attachment;
-	imageInfo.initialLayout = vtek::ImageLayout::depth_stencil_attachment_optimal;
+	imageInfo.initialLayout = vtek::ImageInitialLayout::undefined;
 	imageInfo.useMipmaps = false;
 
 	swapchain->depthImages.resize(swapchain->length, nullptr);
@@ -381,6 +381,7 @@ static bool create_depth_images(vtek::Swapchain* swapchain, vtek::Device* device
 		}
 	}
 
+	vtek_log_debug("Created swapchain depth images!");
 	return true;
 }
 

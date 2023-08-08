@@ -394,7 +394,6 @@ bool vtek::allocator_image2d_create(
 	imageInfo.arrayLayers = 1;
 	imageInfo.samples = vtek::get_multisample_count(info->multisampling);
 	imageInfo.usage = get_image_usage_flags(info->usageFlags);
-	imageInfo.initialLayout = get_image_layout(info->initialLayout);
 
 	if (info->format != VK_FORMAT_UNDEFINED) {
 		imageInfo.format = info->format;
@@ -410,12 +409,16 @@ bool vtek::allocator_image2d_create(
 		imageInfo.mipLevels = 1;
 	}
 
-	if (info->usageFlags.has_flag(vtek::ImageUsageFlag::transfer_dst)) {
-		// TODO: Is this a sensible choice?
+	if (info->initialLayout == vtek::ImageInitialLayout::preinitialized ||
+	    info->usageFlags.has_flag(vtek::ImageUsageFlag::transfer_dst))
+	{
 		imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 	}
-	else {
+	else
+	{
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	}
 
 	// Sharing mode, if the image is accessed by multiple queue families

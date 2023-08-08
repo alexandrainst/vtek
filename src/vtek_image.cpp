@@ -38,7 +38,7 @@ void vtek::image2d_destroy(vtek::Image2D* image)
 {
 	if (image == nullptr) { return; }
 
-
+	vtek::allocator_image2d_destroy(image);
 }
 
 vtek::Image2D* vtek::image2d_create(

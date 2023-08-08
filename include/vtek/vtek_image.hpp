@@ -43,6 +43,22 @@ namespace vtek
 		input_attachment         = 0x0080
 	};
 
+	enum class ImageInitialLayout
+	{
+		// Default initial layout. It means that the image is neither valid
+		// to write to OR read from, and that a layout transition MUST be
+		// performed before using the image for any purposes.
+		undefined,
+		// Pre-initialized image layout is used as initial layout if an image
+		// should be written to by the host, and signifies that the image data
+		// can be written to memory immediately without first executing a
+		// layout transition.
+		// NOTE: Pre-initialized is ONLY valid with linear tiling, and a manual
+		// layout transition into optimal tiling MUST be performed before the
+		// image may be read from.
+		preinitialized
+	};
+
 	enum class ImageLayout
 	{
 		// Standard values, provided by Vulkan >= 1.0
@@ -97,7 +113,8 @@ namespace vtek
 
 		// Specify how the image should be used. At least one flag must be set.
 		EnumBitmask<ImageUsageFlag> usageFlags {0U};
-		ImageLayout initialLayout {ImageLayout::undefined};
+		ImageInitialLayout initialLayout {ImageInitialLayout::undefined};
+		// TODO: If mipmaps then specify number of mip levels (or compute automatically)?
 		bool useMipmaps {false};
 		// The `samples` flag is related to multisampling. This is only relevant
 		// for images that will be used as attachments,
