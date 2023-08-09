@@ -182,7 +182,6 @@ vtek::Image2D* vtek::image2d_create(
 		image->viewHandle = view;
 	}
 
-	vtek_log_debug("2D image created!");
 	return image;
 }
 

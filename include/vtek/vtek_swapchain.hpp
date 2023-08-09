@@ -79,6 +79,7 @@ namespace vtek
 	VkFormat swapchain_get_image_format(Swapchain* swapchain);
 	VkExtent2D swapchain_get_image_extent(const Swapchain* swapchain);
 
+	bool swapchain_has_depth_buffer(Swapchain* swapchain);
 	VkFormat swapchain_get_depth_image_format(Swapchain* swapchain);
 
 

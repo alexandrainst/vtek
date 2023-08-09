@@ -11,11 +11,15 @@
 #include "vtek_submit_info.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 
 /* struct implementation */
+using tDynRenderBegin = std::function<
+	void(vtek::Swapchain*, uint32_t, VkCommandBuffer, glm::vec3)>;
+
 struct vtek::Swapchain
 {
 	// ============================ //
@@ -27,11 +31,13 @@ struct vtek::Swapchain
 	VkFormat imageFormat {VK_FORMAT_UNDEFINED};
 	VkFormat depthImageFormat {VK_FORMAT_UNDEFINED};
 	SwapchainDepthBuffer depthBufferType {vtek::SwapchainDepthBuffer::none};
+	tDynRenderBegin fDynRenderBegin;
 
 	bool isInvalidated {false};
 
 	VkQueue presentQueue {VK_NULL_HANDLE};
 	uint32_t graphicsQueueIndex {0};
+	uint32_t presentQueueIndex {0};
 
 	// =================== //
 	// === Attachments === //
@@ -357,7 +363,8 @@ static void destroy_swapchain_handle(vtek::Swapchain* swapchain, VkDevice dev)
 	}
 }
 
-static bool create_depth_images(vtek::Swapchain* swapchain, vtek::Device* device)
+static bool create_depth_images(
+	vtek::Swapchain* swapchain, vtek::Device* device, uint32_t count)
 {
 	vtek::Image2DInfo imageInfo{};
 	imageInfo.requireDedicatedAllocation = true;
@@ -373,10 +380,10 @@ static bool create_depth_images(vtek::Swapchain* swapchain, vtek::Device* device
 	// we care only about depth buffering here.
 	imageInfo.imageViewInfo.aspectFlags = vtek::ImageAspectFlag::depth;
 
-	swapchain->depthImages.resize(swapchain->length, nullptr);
-	swapchain->depthImageViews.resize(swapchain->length, VK_NULL_HANDLE);
+	swapchain->depthImages.resize(count, nullptr);
+	swapchain->depthImageViews.resize(count, VK_NULL_HANDLE);
 
-	for (uint32_t i = 0; i < swapchain->length; i++)
+	for (uint32_t i = 0; i < count; i++)
 	{
 		vtek::Image2D* image = vtek::image2d_create(&imageInfo, device);
 		if (image == nullptr)
@@ -389,8 +396,6 @@ static bool create_depth_images(vtek::Swapchain* swapchain, vtek::Device* device
 		swapchain->depthImages[i] = image;
 		swapchain->depthImageViews[i] = vtek::image2d_get_view_handle(image);
 	}
-
-	vtek_log_debug("Created swapchain depth images!");
 	return true;
 }
 
@@ -607,6 +612,269 @@ static void set_image_in_use(
 
 
 
+/* dynamic rendering */
+static void dynrender_begin_no_depth(
+	vtek::Swapchain* swapchain, uint32_t imageIndex,
+	VkCommandBuffer cmdBuf, glm::vec3 clearColor)
+{
+	const glm::vec3& c = clearColor;
+	VkExtent2D extent = swapchain->imageExtent;
+
+	// Transition from whatever (probably present src) to color attachment
+	VkImageMemoryBarrier barrier{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.pNext = nullptr,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		.srcQueueFamilyIndex = swapchain->presentQueueIndex,
+		.dstQueueFamilyIndex = swapchain->graphicsQueueIndex,
+		.image = swapchain->images[imageIndex],
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
+		0, nullptr, 1, &barrier);
+
+	VkRenderingAttachmentInfo colorAttachmentInfo{
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
+		.pNext = nullptr,
+		.imageView = swapchain->imageViews[imageIndex],
+		.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+		.resolveMode = VK_RESOLVE_MODE_NONE,
+		.resolveImageView = VK_NULL_HANDLE,
+		.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		.clearValue = { .color = { .float32 = {c.x, c.y, c.z, 1.0f} } },
+	};
+
+	VkRenderingInfo renderingInfo{};
+	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderingInfo.pNext = nullptr;
+	renderingInfo.flags = 0;
+	renderingInfo.renderArea = { 0U, 0U, extent.width, extent.height };
+	renderingInfo.layerCount = 1;
+	renderingInfo.viewMask = 0;
+	renderingInfo.colorAttachmentCount = 1;
+	renderingInfo.pColorAttachments = &colorAttachmentInfo;
+	renderingInfo.pDepthAttachment = nullptr;
+	renderingInfo.pStencilAttachment = nullptr;
+
+	vkCmdBeginRendering(cmdBuf, &renderingInfo);
+}
+
+static void dynrender_begin_shared_depth(
+	vtek::Swapchain* swapchain, uint32_t imageIndex,
+	VkCommandBuffer cmdBuf, glm::vec3 clearColor)
+{
+	const glm::vec3& c = clearColor;
+	VkExtent2D extent = swapchain->imageExtent;
+
+	// Transition from whatever (probably present src) to color attachment
+	VkImageMemoryBarrier barrier{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.pNext = nullptr,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		.srcQueueFamilyIndex = swapchain->presentQueueIndex,
+		.dstQueueFamilyIndex = swapchain->graphicsQueueIndex,
+		.image = swapchain->images[imageIndex],
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
+		0, nullptr, 1, &barrier);
+
+	// NOTE: Discussion regarding the depth barrier on StackOverflow:
+	// https://stackoverflow.com/a/62398311/6572223
+	constexpr VkAccessFlags depthSrcAccessMask
+		= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	constexpr VkAccessFlags depthDstAccessMask
+		= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
+		| VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	constexpr VkPipelineStageFlags depthSrcStageMask
+		= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+		| VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	constexpr VkPipelineStageFlags depthDstStageMask = depthSrcStageMask;
+
+	VkImageMemoryBarrier depthBarrier{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.pNext = nullptr,
+		.srcAccessMask = depthSrcAccessMask,
+		.dstAccessMask = depthDstAccessMask,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		.srcQueueFamilyIndex = swapchain->graphicsQueueIndex,
+		.dstQueueFamilyIndex = swapchain->graphicsQueueIndex,
+		.image = vtek::image2d_get_handle(swapchain->depthImages[0]),
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+	vkCmdPipelineBarrier(
+		cmdBuf, depthSrcStageMask,
+		depthDstStageMask, 0, 0, nullptr,
+		0, nullptr, 1, &depthBarrier);
+
+	VkRenderingAttachmentInfo colorAttachmentInfo{
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
+		.pNext = nullptr,
+		.imageView = swapchain->imageViews[imageIndex],
+		.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+		.resolveMode = VK_RESOLVE_MODE_NONE,
+		.resolveImageView = VK_NULL_HANDLE,
+		.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		.clearValue = { .color = { .float32 = {c.x, c.y, c.z, 1.0f} } },
+	};
+	VkRenderingAttachmentInfo depthStencilAttachmentInfo{
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
+		.pNext = nullptr,
+		.imageView = swapchain->depthImageViews[0],
+		.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		.resolveMode = VK_RESOLVE_MODE_NONE, // TODO: Multisampling?
+		.resolveImageView = VK_NULL_HANDLE,
+		.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		.clearValue = { .depthStencil = { 1.0f, 0 } },
+	};
+
+	VkRenderingInfo renderingInfo{};
+	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderingInfo.pNext = nullptr;
+	renderingInfo.flags = 0;
+	renderingInfo.renderArea = { 0U, 0U, extent.width, extent.height };
+	renderingInfo.layerCount = 1;
+	renderingInfo.viewMask = 0;
+	renderingInfo.colorAttachmentCount = 1;
+	renderingInfo.pColorAttachments = &colorAttachmentInfo;
+	renderingInfo.pDepthAttachment = &depthStencilAttachmentInfo;
+	renderingInfo.pStencilAttachment = nullptr;
+
+	vkCmdBeginRendering(cmdBuf, &renderingInfo);
+}
+
+static void dynrender_begin_oneperimage_depth(
+	vtek::Swapchain* swapchain, uint32_t imageIndex,
+	VkCommandBuffer cmdBuf, glm::vec3 clearColor)
+{
+	const glm::vec3& c = clearColor;
+	VkExtent2D extent = swapchain->imageExtent;
+
+	// Transition from whatever (probably present src) to color attachment
+	VkImageMemoryBarrier barrier{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.pNext = nullptr,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		.srcQueueFamilyIndex = swapchain->presentQueueIndex,
+		.dstQueueFamilyIndex = swapchain->graphicsQueueIndex,
+		.image = swapchain->images[imageIndex],
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+	VkImageMemoryBarrier depthBarrier{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.pNext = nullptr,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		.srcQueueFamilyIndex = swapchain->graphicsQueueIndex,
+		.dstQueueFamilyIndex = swapchain->graphicsQueueIndex,
+		.image = vtek::image2d_get_handle(swapchain->depthImages[imageIndex]),
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
+		0, nullptr, 1, &barrier);
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr,
+		0, nullptr, 1, &depthBarrier);
+
+	VkRenderingAttachmentInfo colorAttachmentInfo{
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
+		.pNext = nullptr,
+		.imageView = swapchain->imageViews[imageIndex],
+		.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+		.resolveMode = VK_RESOLVE_MODE_NONE,
+		.resolveImageView = VK_NULL_HANDLE,
+		.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		.clearValue = { .color = { .float32 = {c.x, c.y, c.z, 1.0f} } },
+	};
+	VkRenderingAttachmentInfo depthStencilAttachmentInfo{
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
+		.pNext = nullptr,
+		.imageView = swapchain->depthImageViews[imageIndex],
+		.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		.resolveMode = VK_RESOLVE_MODE_NONE, // TODO: Multisampling?
+		.resolveImageView = VK_NULL_HANDLE,
+		.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		.clearValue = { .depthStencil = { 1.0f, 0 } },
+	};
+
+	VkRenderingInfo renderingInfo{};
+	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderingInfo.pNext = nullptr;
+	renderingInfo.flags = 0;
+	renderingInfo.renderArea = { 0U, 0U, extent.width, extent.height };
+	renderingInfo.layerCount = 1;
+	renderingInfo.viewMask = 0;
+	renderingInfo.colorAttachmentCount = 1;
+	renderingInfo.pColorAttachments = &colorAttachmentInfo;
+	renderingInfo.pDepthAttachment = &depthStencilAttachmentInfo;
+	renderingInfo.pStencilAttachment = nullptr;
+
+	vkCmdBeginRendering(cmdBuf, &renderingInfo);
+}
+
+
+
 /* swapchain interface */
 vtek::Swapchain* vtek::swapchain_create(
 	const SwapchainInfo* info, VkSurfaceKHR surface,
@@ -720,7 +988,7 @@ vtek::Swapchain* vtek::swapchain_create(
 		return nullptr;
 	}
 
-	uint32_t qf_indices[2] = {
+	const uint32_t qf_indices[2] = {
 		vtek::queue_get_family_index(graphicsQueue),
 		vtek::queue_get_family_index(presentQueue)
 	};
@@ -792,6 +1060,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	swapchain->isInvalidated = false;
 	swapchain->presentQueue = vtek::queue_get_handle(presentQueue);
 	swapchain->graphicsQueueIndex = qf_indices[0];
+	swapchain->presentQueueIndex = qf_indices[1];
 	swapchain->vsync = info->vsync;
 	swapchain->prioritizeLowLatency = info->prioritizeLowLatency;
 	swapchain->physDev = physDev;
@@ -834,18 +1103,26 @@ vtek::Swapchain* vtek::swapchain_create(
 		return nullptr;
 	}
 
-	swapchain->depthBufferType = info->depthBuffer;
-	if (swapchain->depthBufferType == vtek::SwapchainDepthBuffer::single_shared)
+	switch (info->depthBuffer)
 	{
-		vtek_log_error("Single shared swapchain depth buffer is not implemented!");
-		vtek_log_warn("No depth buffer(s) will be created. {}",
-		              "Alternatively, specify one_per_image instead.");
+	case vtek::SwapchainDepthBuffer::none:
+		swapchain->fDynRenderBegin = dynrender_begin_no_depth;
 		swapchain->depthBufferType = vtek::SwapchainDepthBuffer::none;
-	}
-	else if (swapchain->depthBufferType ==
-		vtek::SwapchainDepthBuffer::one_per_image)
-	{
-		if (!create_depth_images(swapchain, device))
+		break;
+	case vtek::SwapchainDepthBuffer::single_shared:
+		if (!create_depth_images(swapchain, device, 1))
+		{
+			vtek_log_error("Failed to create shared swapchain depth buffer!");
+			destroy_swapchain_image_views(swapchain, dev);
+			destroy_swapchain_handle(swapchain, dev);
+			delete swapchain;
+			return nullptr;
+		}
+		swapchain->fDynRenderBegin = dynrender_begin_shared_depth;
+		swapchain->depthBufferType = vtek::SwapchainDepthBuffer::single_shared;
+		break;
+	case vtek::SwapchainDepthBuffer::one_per_image:
+		if (!create_depth_images(swapchain, device, swapchain->length))
 		{
 			vtek_log_error("Failed to create swapchain depth buffers!");
 			destroy_swapchain_image_views(swapchain, dev);
@@ -853,6 +1130,14 @@ vtek::Swapchain* vtek::swapchain_create(
 			delete swapchain;
 			return nullptr;
 		}
+		swapchain->fDynRenderBegin = dynrender_begin_oneperimage_depth;
+		swapchain->depthBufferType = vtek::SwapchainDepthBuffer::one_per_image;
+		break;
+	default:
+		vtek_log_error("swapchain_create(): Unrecognized depth buffer type!");
+		swapchain->depthBufferType = vtek::SwapchainDepthBuffer::none;
+		swapchain->fDynRenderBegin = dynrender_begin_no_depth;
+		break;
 	}
 
 
@@ -1053,6 +1338,11 @@ VkExtent2D vtek::swapchain_get_image_extent(const vtek::Swapchain* swapchain)
 	return swapchain->imageExtent;
 }
 
+bool vtek::swapchain_has_depth_buffer(vtek::Swapchain* swapchain)
+{
+	return swapchain->depthImages.size() > 0;
+}
+
 VkFormat vtek::swapchain_get_depth_image_format(vtek::Swapchain* swapchain)
 {
 	return swapchain->depthImageFormat;
@@ -1200,110 +1490,17 @@ vtek::SwapchainStatus vtek::swapchain_present_frame(
 	}
 }
 
-
 void vtek::swapchain_dynamic_rendering_begin(
 	vtek::Swapchain* swapchain, uint32_t imageIndex,
 	vtek::CommandBuffer* commandBuffer, glm::vec3 clearColor)
 {
-	// TODO: If graphics and present are from different queue families this won't work!!?
-	uint32_t queueIndex = swapchain->graphicsQueueIndex;
-
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
-	const glm::vec3& c = clearColor;
-	VkExtent2D extent = swapchain->imageExtent;
-
-	// Transition from whatever (probably present src) to color attachment
-	VkImageMemoryBarrier barrier{
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		.pNext = nullptr,
-		.srcAccessMask = 0,
-		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		.srcQueueFamilyIndex = queueIndex,
-		.dstQueueFamilyIndex = queueIndex,
-		.image = swapchain->images[imageIndex],
-		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1
-		}
-	};
-	// TODO: Also use barrier for depth/stencil image!
-	VkImageMemoryBarrier depthBarrier{
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		.pNext = nullptr,
-		.srcAccessMask = 0,
-		.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		.srcQueueFamilyIndex = queueIndex,
-		.dstQueueFamilyIndex = queueIndex,
-		.image = vtek::image2d_get_handle(swapchain->depthImages[imageIndex]),
-		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1
-		}
-	};
-
-	vkCmdPipelineBarrier(
-		cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
-		0, nullptr, 1, &barrier);
-	vkCmdPipelineBarrier(
-		cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr,
-		0, nullptr, 1, &depthBarrier);
-
-	VkRenderingAttachmentInfo colorAttachmentInfo{
-		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
-		.pNext = nullptr,
-		.imageView = swapchain->imageViews[imageIndex],
-		.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-		.resolveMode = VK_RESOLVE_MODE_NONE,
-		.resolveImageView = VK_NULL_HANDLE,
-		.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-		.clearValue = { .color = { .float32 = {c.x, c.y, c.z, 1.0f} } },
-	};
-	VkRenderingAttachmentInfo depthStencilAttachmentInfo{
-		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, // _KHR ??
-		.pNext = nullptr,
-		.imageView = swapchain->depthImageViews[imageIndex], // TODO: Views not created!
-		.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		.resolveMode = VK_RESOLVE_MODE_NONE, // TODO: Multisampling?
-		.resolveImageView = VK_NULL_HANDLE,
-		.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-		.clearValue = { .depthStencil = { 1.0f, 0 } },
-	};
-
-	VkRenderingInfo renderingInfo{};
-	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-	renderingInfo.pNext = nullptr;
-	renderingInfo.flags = 0;
-	renderingInfo.renderArea = { 0U, 0U, extent.width, extent.height };
-	renderingInfo.layerCount = 1;
-	renderingInfo.viewMask = 0;
-	renderingInfo.colorAttachmentCount = 1;
-	renderingInfo.pColorAttachments = &colorAttachmentInfo;
-	renderingInfo.pDepthAttachment = &depthStencilAttachmentInfo;
-	renderingInfo.pStencilAttachment = nullptr;
-
-	vkCmdBeginRendering(cmdBuf, &renderingInfo);
+	swapchain->fDynRenderBegin(swapchain, imageIndex, cmdBuf, clearColor);
 }
 
 void vtek::swapchain_dynamic_rendering_end(
 	vtek::Swapchain* swapchain, uint32_t imageIndex, vtek::CommandBuffer* commandBuffer)
 {
-	uint32_t queueIndex = swapchain->graphicsQueueIndex;
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
 	// End dynamic rendering
@@ -1317,8 +1514,8 @@ void vtek::swapchain_dynamic_rendering_end(
 		.dstAccessMask = 0,
 		.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		.srcQueueFamilyIndex = queueIndex,
-		.dstQueueFamilyIndex = queueIndex,
+		.srcQueueFamilyIndex = swapchain->graphicsQueueIndex,
+		.dstQueueFamilyIndex = swapchain->presentQueueIndex,
 		.image = swapchain->images[imageIndex],
 		.subresourceRange = {
 			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

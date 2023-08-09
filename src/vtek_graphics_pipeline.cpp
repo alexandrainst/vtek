@@ -510,7 +510,6 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	{
 		for (auto* layout : info->descriptorSetLayouts)
 		{
-			vtek_log_debug("");
 			layouts.push_back(vtek::descriptor_set_layout_get_handle(layout));
 		}
 		layoutInfo.setLayoutCount = layouts.size();

@@ -47,7 +47,7 @@ namespace std
 struct MemoryPool
 {
 	// TODO: This is really unoptimal! Can we use std::map or something else?
-	//std::vector<vtek::Directory> directories;
+	// NOTE: Container MUST not move items around (std::vector strictly forbidden!)
 	std::unordered_map<uint64_t, vtek::Directory> directories;
 	std::unordered_map<uint64_t, vtek::File> files;
 
@@ -98,7 +98,6 @@ static fs::path find_executable_directory()
 
 bool vtek::initialize_fileio()
 {
-	vtek_log_trace("vtek::initialize_fileio()");
 	sMemoryPool = new MemoryPool();
 
 	sDirLocations = new DirectoryLocations();
@@ -117,7 +116,6 @@ bool vtek::initialize_fileio()
 
 void vtek::terminate_fileio()
 {
-	vtek_log_trace("vtek::terminate_fileio()");
 	// TODO: We could check if some memory was not cleaned up.
 	delete sMemoryPool;
 	delete sDirLocations;

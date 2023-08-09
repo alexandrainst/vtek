@@ -204,7 +204,11 @@ static VkShaderModule load_spirv_shader(
 	}
 
 	// NEXT: Reflection queries...
-	if (!spirv_reflect_test(buffer.data(), buffer.size()))
+	// TODO: Undecided on how to continue.
+	// REVIEW: Implementation could compare all shaders in a program, or
+	// REVIEW: extract descriptor binding info and compare during pipeline creation.
+	constexpr bool doSpirvReflectTest = false;
+	if (doSpirvReflectTest && !spirv_reflect_test(buffer.data(), buffer.size()))
 	{
 		vtek_log_error(
 			"Failed SPIR-V reflection query -- cannot create graphics shader!");

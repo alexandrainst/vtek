@@ -397,7 +397,6 @@ static void configure_window(GLFWwindow* window, const vtek::WindowCreateInfo* i
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		if (glfwRawMouseMotionSupported())
 		{
-			vtek_log_debug("Enabling raw mouse motion.");
 			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 		}
 	}

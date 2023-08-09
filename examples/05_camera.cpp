@@ -302,7 +302,7 @@ int main()
 	// Vulkan instance
 	vtek::InstanceCreateInfo instanceInfo{};
 	instanceInfo.applicationName = "camera";
-	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
+	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0); // TODO: vtek::AppVersion
 	instanceInfo.enableValidationLayers = true;
 	auto instance = vtek::instance_create(&instanceInfo);
 	if (instance == nullptr)
@@ -364,6 +364,9 @@ int main()
 	swapchainInfo.prioritizeLowLatency = false;
 	swapchainInfo.framebufferWidth = windowSize.x;
 	swapchainInfo.framebufferHeight = windowSize.y;
+	// NOTE: Experiment with depth buffering.
+	//swapchainInfo.depthBuffer = vtek::SwapchainDepthBuffer::none;
+	//swapchainInfo.depthBuffer = vtek::SwapchainDepthBuffer::single_shared;
 	swapchainInfo.depthBuffer = vtek::SwapchainDepthBuffer::one_per_image;
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
 		&swapchainInfo, surface, physicalDevice, device);
@@ -510,17 +513,23 @@ int main()
 	vtek::RasterizationState rasterizer{};
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{};
-	depthStencil.depthTestEnable = true;
-	depthStencil.depthWriteEnable = true;
-	depthStencil.depthBoundsTestEnable = false; // TODO: ?
 	vtek::ColorBlendState colorBlending{};
 	colorBlending.attachments.emplace_back(
 		vtek::ColorBlendAttachment::GetDefault());
 	vtek::PipelineRendering pipelineRendering{};
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
-	pipelineRendering.depthAttachmentFormat =
-		vtek::swapchain_get_depth_image_format(swapchain);
+
+	// NOTE: For experimenting with depth buffering, we can query the swapchain.
+	if (vtek::swapchain_has_depth_buffer(swapchain))
+	{
+		depthStencil.depthTestEnable = true;
+		depthStencil.depthWriteEnable = true;
+		depthStencil.depthBoundsTestEnable = false; // TODO: ?
+
+		pipelineRendering.depthAttachmentFormat =
+			vtek::swapchain_get_depth_image_format(swapchain);
+	}
 
 	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
