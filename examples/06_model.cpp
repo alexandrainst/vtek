@@ -67,6 +67,7 @@ void update_movement()
 {
 	using vtek::KeyboardKey;
 	constexpr float moveSpeed = 0.05f;
+	constexpr float rotateSpeed = 0.025f;
 
 	// left / right
 	if (gKeyboardMap.get_key(KeyboardKey::a)) {
@@ -94,19 +95,19 @@ void update_movement()
 
 	// rotate
 	if (gKeyboardMap.get_key(KeyboardKey::q)) {
-		vtek::camera_roll_left_radians(gCamera, 0.05f);
+		vtek::camera_roll_left_radians(gCamera, rotateSpeed);
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::e)) {
-		vtek::camera_roll_right_radians(gCamera, 0.05f);
+		vtek::camera_roll_right_radians(gCamera, rotateSpeed);
 	}
 
 	// light rotation
 	if (gKeyboardMap.get_key(KeyboardKey::r)) {
-		gLightPosition = glm::rotate(gLightPosition, 0.01f, glm::vec3(1.0f, 0.0f, 0.0f));
+		gLightPosition = glm::rotate(gLightPosition, 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
 		gLightChanged = true;
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::f)) {
-		gLightPosition = glm::rotate(gLightPosition, -0.01f, glm::vec3(1.0f, 0.0f, 0.0f));
+		gLightPosition = glm::rotate(gLightPosition, -0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
 		gLightChanged = true;
 	}
 }
@@ -316,6 +317,8 @@ int main()
 	physicalDeviceInfo.requirePresentQueue = true;
 	physicalDeviceInfo.requireSwapchainSupport = true;
 	physicalDeviceInfo.requireDynamicRendering = true;
+	physicalDeviceInfo.requiredFeatures.depthBounds = true;
+	physicalDeviceInfo.requiredFeatures.fillModeNonSolid = true; // TODO: Test!
 	// Allows us to change the uniform without re-recording the command buffers:
 	physicalDeviceInfo.updateAfterBindFeatures
 		= vtek::UpdateAfterBindFeature::uniform_buffer;
@@ -564,11 +567,14 @@ int main()
 	bindings.add_buffer(
 		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex); // normal
 	vtek::RasterizationState rasterizer{};
+	rasterizer.cullMode = vtek::CullMode::back; // enable back-face culling
+	rasterizer.polygonMode = vtek::PolygonMode::fill; // NOTE: Test
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{};
 	depthStencil.depthTestEnable = true;
 	depthStencil.depthWriteEnable = true;
-	depthStencil.depthBoundsTestEnable = true;
+	depthStencil.depthBoundsTestEnable = false; // NOTE: Test
+	depthStencil.depthBounds = vtek::FloatRange(0.98f, 1.0f);
 	vtek::ColorBlendState colorBlending{};
 	colorBlending.attachments.emplace_back(
 		vtek::ColorBlendAttachment::GetDefault());
