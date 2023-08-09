@@ -509,13 +509,18 @@ int main()
 		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex);
 	vtek::RasterizationState rasterizer{};
 	vtek::MultisampleState multisampling{};
-	vtek::DepthStencilState depthStencil{}; // No depth testing!
+	vtek::DepthStencilState depthStencil{};
+	depthStencil.depthTestEnable = true;
+	depthStencil.depthWriteEnable = true;
+	depthStencil.depthBoundsTestEnable = false; // TODO: ?
 	vtek::ColorBlendState colorBlending{};
 	colorBlending.attachments.emplace_back(
 		vtek::ColorBlendAttachment::GetDefault());
 	vtek::PipelineRendering pipelineRendering{};
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
+	pipelineRendering.depthAttachmentFormat =
+		vtek::swapchain_get_depth_image_format(swapchain);
 
 	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;

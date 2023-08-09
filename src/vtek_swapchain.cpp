@@ -24,8 +24,8 @@ struct vtek::Swapchain
 	VkSwapchainKHR vulkanHandle {VK_NULL_HANDLE};
 	uint32_t length {0};
 	VkExtent2D imageExtent {0, 0};
-	VkFormat imageFormat;
-	VkFormat depthImageFormat;
+	VkFormat imageFormat {VK_FORMAT_UNDEFINED};
+	VkFormat depthImageFormat {VK_FORMAT_UNDEFINED};
 	SwapchainDepthBuffer depthBufferType {vtek::SwapchainDepthBuffer::none};
 
 	bool isInvalidated {false};
@@ -1053,6 +1053,11 @@ VkExtent2D vtek::swapchain_get_image_extent(const vtek::Swapchain* swapchain)
 	return swapchain->imageExtent;
 }
 
+VkFormat vtek::swapchain_get_depth_image_format(vtek::Swapchain* swapchain)
+{
+	return swapchain->depthImageFormat;
+}
+
 vtek::SwapchainStatus vtek::swapchain_wait_begin_frame(
 	vtek::Swapchain* swapchain, vtek::Device* device, uint64_t timeout)
 {
@@ -1290,7 +1295,7 @@ void vtek::swapchain_dynamic_rendering_begin(
 	renderingInfo.colorAttachmentCount = 1;
 	renderingInfo.pColorAttachments = &colorAttachmentInfo;
 	renderingInfo.pDepthAttachment = &depthStencilAttachmentInfo;
-	renderingInfo.pStencilAttachment = &depthStencilAttachmentInfo;
+	renderingInfo.pStencilAttachment = nullptr;
 
 	vkCmdBeginRendering(cmdBuf, &renderingInfo);
 }

@@ -11,7 +11,7 @@
 #include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
-#include "vtek_vulkan_types.hpp"
+#include "vtek_vulkan_types.hpp" // MultisampleType
 
 
 namespace vtek

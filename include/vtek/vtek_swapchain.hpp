@@ -79,6 +79,8 @@ namespace vtek
 	VkFormat swapchain_get_image_format(Swapchain* swapchain);
 	VkExtent2D swapchain_get_image_extent(const Swapchain* swapchain);
 
+	VkFormat swapchain_get_depth_image_format(Swapchain* swapchain);
+
 
 	// A status enum, returned by the frame functions below, to keep a client
 	// application informed on when a swapchain should be re-created, or if
