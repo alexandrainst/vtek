@@ -13,6 +13,7 @@ glm::vec3 gLightPosition(0.0f, 0.0, 5.0f);
 float gLightFalloff = 1.0f;
 glm::vec3 gLightColor = vtek::Colors::Linen;
 float gLightIntensity = 1.0f;
+bool gLightChanged = false;
 
 
 /* Input handling */
@@ -65,29 +66,30 @@ void mouse_move_callback(double x, double y)
 void update_movement()
 {
 	using vtek::KeyboardKey;
+	constexpr float moveSpeed = 0.05f;
 
 	// left / right
 	if (gKeyboardMap.get_key(KeyboardKey::a)) {
-		vtek::camera_move_right(gCamera, 0.1f);
+		vtek::camera_move_right(gCamera, moveSpeed);
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::d)) {
-		vtek::camera_move_left(gCamera, 0.1f);
+		vtek::camera_move_left(gCamera, moveSpeed);
 	}
 
 	// forward / backward
 	if (gKeyboardMap.get_key(KeyboardKey::w)) {
-		vtek::camera_move_forward(gCamera, 0.1f);
+		vtek::camera_move_forward(gCamera, moveSpeed);
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::s)) {
-		vtek::camera_move_backward(gCamera, 0.1f);
+		vtek::camera_move_backward(gCamera, moveSpeed);
 	}
 
 	// up / down
 	if (gKeyboardMap.get_key(KeyboardKey::space)) {
-		vtek::camera_move_up(gCamera, 0.1f);
+		vtek::camera_move_up(gCamera, moveSpeed);
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::c)) {
-		vtek::camera_move_down(gCamera, 0.1f);
+		vtek::camera_move_down(gCamera, moveSpeed);
 	}
 
 	// rotate
@@ -96,6 +98,16 @@ void update_movement()
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::e)) {
 		vtek::camera_roll_right_radians(gCamera, 0.05f);
+	}
+
+	// light rotation
+	if (gKeyboardMap.get_key(KeyboardKey::r)) {
+		gLightPosition = glm::rotate(gLightPosition, 0.01f, glm::vec3(1.0f, 0.0f, 0.0f));
+		gLightChanged = true;
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::f)) {
+		gLightPosition = glm::rotate(gLightPosition, -0.01f, glm::vec3(1.0f, 0.0f, 0.0f));
+		gLightChanged = true;
 	}
 }
 
@@ -242,38 +254,6 @@ bool record_command_buffers(
 	return true;
 }
 
-// TODO: Remove when done.
-vtek::Buffer* create_vertex_buffer(
-	vtek::Device* device, std::vector<glm::vec3> gCubeVertices)
-{
-	vtek::BufferInfo info{};
-	info.size = sizeof(float) * gCubeVertices.size();
-	info.writePolicy = vtek::BufferWritePolicy::write_once;
-
-	using BUFlag = vtek::BufferUsageFlag;
-	info.usageFlags = BUFlag::transfer_dst | BUFlag::vertex_buffer;
-
-	vtek::Buffer* buffer = vtek::buffer_create(&info, device);
-	if (buffer == nullptr)
-	{
-		log_error("Failed to create vertex buffer!");
-		return nullptr;
-	}
-
-	vtek::BufferRegion region {
-		.offset = 0,
-		.size = info.size
-	};
-	if (!vtek::buffer_write_data(buffer, gCubeVertices.data(), &region, device))
-	{
-		log_error("Failed to write data to vertex buffer!");
-		vtek::buffer_destroy(buffer);
-		return nullptr;
-	}
-
-	return buffer;
-}
-
 
 
 
@@ -313,7 +293,7 @@ int main()
 	// Vulkan instance
 	vtek::InstanceCreateInfo instanceInfo{};
 	instanceInfo.applicationName = "06_model";
-	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
+	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0); // TODO: vtek::AppVersion
 	instanceInfo.enableValidationLayers = true;
 	auto instance = vtek::instance_create(&instanceInfo);
 	if (instance == nullptr)
@@ -375,7 +355,7 @@ int main()
 	swapchainInfo.prioritizeLowLatency = false;
 	swapchainInfo.framebufferWidth = gFramebufferWidth;
 	swapchainInfo.framebufferHeight = gFramebufferHeight;
-	swapchainInfo.depthBuffer = vtek::SwapchainDepthBuffer::one_per_image;
+	swapchainInfo.depthBuffer = vtek::SwapchainDepthBuffer::single_shared;
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
 		&swapchainInfo, surface, physicalDevice, device);
 	if (swapchain == nullptr)
@@ -455,7 +435,7 @@ int main()
 	modelInfo.keepVertexDataInMemory = false; // Preferred usage
 	modelInfo.loadNormals = true;
 	vtek::Model* model = vtek::model_load_obj(
-		&modelInfo, modeldir, "armored_car.glb", device);
+		&modelInfo, modeldir, "car_tutorial.obj", device);
 	if (model == nullptr)
 	{
 		log_error("Failed to load obj model!");
@@ -584,15 +564,19 @@ int main()
 	bindings.add_buffer(
 		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex); // normal
 	vtek::RasterizationState rasterizer{};
-	rasterizer.cullMode = vtek::CullMode::back;
 	vtek::MultisampleState multisampling{};
-	vtek::DepthStencilState depthStencil{}; // No depth testing!
+	vtek::DepthStencilState depthStencil{};
+	depthStencil.depthTestEnable = true;
+	depthStencil.depthWriteEnable = true;
+	depthStencil.depthBoundsTestEnable = true;
 	vtek::ColorBlendState colorBlending{};
 	colorBlending.attachments.emplace_back(
 		vtek::ColorBlendAttachment::GetDefault());
 	vtek::PipelineRendering pipelineRendering{};
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
+	pipelineRendering.depthAttachmentFormat =
+		vtek::swapchain_get_depth_image_format(swapchain);
 
 	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
@@ -649,8 +633,17 @@ int main()
 		vtek::camera_update(gCamera);
 		if (!update_camera_uniform(descriptorSetCamera, uniformBufferCamera, device))
 		{
-			log_error("Failed to update uniform buffer!");
+			log_error("Failed to update uniform buffer (Camera)!");
 			return -1;
+		}
+		if (gLightChanged)
+		{
+			if (!update_light_uniform(descriptorSetLight, uniformBufferLight, device))
+			{
+				log_error("Failed to update uniform buffer (Light)!");
+				return -1;
+			}
+			gLightChanged = false;
 		}
 
 		// To avoid excessive GPU work we wait until we may begin the frame
