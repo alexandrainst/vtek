@@ -11,7 +11,7 @@
 #include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
-#include "vtek_vulkan_types.hpp" // MultisampleType
+#include "vtek_vulkan_types.hpp" // MultisampleType, CullMode
 
 
 namespace vtek
@@ -32,11 +32,6 @@ namespace vtek
 	enum class PolygonMode
 	{
 		fill, line, point
-	};
-
-	enum class CullMode
-	{
-		none, front, back, front_and_back
 	};
 
 	enum class FrontFace

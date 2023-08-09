@@ -61,7 +61,7 @@ void vtek::descriptor_set_destroy(vtek::DescriptorSet* set)
 	delete set;
 }
 
-VkDescriptorSet vtek::descriptor_set_get_handle(vtek::DescriptorSet* set)
+VkDescriptorSet vtek::descriptor_set_get_handle(const vtek::DescriptorSet* set)
 {
 	return set->vulkanHandle;
 }

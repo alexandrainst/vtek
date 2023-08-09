@@ -12,7 +12,7 @@ namespace vtek
 	// TODO: Has pool been created with destroy individual flag?
 	void descriptor_set_destroy(DescriptorSet* set);
 
-	VkDescriptorSet descriptor_set_get_handle(DescriptorSet* set);
+	VkDescriptorSet descriptor_set_get_handle(const DescriptorSet* set);
 
 	// Apply the descriptors added/modified with the functions declared below.
 	// This function will finalize these changes into the descriptor set,

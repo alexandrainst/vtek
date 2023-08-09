@@ -14,7 +14,8 @@ float gLightFalloff = 1.0f;
 glm::vec3 gLightColor = vtek::Colors::Linen;
 float gLightIntensity = 1.0f;
 bool gLightChanged = false;
-
+bool gRenderWireframe = false;
+vtek::CullMode gCullMode = vtek::CullMode::back; // default: back-face culling
 
 /* Input handling */
 void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
@@ -29,14 +30,11 @@ void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 			vtek::window_set_should_close(gWindow, true);
 			break;
 		case KeyboardKey::p:
-			{
-				glm::vec3 pos = vtek::camera_get_position(gCamera);
-				glm::vec3 front = vtek::camera_get_front(gCamera);
-				glm::vec3 up = vtek::camera_get_up(gCamera);
-
-				log_debug("[Camera] pos=({},{},{}), front=({},{},{}), up=({},{},{})",
-				          pos.x, pos.y, pos.z, front.x, front.y, front.z, up.x, up.y, up.z);
-			}
+			gRenderWireframe ^= true; // XOR-toggle
+			break;
+		case KeyboardKey::b:
+			gCullMode = (gCullMode == vtek::CullMode::back)
+				? vtek::CullMode::none : vtek::CullMode::back;
 			break;
 
 		// NOTE: Un-comment for checking correct angular displacement.
@@ -186,70 +184,67 @@ bool update_light_uniform(
 	return true;
 }
 
-bool record_command_buffers(
-	vtek::GraphicsPipeline* pipeline,
-	std::vector<vtek::CommandBuffer*> commandBuffers, vtek::Swapchain* swapchain,
-	vtek::Model* model, vtek::DescriptorSet* descriptorSets[2])
+bool recordCommandBuffer(
+	vtek::CommandBuffer* commandBuffer, vtek::GraphicsPipeline* pipeline,
+	vtek::Swapchain* swapchain, uint32_t imageIndex,
+	vtek::Model* model, const vtek::DescriptorSet* descriptorSets[2])
 {
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
-	uint32_t commandBufferCount = commandBuffers.size();
+	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
-	for (uint32_t i = 0; i < commandBufferCount; i++)
+	if (!vtek::command_buffer_begin(commandBuffer))
 	{
-		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
-		VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+		log_error("Failed to begin command buffer {} recording!", imageIndex);
+		return false;
+	}
 
-		if (!vtek::command_buffer_begin(commandBuffer))
-		{
-			log_error("Failed to begin command buffer {} recording!", i);
-			return false;
-		}
+	glm::vec3 clearColor(0.15f, 0.15f, 0.15f);
+	// TODO: Ensure the swapchain has a depth buffer (or several!)
+	vtek::swapchain_dynamic_rendering_begin(
+		swapchain, imageIndex, commandBuffer, clearColor);
 
-		glm::vec3 clearColor(0.15f, 0.15f, 0.15f);
-		// TODO: Ensure the swapchain has a depth buffer (or several!)
-		vtek::swapchain_dynamic_rendering_begin(
-			swapchain, i, commandBuffer, clearColor);
+	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 
-		vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
+	// Dynamic state
+	vkCmdSetCullMode(cmdBuf, vtek::get_cull_mode(gCullMode));
 
-		// TODO: Bind vertex buffer for model
-		VkBuffer buffers[2] = {
-			vtek::buffer_get_handle(vtek::model_get_vertex_buffer(model)),
-			vtek::buffer_get_handle(vtek::model_get_normal_buffer(model))
-		};
-		VkDeviceSize offsets[2] = { 0, 0 };
-		vkCmdBindVertexBuffers(cmdBuf, 0, 2, buffers, offsets);
+	// TODO: Bind vertex buffer for model
+	VkBuffer buffers[2] = {
+		vtek::buffer_get_handle(vtek::model_get_vertex_buffer(model)),
+		vtek::buffer_get_handle(vtek::model_get_normal_buffer(model))
+	};
+	VkDeviceSize offsets[2] = { 0, 0 };
+	vkCmdBindVertexBuffers(cmdBuf, 0, 2, buffers, offsets);
 
-		// TODO: Bind descriptor set for the pipeline:
-		// TODO: m4 push constant, m4 uniform
-		VkDescriptorSet descriptorSetHandles[2] = {
-			vtek::descriptor_set_get_handle(descriptorSets[0]),
-			vtek::descriptor_set_get_handle(descriptorSets[1]),
-		};
-		vkCmdBindDescriptorSets(
-			cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipLayout, 0, 2,
-			descriptorSetHandles, 0, nullptr); // NOTE: Dynamic offset unused
+	// TODO: Bind descriptor set for the pipeline:
+	// TODO: m4 push constant, m4 uniform
+	VkDescriptorSet descriptorSetHandles[2] = {
+		vtek::descriptor_set_get_handle(descriptorSets[0]),
+		vtek::descriptor_set_get_handle(descriptorSets[1]),
+	};
+	vkCmdBindDescriptorSets(
+		cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipLayout, 0, 2,
+		descriptorSetHandles, 0, nullptr); // NOTE: Dynamic offset unused
 
-		// Push constant for the model, ie. transformation matrix
-		// TODO: Later also add vertex color
-		vtek::PushConstant_m4 pc{};
-		pc.m1 = glm::mat4(1.0f); // unit matrix
-		// TODO: Bitflag for also fragment shader access (vertex color)
-		pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc.cmdPush(cmdBuf, pipLayout);
+	// Push constant for the model, ie. transformation matrix
+	// TODO: Later also add vertex color
+	vtek::PushConstant_m4 pc{};
+	pc.m1 = glm::mat4(1.0f); // unit matrix
+	// TODO: Bitflag for also fragment shader access (vertex color)
+	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
+	pc.cmdPush(cmdBuf, pipLayout);
 
-		// Draw the model
-		uint32_t numVertices = vtek::model_get_num_vertices(model);
-		vkCmdDraw(cmdBuf, numVertices, 1, 0, 0);
+	// Draw the model
+	uint32_t numVertices = vtek::model_get_num_vertices(model);
+	vkCmdDraw(cmdBuf, numVertices, 1, 0, 0);
 
-		vtek::swapchain_dynamic_rendering_end(swapchain, i, commandBuffer);
+	vtek::swapchain_dynamic_rendering_end(swapchain, imageIndex, commandBuffer);
 
-		if (!vtek::command_buffer_end(commandBuffer))
-		{
-			log_error("Failed to end command buffer {} recording!", i);
-			return false;
-		}
+	if (!vtek::command_buffer_end(commandBuffer))
+	{
+		log_error("Failed to end command buffer {} recording!", imageIndex);
+		return false;
 	}
 
 	return true;
@@ -318,7 +313,7 @@ int main()
 	physicalDeviceInfo.requireSwapchainSupport = true;
 	physicalDeviceInfo.requireDynamicRendering = true;
 	physicalDeviceInfo.requiredFeatures.depthBounds = true;
-	physicalDeviceInfo.requiredFeatures.fillModeNonSolid = true; // TODO: Test!
+	physicalDeviceInfo.requiredFeatures.fillModeNonSolid = true;
 	// Allows us to change the uniform without re-recording the command buffers:
 	physicalDeviceInfo.updateAfterBindFeatures
 		= vtek::UpdateAfterBindFeature::uniform_buffer;
@@ -568,7 +563,7 @@ int main()
 		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex); // normal
 	vtek::RasterizationState rasterizer{};
 	rasterizer.cullMode = vtek::CullMode::back; // enable back-face culling
-	rasterizer.polygonMode = vtek::PolygonMode::fill; // NOTE: Test
+	rasterizer.polygonMode = vtek::PolygonMode::fill;
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{};
 	depthStencil.depthTestEnable = true;
@@ -584,46 +579,49 @@ int main()
 	pipelineRendering.depthAttachmentFormat =
 		vtek::swapchain_get_depth_image_format(swapchain);
 
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
-	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
-	graphicsPipelineInfo.renderPass = nullptr; // Nice!
-	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
-	graphicsPipelineInfo.shader = shader;
+	vtek::GraphicsPipelineCreateInfo pipelineInfo{};
+	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	pipelineInfo.renderPass = nullptr; // Nice!
+	pipelineInfo.pipelineRendering = &pipelineRendering;
+	pipelineInfo.shader = shader;
 	// TODO: Rename to `vertexBufferBindings`
-	graphicsPipelineInfo.vertexInputBindings = &bindings;
-	graphicsPipelineInfo.primitiveTopology =
+	pipelineInfo.vertexInputBindings = &bindings;
+	pipelineInfo.primitiveTopology =
 		vtek::PrimitiveTopology::triangle_list;
-	graphicsPipelineInfo.enablePrimitiveRestart = false;
-	graphicsPipelineInfo.viewportState = &viewport;
-	graphicsPipelineInfo.rasterizationState = &rasterizer;
-	graphicsPipelineInfo.multisampleState = &multisampling;
-	graphicsPipelineInfo.depthStencilState = &depthStencil;
-	graphicsPipelineInfo.colorBlendState = &colorBlending;
-	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutCamera);
-	graphicsPipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutLight);
-	graphicsPipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
+	pipelineInfo.enablePrimitiveRestart = false;
+	pipelineInfo.viewportState = &viewport;
+	pipelineInfo.rasterizationState = &rasterizer;
+	pipelineInfo.multisampleState = &multisampling;
+	pipelineInfo.depthStencilState = &depthStencil;
+	pipelineInfo.colorBlendState = &colorBlending;
+	pipelineInfo.dynamicStateFlags = vtek::PipelineDynamicState::cull_mode;
+	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutCamera);
+	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutLight);
+	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
 	// TODO: Push constant m4_v4, for transform _and_ vertex color?
-	graphicsPipelineInfo.pushConstantShaderStages =
-		vtek::ShaderStageGraphics::vertex;
+	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
 
-	vtek::GraphicsPipeline* graphicsPipeline = vtek::graphics_pipeline_create(
-		&graphicsPipelineInfo, device);
-	if (graphicsPipeline == nullptr)
+	vtek::GraphicsPipeline* pipeline =
+		vtek::graphics_pipeline_create(&pipelineInfo, device);
+	if (pipeline == nullptr)
 	{
 		log_error("Failed to create graphics pipeline!");
 		return -1;
 	}
-
-	// Command buffer recording
-	vtek::DescriptorSet* descriptorSets[2] = {
-		descriptorSetCamera, descriptorSetLight
-	};
-	if (!record_command_buffers(
-		    graphicsPipeline, commandBuffers, swapchain, model, descriptorSets))
+	// Modify polygon mode and create another pipeline
+	rasterizer.polygonMode = vtek::PolygonMode::line;
+	vtek::GraphicsPipeline* pipelineWireframe =
+		vtek::graphics_pipeline_create(&pipelineInfo, device);
+	if (pipelineWireframe == nullptr)
 	{
-		log_error("Failed to record command buffers!");
+		log_error("Failed to create graphics pipeline (Wireframe)!");
 		return -1;
 	}
+
+	// Command buffer recording
+	const vtek::DescriptorSet* descriptorSets[2] = {
+		descriptorSetCamera, descriptorSetLight
+	};
 
 
 
@@ -635,6 +633,38 @@ int main()
 		// React to incoming input events
 		vtek::window_poll_events();
 
+		// To avoid excessive GPU work we wait until we may begin the frame
+		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
+		if (beginStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait begin frame - swapchain timeout!");
+			// TODO: Probably log an error and then run the loop again.
+			errors--; continue;
+		}
+		else if (beginStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait begin frame - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// Acquire the next available image in the swapchain
+		uint32_t imageIndex;
+		auto acquireStatus =
+			vtek::swapchain_acquire_next_image(swapchain, device, &imageIndex);
+		if (acquireStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_error("Failed to acquire image - swapchain outofdate!");
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (acquireStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to acquire image - swapchain error!");
+			// NEXT: Terminate application.
+		}
+
+		// Successfully acquired image, now update uniforms before rendering
+		// TODO: Update after bind no longer needed!
 		update_movement();
 		vtek::camera_update(gCamera);
 		if (!update_camera_uniform(descriptorSetCamera, uniformBufferCamera, device))
@@ -652,40 +682,23 @@ int main()
 			gLightChanged = false;
 		}
 
-		// To avoid excessive GPU work we wait until we may begin the frame
-		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
-		if (beginStatus == vtek::SwapchainStatus::timeout)
+		// Record command buffer for next frame
+		vtek::CommandBuffer* commandBuffer = commandBuffers[imageIndex];
+		vtek::GraphicsPipeline* nextPipeline =
+			(gRenderWireframe) ? pipelineWireframe : pipeline;
+		bool record = recordCommandBuffer(
+			commandBuffer, nextPipeline, swapchain, imageIndex, model,
+			descriptorSets);
+		if (!record)
 		{
-			log_error("Failed to wait begin frame - swapchain timeout!");
-			// TODO: Probably log an error and then run the loop again.
+			log_error("Failed to record command buffer!");
 			errors--; continue;
-		}
-		else if (beginStatus == vtek::SwapchainStatus::error)
-		{
-			log_error("Failed to wait begin frame - swapchain error!");
-			// NEXT: Terminate application.
-		}
-
-		// Acquire the next available image in the swapchain
-		uint32_t frameIndex;
-		auto acquireStatus =
-			vtek::swapchain_acquire_next_image(swapchain, device, &frameIndex);
-		if (acquireStatus == vtek::SwapchainStatus::outofdate)
-		{
-			log_error("Failed to acquire image - swapchain outofdate!");
-			// TODO: Rebuild swapchain
-			// NOTE: Swapchain _may_ indeed change length!
-		}
-		else if (acquireStatus == vtek::SwapchainStatus::error)
-		{
-			log_error("Failed to acquire image - swapchain error!");
-			// NEXT: Terminate application.
 		}
 
 		// Wait until any previous operations are finished using this image, for either read or write.
 		// NOTE: We can do command buffer recording or other operations before calling this function.
 		auto readyStatus =
-			vtek::swapchain_wait_image_ready(swapchain, device, frameIndex);
+			vtek::swapchain_wait_image_ready(swapchain, device, imageIndex);
 		if (readyStatus == vtek::SwapchainStatus::timeout)
 		{
 			log_error("Failed to wait image ready - swapchain timeout!");
@@ -701,14 +714,14 @@ int main()
 		vtek::SubmitInfo submitInfo{};
 		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
 		if (!vtek::queue_submit(
-			    graphicsQueue, commandBuffers[frameIndex], &submitInfo))
+			    graphicsQueue, commandBuffers[imageIndex], &submitInfo))
 		{
 			log_error("Failed to submit to queue!");
 			// TODO: This is an error.
 		}
 
 		// Wait for command buffer to finish execution, and present frame to screen.
-		auto presentStatus = vtek::swapchain_present_frame(swapchain, frameIndex);
+		auto presentStatus = vtek::swapchain_present_frame(swapchain, imageIndex);
 		if (presentStatus == vtek::SwapchainStatus::outofdate)
 		{
 			log_error("Failed to present frame - swapchain outofdate!");
@@ -731,7 +744,8 @@ int main()
 	// Cleanup
 	vtek::device_wait_idle(device);
 
-	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
+	vtek::graphics_pipeline_destroy(pipelineWireframe, device);
+	vtek::graphics_pipeline_destroy(pipeline, device);
 	vtek::buffer_destroy(uniformBufferCamera);
 	vtek::buffer_destroy(uniformBufferLight);
 	// TODO: descriptor_pool_free_set(pool, set, device) - ??

@@ -20,3 +20,17 @@ VkSampleCountFlagBits vtek::get_multisample_count(vtek::MultisampleType sample)
 		return VK_SAMPLE_COUNT_1_BIT;
 	}
 }
+
+VkCullModeFlags vtek::get_cull_mode(vtek::CullMode mode)
+{
+	switch (mode)
+	{
+	case vtek::CullMode::none:           return VK_CULL_MODE_NONE;
+	case vtek::CullMode::front:          return VK_CULL_MODE_FRONT_BIT;
+	case vtek::CullMode::back:           return VK_CULL_MODE_BACK_BIT;
+	case vtek::CullMode::front_and_back: return VK_CULL_MODE_FRONT_AND_BACK;
+	default:
+		vtek_log_error("vtek::get_cull_mode(): Invalid cull mode!");
+		return VK_CULL_MODE_NONE;
+	}
+}

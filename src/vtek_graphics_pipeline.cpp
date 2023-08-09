@@ -128,20 +128,6 @@ static VkPolygonMode get_polygon_mode(vtek::PolygonMode mode)
 	}
 }
 
-static VkCullModeFlags get_cull_mode_flags(vtek::CullMode mode)
-{
-	switch (mode)
-	{
-	case vtek::CullMode::none:           return VK_CULL_MODE_NONE;
-	case vtek::CullMode::front:          return VK_CULL_MODE_FRONT_BIT;
-	case vtek::CullMode::back:           return VK_CULL_MODE_BACK_BIT;
-	case vtek::CullMode::front_and_back: return VK_CULL_MODE_FRONT_AND_BACK;
-	default:
-		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid cull mode!");
-		return VK_CULL_MODE_NONE;
-	}
-}
-
 static VkFrontFace get_front_face(vtek::FrontFace face)
 {
 	switch (face)
@@ -317,7 +303,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	rasterizer.depthClampEnable = rasterizationState.depthClampEnable.get();
 	rasterizer.rasterizerDiscardEnable = rasterizationState.rasterizerDiscardEnable.get();
 	rasterizer.polygonMode = get_polygon_mode(rasterizationState.polygonMode);
-	rasterizer.cullMode = get_cull_mode_flags(rasterizationState.cullMode);
+	rasterizer.cullMode = get_cull_mode(rasterizationState.cullMode);
 	rasterizer.frontFace = get_front_face(rasterizationState.frontFace);
 	rasterizer.depthBiasEnable = rasterizationState.depthBiasEnable.get();
 	rasterizer.depthBiasConstantFactor = rasterizationState.depthBiasConstantFactor;

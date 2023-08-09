@@ -14,4 +14,14 @@ namespace vtek
 	};
 
 	VkSampleCountFlagBits get_multisample_count(MultisampleType sample);
+
+	// Cull mode determines if any face of rendered polygons should be culled
+	// (ie. discarded) by pipeline rasterization. Back culling is recommended
+	// to avoid overdraw.
+	enum class CullMode
+	{
+		none, front, back, front_and_back
+	};
+
+	VkCullModeFlags get_cull_mode(CullMode mode);
 }
