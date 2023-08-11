@@ -147,12 +147,16 @@ namespace vtek
 		// The `samples` flag is related to multisampling. This is only relevant
 		// for images that will be used as attachments,
 		MultisampleType multisampling {MultisampleType::none};
+
 		// This is only relevant for images that are shared between multiple
 		// queue families, in which case sharing mode should be `concurrent`.
-		// NOTE: When sharing mode is `exclusive`, the queue indices are ignored.
+		// NOTE: When sharing mode is `exclusive`, the sharing queues are ignored.
 		ImageSharingMode sharingMode {ImageSharingMode::exclusive};
-		std::vector<uint32_t> sharingQueueIndices;
+		std::vector<Queue*> sharingQueues;
 
+		// If an image view should be created automatically (avoid creating it
+		// later manually). This should be preferred for most cases, why its
+		// default is set to `true`.
 		bool createImageView {true};
 		Image2DViewInfo imageViewInfo {};
 	};

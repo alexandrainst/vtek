@@ -5,6 +5,7 @@
 #include "vtek_device.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_queue.hpp"
 #include "vtek_vulkan_version.hpp"
 
 
@@ -424,15 +425,22 @@ bool vtek::allocator_image2d_create(
 	}
 
 	// Sharing mode, if the image is accessed by multiple queue families
-	if (info->sharingMode == vtek::ImageSharingMode::exclusive) {
+	std::vector<uint32_t> queueIndices;
+	if (info->sharingMode == vtek::ImageSharingMode::exclusive)
+	{
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		imageInfo.queueFamilyIndexCount = 0;
 		imageInfo.pQueueFamilyIndices = nullptr;
 	}
-	else {
+	else
+	{
 		imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
-		imageInfo.queueFamilyIndexCount = info->sharingQueueIndices.size();
-		imageInfo.pQueueFamilyIndices = info->sharingQueueIndices.data();
+		for (const auto* q : info->sharingQueues)
+		{
+			queueIndices.push_back(vtek::queue_get_family_index(q));
+		}
+		imageInfo.queueFamilyIndexCount = queueIndices.size();
+		imageInfo.pQueueFamilyIndices = queueIndices.data();
 	}
 
 	// 2) Fill `VmaAllocationCreateinfo` struct

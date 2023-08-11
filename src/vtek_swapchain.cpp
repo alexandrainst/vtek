@@ -364,7 +364,8 @@ static void destroy_swapchain_handle(vtek::Swapchain* swapchain, VkDevice dev)
 }
 
 static bool create_depth_images(
-	vtek::Swapchain* swapchain, vtek::Device* device, uint32_t count)
+	vtek::Swapchain* swapchain, vtek::Device* device, uint32_t count,
+	std::vector<vtek::Queue*>&& queues)
 {
 	vtek::Image2DInfo imageInfo{};
 	imageInfo.requireDedicatedAllocation = true;
@@ -374,7 +375,15 @@ static bool create_depth_images(
 	imageInfo.initialLayout = vtek::ImageInitialLayout::undefined;
 	imageInfo.useMipmaps = false;
 	imageInfo.multisampling = vtek::MultisampleType::none;
-	imageInfo.sharingMode = vtek::ImageSharingMode::exclusive;
+	if (queues.size() > 1)
+	{
+		imageInfo.sharingMode = vtek::ImageSharingMode::concurrent;
+		imageInfo.sharingQueues = queues;
+	}
+	else
+	{
+		imageInfo.sharingMode = vtek::ImageSharingMode::exclusive;
+	}
 	imageInfo.createImageView = true;
 	// NOTE: We choose to ignore the stencil aspect, if present in format, because
 	// we care only about depth buffering here.
@@ -988,6 +997,7 @@ vtek::Swapchain* vtek::swapchain_create(
 		return nullptr;
 	}
 
+	std::vector<vtek::Queue*> queues;
 	const uint32_t qf_indices[2] = {
 		vtek::queue_get_family_index(graphicsQueue),
 		vtek::queue_get_family_index(presentQueue)
@@ -1007,6 +1017,9 @@ vtek::Swapchain* vtek::swapchain_create(
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
 		createInfo.pQueueFamilyIndices = qf_indices;
+
+		queues.push_back(graphicsQueue);
+		queues.push_back(presentQueue);
 	}
 
 	createInfo.preTransform = choose_pre_transform(capabilities);
@@ -1110,7 +1123,7 @@ vtek::Swapchain* vtek::swapchain_create(
 		swapchain->depthBufferType = vtek::SwapchainDepthBuffer::none;
 		break;
 	case vtek::SwapchainDepthBuffer::single_shared:
-		if (!create_depth_images(swapchain, device, 1))
+		if (!create_depth_images(swapchain, device, 1, std::move(queues)))
 		{
 			vtek_log_error("Failed to create shared swapchain depth buffer!");
 			destroy_swapchain_image_views(swapchain, dev);
@@ -1122,7 +1135,7 @@ vtek::Swapchain* vtek::swapchain_create(
 		swapchain->depthBufferType = vtek::SwapchainDepthBuffer::single_shared;
 		break;
 	case vtek::SwapchainDepthBuffer::one_per_image:
-		if (!create_depth_images(swapchain, device, swapchain->length))
+		if (!create_depth_images(swapchain, device, swapchain->length, std::move(queues)))
 		{
 			vtek_log_error("Failed to create swapchain depth buffers!");
 			destroy_swapchain_image_views(swapchain, dev);
