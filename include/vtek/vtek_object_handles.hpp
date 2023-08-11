@@ -23,11 +23,14 @@ namespace vtek
 	struct PhysicalDevice;
 	struct Queue;
 	struct RenderPass;
+	struct Sampler;
 	struct Swapchain;
 	// TODO: struct SwapchainFramebuffers;
 
 	// ======================= //
 	// === Utility Handles === //
 	// ======================= //
+	struct Directory;
+	struct File;
 	struct Model;
 }

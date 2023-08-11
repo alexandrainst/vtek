@@ -133,6 +133,7 @@ set (src
     include/vtek/vtek_push_constants.hpp
     include/vtek/vtek_queue.hpp
     include/vtek/vtek_render_pass.hpp
+    include/vtek/vtek_sampler.hpp
     include/vtek/vtek_shaders.hpp
     include/vtek/vtek_submit_info.hpp
     include/vtek/vtek_swapchain.hpp
@@ -173,6 +174,7 @@ set (src
     src/vtek_physical_device.cpp
     src/vtek_queue.cpp
     src/vtek_render_pass.cpp
+    src/vtek_sampler.cpp
     src/vtek_shaders.cpp
     src/vtek_swapchain.cpp
     src/vtek_uniform_data.cpp

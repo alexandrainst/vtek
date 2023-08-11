@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <cstdint>
+#include <string_view>
 
 #include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
@@ -10,6 +11,10 @@
 
 namespace vtek
 {
+	// =========================== //
+	// === Image creation info === //
+	// =========================== //
+
 	enum class ImageChannels : uint32_t
 	{
 		channels_1 = 1,
@@ -161,11 +166,38 @@ namespace vtek
 		Image2DViewInfo imageViewInfo {};
 	};
 
+	struct Image2DLoadInfo
+	{
+		bool loadSRGB {true};
+
+		// TODO: Description and rationale.
+		bool forceAlphaPremultiply {false};
+
+		// TODO: Implementation (both blit and compute)
+		bool createMipmaps {false};
+		uint32_t maxNumMipmaps {UINT32_MAX};
+		uint32_t baseMipLevel {0}; // aka. mip-lod-bias
+	};
+
+
+	// ======================= //
+	// === Image interface === //
+	// ======================= //
+
 	Image2D* image2d_create(const Image2DInfo* info, Device* device);
 	void image2d_destroy(Image2D* image);
 
 	// TODO: Alternative image creation, using a specific allocator
 	Image2D* image2d_create(const Image2DInfo* info, Allocator* allocator);
+
+	Image2D* image2d_load(
+		const Image2DLoadInfo* info, const Directory* directory,
+		std::string_view filename, Device* device);
+
+
+	// ======================== //
+	// === Image properties === //
+	// ======================== //
 
 	VkImage image2d_get_handle(const Image2D* image);
 	VkImageView image2d_get_view_handle(const Image2D* image);
