@@ -315,8 +315,6 @@ int main()
 	physicalDeviceInfo.requiredFeatures.depthBounds = true;
 	physicalDeviceInfo.requiredFeatures.fillModeNonSolid = true;
 	// Allows us to change the uniform without re-recording the command buffers:
-	physicalDeviceInfo.updateAfterBindFeatures
-		= vtek::UpdateAfterBindFeature::uniform_buffer;
 	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
 		&physicalDeviceInfo, instance, surface);
 	if (physicalDevice == nullptr)
@@ -442,7 +440,7 @@ int main()
 
 	// Descriptor pool
 	vtek::DescriptorPoolInfo descriptorPoolInfo{};
-	descriptorPoolInfo.allowUpdateAfterBind = true;
+	descriptorPoolInfo.allowUpdateAfterBind = false;
 	descriptorPoolInfo.descriptorTypes.push_back(
 		{ vtek::DescriptorType::uniform_buffer, 2 }); // NOTE: Leave place for light
 	vtek::DescriptorPool* descriptorPool =
@@ -459,7 +457,7 @@ int main()
 	descriptorBindingCamera.type = vtek::DescriptorType::uniform_buffer;
 	descriptorBindingCamera.binding = 0;
 	descriptorBindingCamera.shaderStages = vtek::ShaderStage::vertex;
-	descriptorBindingCamera.updateAfterBind = true;
+	descriptorBindingCamera.updateAfterBind = false;
 	descriptorLayoutInfoCamera.bindings.emplace_back(descriptorBindingCamera);
 	vtek::DescriptorSetLayout* descriptorSetLayoutCamera =
 		vtek::descriptor_set_layout_create(&descriptorLayoutInfoCamera, device);
@@ -475,7 +473,7 @@ int main()
 	descriptorBindingLight.type = vtek::DescriptorType::uniform_buffer;
 	descriptorBindingLight.binding = 1;
 	descriptorBindingLight.shaderStages = vtek::ShaderStage::fragment;
-	descriptorBindingLight.updateAfterBind = true;
+	descriptorBindingLight.updateAfterBind = false;
 	descriptorLayoutInfoLight.bindings.emplace_back(descriptorBindingLight);
 	vtek::DescriptorSetLayout* descriptorSetLayoutLight =
 		vtek::descriptor_set_layout_create(&descriptorLayoutInfoLight, device);
