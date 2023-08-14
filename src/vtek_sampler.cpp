@@ -78,18 +78,18 @@ vtek::Sampler* vtek::sampler_create(
 	createInfo.anisotropyEnable = VulkanBool(info->anisotropicFiltering).get();
 	createInfo.maxAnisotropy = info->maxAnisotropy.get();
 
-	if (info->compareOp == )
-	{
-		createInfo.compareEnable = 
-	}
-	else
-	{
-		createInfo.compareEnable = 
-	}
+	// TODO: Probably, `compareOp` is only used for depth/stencil images!
+	// if (info->compareOp == )
+	// {
+	// 	createInfo.compareEnable = 
+	// }
+	// else
+	// {
+	// 	createInfo.compareEnable = 
+	// }
 
-
-
-
+	vtek_log_error("sampler_create(): Not implemented!");
+	return nullptr;
 }
 
 void vtek::sampler_destroy(vtek::Sampler* sampler)

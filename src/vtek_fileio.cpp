@@ -167,6 +167,17 @@ static std::ios_base::openmode read_file_mode_flags(vtek::FileModeFlags flags)
 
 
 /* fileio interface */
+std::string_view vtek::filename_get_extension(std::string_view filename)
+{
+	auto p = fs::path(filename);
+	if (!p.has_extension())
+	{
+		return "";
+	}
+
+	return filename.substr(filename.find_last_of('.') + 1);
+}
+
 char vtek::get_path_separator()
 {
 	return fs::path::preferred_separator;

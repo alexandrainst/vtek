@@ -96,6 +96,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         -Wno-unused-variable -ggdb3)
 endif()
 
+# stb libraries, notably stb_image {^_^}, similar setup as for vma
+set (stb_src
+    external/nothings/stb_image.h
+    external/nothings/stb_image.cpp
+)
+add_library(stb SHARED ${stb_src})
+set_target_properties(stb PROPERTIES CXX_STANDARD 20)
+
+
 
 # --------------------------------------------------------------------------------
 # Source files and build configuration for vtek
@@ -143,6 +152,7 @@ set (src
     include/vtek/vtek_vulkan_types.hpp
     include/vtek/vtek_vulkan_version.hpp
 
+    src/imgload/vtek_image_load.hpp
     src/impl/vtek_command_buffer_struct.hpp
     src/impl/vtek_glfw_backend.hpp
     src/impl/vtek_init.hpp
@@ -151,6 +161,7 @@ set (src
     src/impl/vtek_vulkan_helpers.hpp
     src/glsl/vtek_glsl_shader_utils.hpp
 
+    src/imgload/vtek_image_load.cpp
     src/glsl/vtek_glsl_shader_utils.cpp
     src/vtek_allocator.cpp
     src/vtek_application_window.cpp
@@ -196,6 +207,7 @@ add_library(vtek::vtek ALIAS vtek)
 set_target_properties(vtek PROPERTIES CXX_STANDARD 20)
 target_include_directories(vtek PRIVATE
     ${PROJECT_SOURCE_DIR}/include/vtek
+    ${PROJECT_SOURCE_DIR}/external/nothings
     ${PROJECT_SOURCE_DIR}/external/spirv_reflect
     ${PROJECT_SOURCE_DIR}/external/vma
     ${PROJECT_SOURCE_DIR}/pchs
@@ -218,7 +230,7 @@ if(VTEK_BUILD_WARNINGS)
 endif()
 
 target_link_libraries(vtek LINK_PUBLIC
-    spdlog::spdlog glfw Vulkan::Vulkan vma assimp::assimp
+    spdlog::spdlog glfw Vulkan::Vulkan vma stb assimp::assimp
     glslang::glslang glslang::SPIRV glslang::glslang-default-resource-limits)
 
 

@@ -1,11 +1,16 @@
 #include "vtek_vulkan.pch"
 #include "vtek_image.hpp"
 
+#include "imgload/vtek_image_load.hpp"
+#include "impl/vtek_queue_struct.hpp"
 #include "impl/vtek_vma_helpers.hpp"
 #include "vtek_device.hpp"
+#include "vtek_fileio.hpp"
 #include "vtek_logging.hpp"
 
 using IAFlag = vtek::ImageAspectFlag;
+using IUFlag = vtek::ImageUsageFlag;
+using IFType = vtek::ImageFileType;
 
 
 /* helper functions */
@@ -199,6 +204,78 @@ vtek::Image2D* vtek::image2d_create(
 
 	return nullptr;
 }
+
+
+
+
+vtek::Image2D* vtek::image2d_load(
+	const vtek::Image2DLoadInfo* info, const vtek::Directory* directory,
+	std::string_view filename, vtek::Device* device)
+{
+	vtek::ImageLoadInfo loadInfo{};
+	vtek::ImageLoadData imageData{};
+
+	// 1) Load image from file
+	if (!vtek::image_load(directory, filename, &loadInfo, &imageData))
+	{
+		vtek_log_error(
+			"Failed to load image file -- cannot create Vulkan image!");
+		return nullptr;
+	}
+
+	// 2) Create Vulkan handle
+	vtek::Image2DInfo createInfo{};
+	// NOTE: If implementation supports VK_KHR_dedicated_allocation
+	// (or Vulkan >= 1.1), we can ask the implementation if it
+	// requires/recommends a dedicated allocation. This is typically
+	// suggested for render targets or very large resources.
+	// NOTE: For simplicity we just say no always!
+	createInfo.requireDedicatedAllocation = false;
+	createInfo.extent = { imageData.width, imageData.height };
+	createInfo.format = VK_FORMAT_UNDEFINED; // TODO: Specify in loader!
+	createInfo.channels = static_cast<vtek::ImageChannels>(imageData.channels);
+	createInfo.pixelStorageFormat = vtek::ImagePixelStorageFormat::unorm;
+	createInfo.imageStorageSRGB = info->loadSRGB;
+	createInfo.swizzleBGR = false; // TODO: Is this a good assumption?
+	createInfo.usageFlags
+		= IUFlag::transfer_dst | IUFlag::sampled | IUFlag::color_attachment;
+	createInfo.initialLayout = vtek::ImageInitialLayout::preinitialized;
+	createInfo.useMipmaps = info->createMipmaps;
+	createInfo.multisampling = vtek::MultisampleType::none;
+
+	// We must check if transfer/graphics queues are from same queue family!
+	vtek::Queue* transferQueue = vtek::device_get_transfer_queues(device)[0];
+	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
+	if (transferQueue->familyIndex == graphicsQueue->familyIndex)
+	{
+		createInfo.sharingMode = vtek::ImageSharingMode::exclusive;
+	}
+	else
+	{
+		createInfo.sharingMode = vtek::ImageSharingMode::concurrent;
+		createInfo.sharingQueues = { transferQueue, graphicsQueue };
+	}
+
+	createInfo.createImageView = true;
+	createInfo.imageViewInfo.baseMipLevel = 0;
+	createInfo.imageViewInfo.baseArrayLayer = 0;
+	createInfo.imageViewInfo.aspectFlags = IAFlag::color;
+
+	vtek::Image2D* image = vtek::image2d_create(&createInfo, device);
+	if (image == nullptr)
+	{
+		return nullptr;
+	}
+
+	// 3) Copy image data to GPU memory
+	uint64_t totalSize = vtek::image_load_data_get_size(&imageData);
+
+	vtek_log_debug("We still need to copy 2d-image data to GPU memory!");
+
+	vtek_log_error("image2d_load(): Not implemented!");
+	return nullptr;
+}
+
 
 VkImage vtek::image2d_get_handle(const vtek::Image2D* image)
 {
