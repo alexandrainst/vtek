@@ -245,6 +245,7 @@ if(VTEK_CREATE_EXAMPLES)
         examples/04_dynamic_circle.cpp
         examples/05_camera.cpp
         examples/06_model.cpp
+        examples/07_textured_model.cpp
         )
 
     foreach(expath ${examples})
