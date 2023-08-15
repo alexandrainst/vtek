@@ -5,6 +5,8 @@
 #include "vtek_logging.hpp"
 
 using SAMode = vtek::SamplerAddressMode;
+using SBColor = vtek::SamplerBorderColor;
+using SDCompOp = vtek::SamplerDepthCompareOp;
 
 
 /* struct implementation */
@@ -45,12 +47,59 @@ static VkSamplerAddressMode get_address_mode(
 	}
 }
 
+static VkBorderColor get_border_color(vtek::SamplerBorderColor color)
+{
+	switch (color)
+	{
+	case SBColor::transparent_black_float:
+		return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+	case SBColor::transparent_black_int:
+		return VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
+	case SBColor::opaque_black_float:
+		return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+	case SBColor::opaque_black_int:
+		return VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	case SBColor::opaque_white_float:
+		return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	case SBColor::opaque_white_int:
+		return VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+
+	default:
+		vtek_log_error("vtek_sampler.cpp: get_border_color(): {}",
+		               "Unrecognized SamplerBorderColor enum value!");
+		vtek_log_warn("Will default to transparent border color.");
+		return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+	}
+}
+
+static VkCompareOp get_depth_compare_op(vtek::SamplerDepthCompareOp op)
+{
+	switch (op)
+	{
+	case SDCompOp::never:            return VK_COMPARE_OP_NEVER;
+	case SDCompOp::less:             return VK_COMPARE_OP_LESS;
+	case SDCompOp::equal:            return VK_COMPARE_OP_EQUAL;
+	case SDCompOp::less_or_equal:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+	case SDCompOp::greater:          return VK_COMPARE_OP_GREATER;
+	case SDCompOp::not_equal:        return VK_COMPARE_OP_NOT_EQUAL;
+	case SDCompOp::greater_or_equal: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+	case SDCompOp::always:           return VK_COMPARE_OP_ALWAYS;
+	default:
+		vtek_log_error("vtek_sampler.cpp: get_depth_compare_op(): {}",
+		               "Unrecognized CompareOp enum value!");
+		vtek_log_warn("Will default to COMPARE_OP_NEVER.");
+		return VK_COMPARE_OP_NEVER;
+	}
+}
+
 
 
 /* interface */
 vtek::Sampler* vtek::sampler_create(
 	const vtek::SamplerInfo* info, vtek::Device* device)
 {
+	VkDevice dev = vtek::device_get_handle(device);
+
 	auto sampler = new vtek::Sampler;
 
 	VkSamplerCreateInfo createInfo{};
@@ -71,30 +120,51 @@ vtek::Sampler* vtek::sampler_create(
 	createInfo.addressModeU = addrMode;
 	createInfo.addressModeV = addrMode;
 	createInfo.addressModeW = addrMode;
-
 	// TODO: What is the difference between this and `baseMipLevel` in image views ?
 	createInfo.mipLodBias = 0.0f;
-
 	createInfo.anisotropyEnable = VulkanBool(info->anisotropicFiltering).get();
 	createInfo.maxAnisotropy = info->maxAnisotropy.get();
 
-	// TODO: Probably, `compareOp` is only used for depth/stencil images!
-	// if (info->compareOp == )
-	// {
-	// 	createInfo.compareEnable = 
-	// }
-	// else
-	// {
-	// 	createInfo.compareEnable = 
-	// }
+	if (info->depthCompareOp == vtek::SamplerDepthCompareOp::never)
+	{
+		createInfo.compareEnable = VK_FALSE;
+		createInfo.compareOp = VK_COMPARE_OP_NEVER;
+	}
+	else
+	{
+		createInfo.compareEnable = VK_TRUE;
+		createInfo.compareOp = get_depth_compare_op(info->depthCompareOp);
+	}
 
-	vtek_log_error("sampler_create(): Not implemented!");
-	return nullptr;
+	// May be used to clamp the computed LOD value.
+	// NOTE: Not implemented yet here.
+	createInfo.minLod = 0.0f;
+	createInfo.maxLod = VK_LOD_CLAMP_NONE; // Avoid setting a maximum
+	createInfo.borderColor = get_border_color(info->borderColor);
+
+	// NOTE: We could allow for unnormalized texture coordinates in shaders,
+	// but that comes with several limitations and requirements, and is
+	// probably not required here, hence omitted.
+	createInfo.unnormalizedCoordinates = VK_FALSE;
+
+	VkResult result = vkCreateSampler(
+		dev, &createInfo, nullptr, &sampler->vulkanHandle);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to create sampler!");
+		delete sampler;
+		return nullptr;
+	}
+
+	return sampler;
 }
 
-void vtek::sampler_destroy(vtek::Sampler* sampler)
+void vtek::sampler_destroy(vtek::Sampler* sampler, vtek::Device* device)
 {
-	//sampler->vulkanHandle;      
+	if (sampler == nullptr) { return; }
+
+	VkDevice dev = vtek::device_get_handle(device);
+	vkDestroySampler(dev, sampler->vulkanHandle, nullptr);
 }
 
 VkSampler vtek::sampler_get_handle(const vtek::Sampler* sampler)

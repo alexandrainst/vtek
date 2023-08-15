@@ -20,6 +20,16 @@ namespace vtek
 		mirror_clamp_to_edge
 	};
 
+	enum class SamplerBorderColor
+	{
+		transparent_black_float,
+		transparent_black_int,
+		opaque_black_float,
+		opaque_black_int,
+		opaque_white_float,
+		opaque_white_int
+	};
+
 	enum class SamplerFilterMode { nearest, linear };
 
 	enum class SamplerDepthCompareOp
@@ -37,6 +47,9 @@ namespace vtek
 	struct SamplerInfo
 	{
 		SamplerAddressMode addressMode {SamplerAddressMode::repeat};
+		// If address mode is `clamp_to_border`, a border color may be
+		// specified from selected list.
+		SamplerBorderColor borderColor {SamplerBorderColor::opaque_black_float};
 
 		// TODO: Document.
 		bool anisotropicFiltering {false};
@@ -54,12 +67,12 @@ namespace vtek
 		// 2) The image view applied to the image has a depth aspect flag
 		// 3) The instruction is an `OpImage*Dref*`, which is a SPIR-V
 		// instruction that applies a depth comparison on the texel values.
-		SamplerDepthCompareOp compareOp {SamplerDepthCompareOp::never};
+		SamplerDepthCompareOp depthCompareOp {SamplerDepthCompareOp::never};
 	};
 
 
 	Sampler* sampler_create(const SamplerInfo* info, Device* device);
-	void sampler_destroy(Sampler* sampler);
+	void sampler_destroy(Sampler* sampler, Device* device);
 
 	VkSampler sampler_get_handle(const Sampler* sampler);
 }
