@@ -94,7 +94,7 @@ vtek::Sampler* vtek::sampler_create(
 
 void vtek::sampler_destroy(vtek::Sampler* sampler)
 {
-
+	//sampler->vulkanHandle;      
 }
 
 VkSampler vtek::sampler_get_handle(const vtek::Sampler* sampler)

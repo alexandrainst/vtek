@@ -403,6 +403,141 @@ int main()
 		return -1;
 	}
 
+	// Descriptor pool
+	vtek::DescriptorPoolInfo descriptorPoolInfo{};
+	descriptorPoolInfo.allowUpdateAfterBind = false;
+	descriptorPoolInfo.descriptorTypes.push_back(
+		{ vtek::DescriptorType::uniform_buffer, 1 }); // NOTE: Leave place for light
+	vtek::DescriptorPool* descriptorPool =
+		vtek::descriptor_pool_create(&descriptorPoolInfo, device);
+	if (descriptorPool == nullptr)
+	{
+		log_error("Failed to create descriptor pool!");
+		return -1;
+	}
+
+	// Descriptor set layout (Camera transform)
+	vtek::DescriptorSetLayoutInfo descriptorLayoutInfoCamera{};
+	vtek::DescriptorLayoutBinding descriptorBindingCamera{};
+	descriptorBindingCamera.type = vtek::DescriptorType::uniform_buffer;
+	descriptorBindingCamera.binding = 0;
+	descriptorBindingCamera.shaderStages = vtek::ShaderStage::vertex;
+	descriptorBindingCamera.updateAfterBind = false;
+	descriptorLayoutInfoCamera.bindings.emplace_back(descriptorBindingCamera);
+	vtek::DescriptorSetLayout* descriptorSetLayoutCamera =
+		vtek::descriptor_set_layout_create(&descriptorLayoutInfoCamera, device);
+	if (descriptorSetLayoutCamera == nullptr)
+	{
+		log_error("Failed to create descriptor set layout (Camera)!");
+		return -1;
+	}
+
+	// Descriptor set (Camera transform)
+	// TODO: descriptor_pool_alloc_set(pool, layout, device) - ??
+	// TODO: This is similar to the improved command buffer interface!
+	vtek::DescriptorSet* descriptorSetCamera = vtek::descriptor_set_create(
+		descriptorPool, descriptorSetLayoutCamera, device);
+	if (descriptorSetCamera == nullptr)
+	{
+		log_error("Failed to create descriptor set (Camera)!");
+		return -1;
+	}
+
+	// Uniform buffer (Camera transform)
+	vtek::BufferInfo uniformBufferInfoCamera{};
+	uniformBufferInfoCamera.size = gCameraUniform.size();
+	uniformBufferInfoCamera.requireHostVisibleStorage = true;
+	uniformBufferInfoCamera.writePolicy = vtek::BufferWritePolicy::overwrite_often;
+	uniformBufferInfoCamera.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::uniform_buffer;
+	vtek::Buffer* uniformBufferCamera =
+		vtek::buffer_create(&uniformBufferInfoCamera, device);
+	if (uniformBufferCamera == nullptr)
+	{
+		log_error("Failed to create uniform buffer (Camera)!");
+		return -1;
+	}
+	if (!update_camera_uniform(descriptorSetCamera, uniformBufferCamera, device))
+	{
+		log_error("Failed to fill uniform buffer (Camera)!");
+		return -1;
+	}
+
+	// Graphics pipeline
+	vtek::ViewportState viewport{
+		.viewportRegion = {
+			.offset = {0U, 0U},
+			.extent = {gFramebufferWidth, gFramebufferHeight}
+		},
+	};
+	vtek::VertexBufferBindings bindings{};
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex); // vertex
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex); // normal
+	vtek::RasterizationState rasterizer{};
+	rasterizer.cullMode = vtek::CullMode::back; // enable back-face culling
+	rasterizer.polygonMode = vtek::PolygonMode::fill;
+	vtek::MultisampleState multisampling{};
+	vtek::DepthStencilState depthStencil{};
+	depthStencil.depthTestEnable = true;
+	depthStencil.depthWriteEnable = true;
+	vtek::ColorBlendState colorBlending{};
+	colorBlending.attachments.emplace_back(
+		vtek::ColorBlendAttachment::GetDefault());
+	vtek::PipelineRendering pipelineRendering{};
+	pipelineRendering.colorAttachmentFormats.push_back(
+		vtek::swapchain_get_image_format(swapchain));
+	pipelineRendering.depthAttachmentFormat =
+		vtek::swapchain_get_depth_image_format(swapchain);
+
+	vtek::GraphicsPipelineCreateInfo pipelineInfo{};
+	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	pipelineInfo.renderPass = nullptr; // Nice!
+	pipelineInfo.pipelineRendering = &pipelineRendering;
+	pipelineInfo.shader = shader;
+	// TODO: Rename to `vertexBufferBindings`
+	pipelineInfo.vertexInputBindings = &bindings;
+	pipelineInfo.primitiveTopology =
+		vtek::PrimitiveTopology::triangle_list;
+	pipelineInfo.enablePrimitiveRestart = false;
+	pipelineInfo.viewportState = &viewport;
+	pipelineInfo.rasterizationState = &rasterizer;
+	pipelineInfo.multisampleState = &multisampling;
+	pipelineInfo.depthStencilState = &depthStencil;
+	pipelineInfo.colorBlendState = &colorBlending;
+	pipelineInfo.dynamicStateFlags
+		= vtek::PipelineDynamicState::cull_mode
+		| vtek::PipelineDynamicState::depth_compare_op;
+	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutCamera);
+	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutLight);
+	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
+	// TODO: Push constant m4_v4, for transform _and_ vertex color?
+	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
+
+	vtek::GraphicsPipeline* pipeline =
+		vtek::graphics_pipeline_create(&pipelineInfo, device);
+	if (pipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline!");
+		return -1;
+	}
+	// Modify polygon mode and create another pipeline
+	rasterizer.polygonMode = vtek::PolygonMode::line;
+	vtek::GraphicsPipeline* pipelineWireframe =
+		vtek::graphics_pipeline_create(&pipelineInfo, device);
+	if (pipelineWireframe == nullptr)
+	{
+		log_error("Failed to create graphics pipeline (Wireframe)!");
+		return -1;
+	}
+
+
+
+
+
+
 
 
 
