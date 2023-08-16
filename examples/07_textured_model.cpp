@@ -1,4 +1,5 @@
 #include <vtek/vtek.hpp>
+#include <iostream>
 
 /* global data */
 vtek::ApplicationWindow* gWindow = nullptr;
@@ -395,7 +396,7 @@ int main()
 	textureInfo.forceAlphaPremultiply = false; // TODO: Would be cool to test!
 	textureInfo.createMipmaps = false; // TODO: We DEFINITELY want this!
 	textureInfo.baseMipLevel = 0;
-	vtek::Image2d* texture = vtek::image2d_load(
+	vtek::Image2D* texture = vtek::image2d_load(
 		&textureInfo, modeldir, "viking_room.png", device);
 	if (texture == nullptr)
 	{
@@ -511,7 +512,7 @@ int main()
 		= vtek::PipelineDynamicState::cull_mode
 		| vtek::PipelineDynamicState::depth_compare_op;
 	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutCamera);
-	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutLight);
+	//pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutLight);
 	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
 	// TODO: Push constant m4_v4, for transform _and_ vertex color?
 	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;

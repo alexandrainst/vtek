@@ -26,8 +26,9 @@ namespace vtek
 		uint8_t* data {nullptr};
 		uint32_t width {0};
 		uint32_t height {0};
-		uint8_t channels {0};
-		uint8_t bitsPerChannel {0};
+		uint8_t  channels {0};
+		uint8_t  bitsPerChannel {0};
+		bool     floatingPoint {false};
 	};
 
 	struct ImageLoadInfo
