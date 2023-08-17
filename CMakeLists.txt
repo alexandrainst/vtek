@@ -152,7 +152,7 @@ set (src
     include/vtek/vtek_vulkan_types.hpp
     include/vtek/vtek_vulkan_version.hpp
 
-    src/imgload/vtek_image_load.hpp
+    src/imgutils/vtek_image_load.hpp
     src/impl/vtek_command_buffer_struct.hpp
     src/impl/vtek_glfw_backend.hpp
     src/impl/vtek_init.hpp
@@ -161,7 +161,7 @@ set (src
     src/impl/vtek_vulkan_helpers.hpp
     src/glsl/vtek_glsl_shader_utils.hpp
 
-    src/imgload/vtek_image_load.cpp
+    src/imgutils/vtek_image_load.cpp
     src/glsl/vtek_glsl_shader_utils.cpp
     src/vtek_allocator.cpp
     src/vtek_application_window.cpp

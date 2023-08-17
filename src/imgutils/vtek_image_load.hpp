@@ -23,12 +23,12 @@ namespace vtek
 	// ===================== //
 	struct ImageLoadData
 	{
-		uint8_t* data {nullptr};
-		uint32_t width {0};
-		uint32_t height {0};
-		uint8_t  channels {0};
-		uint8_t  bitsPerChannel {0};
-		bool     floatingPoint {false};
+		uint8_t*  data {nullptr};
+		uint16_t* data16 {nullptr};
+		float*    fdata {nullptr};
+		uint32_t  width {0};
+		uint32_t  height {0};
+		uint32_t  channels {0};
 	};
 
 	struct ImageLoadInfo

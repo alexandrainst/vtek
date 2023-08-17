@@ -32,6 +32,7 @@ namespace vtek
 		float16,
 		float32,
 		pack_unorm16,
+		pack_unorm32,
 		pack_float16,
 		pack_float32
 	};

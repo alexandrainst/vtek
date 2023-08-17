@@ -1,8 +1,10 @@
-#include "vtek_vulkan.pch"
 #include "vtek_image_load.hpp"
 
 #include "vtek_fileio.hpp"
 #include "vtek_logging.hpp"
+
+// Standard
+#include <cstdio>
 
 // External
 // Define to let stbi_failure_reason return slightly more use-friendly messages.
@@ -38,59 +40,6 @@ vtek::ImageFileType vtek::get_image_type(const std::string_view filename)
 
 	return IFType::unsupported;
 }
-
-
-
-/* image loading helpers */
-// TODO: We very much want this! :
-static bool image_load_jpg(
-	const std::string& path, const vtek::ImageLoadInfo* info,
-	vtek::ImageLoadData* outData)
-{
-	vtek_log_debug("vtek_image_load.cpp: image_load_jpg(): Not implemented!");
-	return false;
-}
-
-static bool image_load_png(
-	const std::string& path, const vtek::ImageLoadInfo* info,
-	vtek::ImageLoadData* outData)
-{
-	bool image16 = false; // image contains 16-bit data
-	bool imagef = false;  // image has a floating-point format
-
-	if (stbi_is_16_bit(path.c_str())) { image16 = true; }
-
-	vtek_log_debug("vtek_image_load.cpp: image_load_png(): Not implemented!");
-	return false;
-}
-
-static bool image_load_tga(
-	const std::string& path, const vtek::ImageLoadInfo* info,
-	vtek::ImageLoadData* outData)
-{
-	vtek_log_debug("vtek_image_load.cpp: image_load_tga(): Not implemented!");
-	return false;
-}
-
-static bool image_load_bmp(
-	const std::string& path, const vtek::ImageLoadInfo* info,
-	vtek::ImageLoadData* outData)
-{
-	vtek_log_debug("vtek_image_load.cpp: image_load_bmp(): Not implemented!");
-	return false;
-}
-
-static bool image_load_hdr(
-	const std::string& path, const vtek::ImageLoadInfo* info,
-	vtek::ImageLoadData* outData)
-{
-	bool hdr = false;
-	if (stbi_is_hdr(path.c_str())) { hdr = true; }
-
-	vtek_log_debug("vtek_image_load.cpp: image_load_hdr(): Not implemented!");
-	return false;
-}
-
 
 
 
@@ -131,21 +80,41 @@ bool vtek::image_load(
 		return false;
 	}
 
-	// Query image info without having to decode the entire image first.
-	// This includes width, height, channels, bit-format, and layout.
-	int x,y,n,ok;
-	ok = stbi_info(path.c_str(), &x, &y, &n);
-	if (!ok)
+	const char* const cpath = path.c_str();
+	int width, height, channels;
+
+	// Use a FILE* instead of opening the file several times
+	std::FILE* fd = std::fopen(cpath, "r");
+	if (fd == nullptr)
 	{
-		vtek_log_error("Image format is unsupported!");
+		vtek_log_error("Failed to open image file!");
 		return false;
 	}
 
-	int width, height, channels;
+	// Conditionally load floating-point data
+	if (stbi_is_hdr_from_file(fd))
+	{
+		outData->fdata = stbi_loadf_from_file(
+			fd, &width, &height, &channels, 0);
+	}
+	else if (stbi_is_16_bit_from_file(fd))
+	{
+		// outData->data16 = stbi_load_from_file_16(
+		// 	fd, &width, &height, &channels, 0);
+		vtek_log_debug(
+			"vtek_image_load.cpp: 16-bit image loading is not implemented!");
+		std::fclose(fd);
+		return false;
+	}
+	else
+	{
+		outData->data = stbi_load_from_file(
+			fd, &width, &height, &channels, desiredChannels);
+	}
 
-	outData->data = stbi_load(
-		path.c_str(), &width, &height, &channels, desiredChannels);
-	if (outData->data == nullptr || channels <= 0)
+	std::fclose(fd);
+
+	if (outData->data == channels <= 0) // TODO: Proper check!
 	{
 		vtek_log_error("Failed to read image file: {}", stbi_failure_reason());
 		return false;
@@ -175,8 +144,11 @@ void vtek::image_load_data_destroy(vtek::ImageLoadData* loadData)
 
 uint64_t vtek::image_load_data_get_size(const vtek::ImageLoadData* loadData)
 {
-	return loadData->bitsPerChannel
-		* loadData->channels
-		* loadData->width
-		* loadData->height;
+	uint32_t channelSize =
+		(loadData->data != nullptr) ? 1 :
+		(loadData->data16 != nullptr) ? 2 :
+		(loadData->fdata != nullptr) ? 32 :
+		0;
+
+	return channelSize * loadData->channels * loadData->width * loadData->height;
 }

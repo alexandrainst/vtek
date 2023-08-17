@@ -1,19 +1,45 @@
 #include "vtek_vulkan.pch"
 #include "vtek_image.hpp"
 
-#include "imgload/vtek_image_load.hpp"
+#include "imgutils/vtek_image_load.hpp"
 #include "impl/vtek_queue_struct.hpp"
 #include "impl/vtek_vma_helpers.hpp"
 #include "vtek_device.hpp"
 #include "vtek_fileio.hpp"
 #include "vtek_logging.hpp"
 
+using IPSFmt = vtek::ImagePixelStorageFormat;
 using IAFlag = vtek::ImageAspectFlag;
 using IUFlag = vtek::ImageUsageFlag;
 using IFType = vtek::ImageFileType;
 
 
 /* helper functions */
+
+static VkFormat get_image_format(
+	bool sRGB, IPSFmt pixelFormat, uint32_t channels)
+{
+	vtek_log_debug("vtek_image.cpp: get_image_format(): Not implemented!");
+	return VK_FORMAT_UNDEFINED;
+
+	switch (pixelFormat)
+	{
+	case IPSFmt::unorm:
+	case IPSFmt::snorm:
+	case IPSFmt::uint8:
+	case IPSFmt::sint8:
+	case IPSFmt::float16:
+	case IPSFmt::float32:
+	case IPSFmt::pack_unorm16:
+	case IPSFmt::pack_float16:
+	case IPSFmt::pack_float32:
+	default:
+		vtek_log_error(
+			"vtek_image.cpp: get_image_format(): Unrecognized pixelFormat enum!");
+		vtek_log_warn("Will default to ImagePixelStorageFormat::unorm.");
+	}
+}
+
 static VkImageAspectFlags get_image_aspect_flags(
 	vtek::EnumBitmask<IAFlag> aspectFlags)
 {
@@ -223,6 +249,40 @@ vtek::Image2D* vtek::image2d_load(
 		return nullptr;
 	}
 
+	// Retrieve format information
+	IPSFmt pixelFormat;
+	if (imageData.fdata != nullptr) {pixelFormat = IPSFmt::float32; } // TODO: ?
+	else if (imageData.data16 != nullptr) { pixelFormat = IPSFmt::float16; } // TODO: ?
+	else if (imageData.data != nullptr) { pixelFormat = IPSFmt::uint8; } // TODO: ?
+	else
+	{
+		vtek_log_error("vtek_image.cpp: Image data was NULL!");
+		vtek::image_load_data_destroy(imageData);
+		return nullptr;
+	}
+	uint32_t channels = imageData.channels;
+
+	VKFormat format = get_image_format(pixelFormat, channels);
+	if (format == VK_FORMAT_UNDEFINED)
+	{
+		vtek_log_error("Failed find a suitable image format for loaded image!");
+		vtek::image_load_data_destroy(imageData);
+		return nullptr;
+	}
+
+	if (imageData.data != nullptr) // data is 8-bit
+	{
+
+	}
+
+
+
+
+	vtek_log_debug(
+		"ImageLoadInfo: w={}, h={}, channels={}, floatingPoint={}",
+		imageData.width, imageData.height,
+		imageData.channels, imageData.floatingPoint);
+
 	// 2) Create Vulkan handle
 	vtek::Image2DInfo createInfo{};
 	// NOTE: If implementation supports VK_KHR_dedicated_allocation
@@ -233,7 +293,7 @@ vtek::Image2D* vtek::image2d_load(
 	createInfo.requireDedicatedAllocation = false;
 	createInfo.extent = { imageData.width, imageData.height };
 	createInfo.format = VK_FORMAT_UNDEFINED; // TODO: Specify in loader!
-	createInfo.channels = static_cast<vtek::ImageChannels>(imageData.channels);
+	createInfo.channels = channels;
 	createInfo.pixelStorageFormat = vtek::ImagePixelStorageFormat::unorm;
 	createInfo.imageStorageSRGB = info->loadSRGB;
 	createInfo.swizzleBGR = false; // TODO: Is this a good assumption?
