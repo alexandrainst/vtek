@@ -53,6 +53,18 @@ namespace vtek
 		// pack_float32
 	};
 
+	enum class ImageChannelSize
+	{
+		// exactly 8, 16, 32, or 64 bits for each channel of each pixel
+		channel_8,
+		channel_16,
+		channel_32,
+		channel_64,
+
+		// everything else, like packed/compressed formats
+		special
+	};
+
 	enum class ImageCompressionFormat
 	{
 		none, // no compression applied
@@ -152,6 +164,7 @@ namespace vtek
 		bool imageStorageSRGB {false};
 		bool swizzleBGR {false}; // TODO: When, why, and how?
 		ImagePixelStorageFormat storageFormat {ImagePixelStorageFormat::unorm};
+		ImageChannelSize channelSize {ImageChannelSize::channel_8};
 		ImageCompressionFormat compression {ImageCompressionFormat::none};
 	};
 

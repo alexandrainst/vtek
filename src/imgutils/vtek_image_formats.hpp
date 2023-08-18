@@ -81,15 +81,178 @@ namespace vtek
 	// couldn't be found.
 
 	// TODO: Better return bool instead?
-	VkFormat get_format_srgb(
+	VkFormat get_format_color(
 		const ImageFormatInfo* info, VkPhysicalDevice physDev,
-		VkFormatFeatureFlags featureFlag);
+		VkFormatFeatureFlags featureFlags);
+
+	VkFormat get_format_color_srgb(
+		const ImageFormatInfo* info, VkPhysicalDevice physDev,
+		VkFormatFeatureFlags featureFlags);
+}
+
+
+
+/* internal helper functions */
+static void vtek::get_format_color_channel_1(
+	const vtek::ImageFormatInfo* info, std::vector<VkFormat>& priorities)
+{
+	if (info->channelSize == vtek::ImageChannelSize::channel_8)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::unorm:
+			priorities.push_back(VK_FORMAT_R8_UNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm:
+			priorities.push_back(VK_FORMAT_R8_SNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled:
+			priorities.push_back(VK_FORMAT_R8_USCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled:
+			priorities.push_back(VK_FORMAT_R8_SSCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R8_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R8_SINT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_16)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::unorm:
+			priorities.push_back(VK_FORMAT_R16_UNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm:
+			priorities.push_back(VK_FORMAT_R16_SNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled:
+			priorities.push_back(VK_FORMAT_R16_USCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled:
+			priorities.push_back(VK_FORMAT_R16_SSCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R16_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R16_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R16_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_32)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R32_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R32_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R32_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_64)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R64_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R64_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R64_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::special)
+	{
+		if (info->storageFormat == vtek::ImagePixelStorageFormat::unorm_pack16)
+		{
+			priorities.push_back(VK_FORMAT_R12X4_UNORM_PACK16);
+			priorities.push_back(VK_FORMAT_R10X6_UNORM_PACK16);
+		}
+	}
 }
 
 /* implementation */
-VkFormat vtek::get_format_srgb(
+VkFormat vtek::get_format_color(
 	const vtek::ImageFormatInfo* info, VkPhysicalDevice physDev,
-	VkFormatFeatureFlags featureFlag)
+	VkFormatFeatureFlags featureFlags)
+{
+	VkFormat outFormat = VK_FORMAT_UNDEFINED;
+	std::vector<VkFormat> priorities;
+	uint32_t channels = static_cast<uint32_t>(info->channels);
+
+	if (channels == 1)
+	{
+		vtek::get_format_color_channel_1(info, priorities);
+	}
+
+	else if (channels == 2)
+	{
+
+	}
+
+	else if (channels == 3)
+	{
+
+	}
+
+	else if (channels == 4)
+	{
+
+	}
+
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+
+	bool find = find_supported_image_format(
+		physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, outFormat);
+	return find ? outFormat : VK_FORMAT_UNDEFINED;
+}
+
+
+VkFormat vtek::get_format_color_srgb(
+	const vtek::ImageFormatInfo* info, VkPhysicalDevice physDev,
+	VkFormatFeatureFlags featureFlags)
 {
 	VkFormat outFormat = VK_FORMAT_UNDEFINED;
 	std::vector<VkFormat> priorities;
@@ -98,20 +261,14 @@ VkFormat vtek::get_format_srgb(
 	if (channels == 1)
 	{
 		priorities.push_back(VK_FORMAT_R8_SRGB);
-		bool find = find_supported_image_format(
-			physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, outFormat);
-		return find ? outFormat : VK_FORMAT_UNDEFINED;
 	}
 
-	if (channels == 2)
+	else if (channels == 2)
 	{
 		priorities.push_back(VK_FORMAT_R8G8_SRGB);
-		bool find = find_supported_image_format(
-			physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, outFormat);
-		return find ? outFormat : VK_FORMAT_UNDEFINED;
 	}
 
-	if (channels == 3)
+	else if (channels == 3)
 	{
 		if (info->compression == vtek::ImageCompressionFormat::none)
 		{
@@ -128,6 +285,8 @@ VkFormat vtek::get_format_srgb(
 		{
 			// REVIEW: Just assuming BC7 > BC6H > BC5 > ...
 			// REVIEW: This is very naive, and should probably be tweaked!
+
+			// TODO: Are these REALLY with 3 channels???
 			priorities.push_back(VK_FORMAT_BC7_SRGB_BLOCK);
 			priorities.push_back(VK_FORMAT_BC3_SRGB_BLOCK);
 			priorities.push_back(VK_FORMAT_BC2_SRGB_BLOCK);
@@ -157,14 +316,13 @@ VkFormat vtek::get_format_srgb(
 			// VK_FORMAT_ASTC_10x10_SRGB_BLOCK = 180,
 			// VK_FORMAT_ASTC_12x10_SRGB_BLOCK = 182,
 			// VK_FORMAT_ASTC_12x12_SRGB_BLOCK = 184,
-		}
 
-		bool find = find_supported_image_format(
-			physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, outFormat);
-		return find ? outFormat : VK_FORMAT_UNDEFINED;
+			vtek_log_error("ASTC compression is not implemented!");
+			return VK_FORMAT_UNDEFINED;
+		}
 	}
 
-	if (channels == 4)
+	else if (channels == 4)
 	{
 		if (info->compression == vtek::ImageCompressionFormat::none)
 		{
@@ -195,41 +353,13 @@ VkFormat vtek::get_format_srgb(
 		else if (info->compression == vtek::ImageCompressionFormat::astc)
 		{
 			// REVIEW: Same as above
+
+			vtek_log_error("ASTC compression is not implemented!");
+			return VK_FORMAT_UNDEFINED;
 		}
-
-		bool find = find_supported_image_format(
-			physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, outFormat);
-		return find ? outFormat : VK_FORMAT_UNDEFINED;
 	}
 
-
-
-
-
-
-	switch ()
-	{
-	case 1:
-		break;
-
-	case 2:
-		
-		break;
-
-	case 3:
-		priorities.push_back();
-
-	case 4:
-		priorities.push_back();
-
-	default:
-		priorities.push_back();
-		priorities.push_back();
-		priorities.push_back();
-		priorities.push_back();
-		priorities.push_back();
-
-		return VK_FORMAT_UNDEFINED;
-	}
-
+	bool find = find_supported_image_format(
+		physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, outFormat);
+	return find ? outFormat : VK_FORMAT_UNDEFINED;
 }
