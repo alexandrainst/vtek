@@ -93,7 +93,7 @@ namespace vtek
 
 
 /* internal helper functions */
-static void vtek::get_format_color_channel_1(
+static void get_format_color_channel_1(
 	const vtek::ImageFormatInfo* info, std::vector<VkFormat>& priorities)
 {
 	if (info->channelSize == vtek::ImageChannelSize::channel_8)
@@ -206,7 +206,7 @@ VkFormat vtek::get_format_color(
 
 	if (channels == 1)
 	{
-		vtek::get_format_color_channel_1(info, priorities);
+		get_format_color_channel_1(info, priorities);
 	}
 
 	else if (channels == 2)
@@ -224,25 +224,25 @@ VkFormat vtek::get_format_color(
 
 	}
 
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
+	// priorities.push_back();
 
 	bool find = find_supported_image_format(
 		physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, outFormat);

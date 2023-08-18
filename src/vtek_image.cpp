@@ -2,9 +2,9 @@
 #include "vtek_image.hpp"
 
 #include "imgutils/vtek_image_load.hpp"
+#include "imgutils/vtek_image_formats.hpp"
 #include "impl/vtek_queue_struct.hpp"
 #include "impl/vtek_vma_helpers.hpp"
-#include "impl/vtek_vulkan_helpers.hpp"
 #include "vtek_device.hpp"
 #include "vtek_fileio.hpp"
 #include "vtek_logging.hpp"
@@ -16,44 +16,6 @@ using IFType = vtek::ImageFileType;
 
 
 /* helper functions */
-static void get_format_channel_1(bool sRGB)
-{
-	VK_FORMAT_R4G4B4A4_UNORM_PACK16,
-		VK_FORMAT_B4G4R4A4_UNORM_PACK16
-
-		VkPhysicalDevice physDev = 
-
-		bool res = vtek::find_supported_image_format(
-			VkPhysicalDevice physicalDevice,
-			std::vector<VkFormat> prioritizedCandidates,
-			VkImageTiling tiling, VkFormatFeatureFlags features,
-			VkFormat* outFormat)
-}
-
-static VkFormat get_image_format(
-	bool sRGB, IPSFmt pixelFormat, uint32_t channels)
-{
-	vtek_log_debug("vtek_image.cpp: get_image_format(): Not implemented!");
-	return VK_FORMAT_UNDEFINED;
-
-	switch (pixelFormat)
-	{
-	case IPSFmt::unorm:
-	case IPSFmt::snorm:
-	case IPSFmt::uint8:
-	case IPSFmt::sint8:
-	case IPSFmt::float16:
-	case IPSFmt::float32:
-	case IPSFmt::pack_unorm16:
-	case IPSFmt::pack_float16:
-	case IPSFmt::pack_float32:
-	default:
-		vtek_log_error(
-			"vtek_image.cpp: get_image_format(): Unrecognized pixelFormat enum!");
-		vtek_log_warn("Will default to ImagePixelStorageFormat::unorm.");
-	}
-}
-
 static VkImageAspectFlags get_image_aspect_flags(
 	vtek::EnumBitmask<IAFlag> aspectFlags)
 {
@@ -276,7 +238,8 @@ vtek::Image2D* vtek::image2d_load(
 	}
 	uint32_t channels = imageData.channels;
 
-	VKFormat format = get_image_format(pixelFormat, channels);
+	//VKFormat format = get_image_format(pixelFormat, channels);
+	VkFormat format= VK_FORMAT_UNDEFINED;
 	if (format == VK_FORMAT_UNDEFINED)
 	{
 		vtek_log_error("Failed find a suitable image format for loaded image!");
