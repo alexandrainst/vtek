@@ -1,7 +1,6 @@
 #include "vtek_vulkan.pch"
 #include "vtek_graphics_pipeline.hpp"
 
-#include "impl/vtek_vulkan_helpers.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_render_pass.hpp"

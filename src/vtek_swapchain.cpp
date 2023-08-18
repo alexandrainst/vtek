@@ -1,7 +1,7 @@
 #include "vtek_vulkan.pch"
 #include "vtek_swapchain.hpp"
 
-#include "impl/vtek_vulkan_helpers.hpp"
+#include "imgutils/vtek_image_formats.hpp"
 #include "vtek_command_buffer.hpp"
 #include "vtek_device.hpp"
 #include "vtek_image.hpp"
@@ -1108,7 +1108,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 	VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-	if (!findSupportedImageFormat(
+	if (!vtek::find_supported_image_format(
 		physDev, depthFormatCandidates, tiling, features,
 		&swapchain->depthImageFormat))
 	{
@@ -1296,8 +1296,9 @@ bool vtek::swapchain_recreate(
 	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 	VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-	if (!findSupportedImageFormat(
-		    physDev, depthFormatCandidates, tiling, features, &swapchain->depthImageFormat))
+	if (!vtek::find_supported_image_format(
+		    physDev, depthFormatCandidates, tiling, features,
+		    &swapchain->depthImageFormat))
 	{
 		vtek_log_error("Failed to find supported depth image format!");
 		return false;

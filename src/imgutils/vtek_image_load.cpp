@@ -114,7 +114,7 @@ bool vtek::image_load(
 
 	std::fclose(fd);
 
-	if (outData->data == channels <= 0) // TODO: Proper check!
+	if (outData->data == nullptr || channels <= 0) // TODO: Proper check!
 	{
 		vtek_log_error("Failed to read image file: {}", stbi_failure_reason());
 		return false;

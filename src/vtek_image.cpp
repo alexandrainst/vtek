@@ -4,6 +4,7 @@
 #include "imgutils/vtek_image_load.hpp"
 #include "impl/vtek_queue_struct.hpp"
 #include "impl/vtek_vma_helpers.hpp"
+#include "impl/vtek_vulkan_helpers.hpp"
 #include "vtek_device.hpp"
 #include "vtek_fileio.hpp"
 #include "vtek_logging.hpp"
@@ -15,6 +16,19 @@ using IFType = vtek::ImageFileType;
 
 
 /* helper functions */
+static void get_format_channel_1(bool sRGB)
+{
+	VK_FORMAT_R4G4B4A4_UNORM_PACK16,
+		VK_FORMAT_B4G4R4A4_UNORM_PACK16
+
+		VkPhysicalDevice physDev = 
+
+		bool res = vtek::find_supported_image_format(
+			VkPhysicalDevice physicalDevice,
+			std::vector<VkFormat> prioritizedCandidates,
+			VkImageTiling tiling, VkFormatFeatureFlags features,
+			VkFormat* outFormat)
+}
 
 static VkFormat get_image_format(
 	bool sRGB, IPSFmt pixelFormat, uint32_t channels)

@@ -152,13 +152,13 @@ set (src
     include/vtek/vtek_vulkan_types.hpp
     include/vtek/vtek_vulkan_version.hpp
 
+    src/imgutils/vtek_image_formats.hpp
     src/imgutils/vtek_image_load.hpp
     src/impl/vtek_command_buffer_struct.hpp
     src/impl/vtek_glfw_backend.hpp
     src/impl/vtek_init.hpp
     src/impl/vtek_queue_struct.hpp
     src/impl/vtek_vma_helpers.hpp
-    src/impl/vtek_vulkan_helpers.hpp
     src/glsl/vtek_glsl_shader_utils.hpp
 
     src/imgutils/vtek_image_load.cpp

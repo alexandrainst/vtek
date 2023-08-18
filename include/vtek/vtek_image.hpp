@@ -25,16 +25,40 @@ namespace vtek
 
 	enum class ImagePixelStorageFormat
 	{
-		unorm,
-		snorm,
-		uint8,
-		sint8,
-		float16,
-		float32,
-		pack_unorm16,
-		pack_unorm32,
-		pack_float16,
-		pack_float32
+		unorm, // float in range [0, 1]
+		snorm, // float in range [-1, 1]
+
+		uscaled, // unsigned int converted to float
+		sscaled, // (signed) int converted to float
+
+		uint, // unsigned int
+		sint, // signed int
+
+		ufloat, // unsigned float
+		sfloat, // signed float
+
+		float16, // half-precision float per-component
+		float32, // 32-bit float per-component
+
+		unorm_pack8,
+		unorm_pack16,
+		unorm_pack32,
+		snorm_pack32,
+
+
+		// pack_unorm16,
+		// pack_unorm32,
+		// pack_uscaled32,
+		// pack_float16,
+		// pack_float32
+	};
+
+	enum class ImageCompressionFormat
+	{
+		none, // no compression applied
+		bc,   // block compression
+		etc2, // ETC2 alpha compression
+		astc  // Adaptive Scalable Texture Compression (LDR profile)
 	};
 
 	enum class ImageUsageFlag : uint32_t
@@ -113,6 +137,42 @@ namespace vtek
 		exclusive, concurrent
 	};
 
+	// Specify how vtek should search for a suitable Vulkan image format.
+	// The restrictions are prioritized as such:
+	// 1. sRGB
+	// 2. Number of channels
+	// 3. Storage format
+	// 4: Swizzled channels
+	// 5. Compression
+	// TODO: Fill out here!
+	// NOTE: The more restrictions placed, the lower possibility of a match!
+	struct ImageFormatInfo
+	{
+		ImageChannels channels {ImageChannels::channels_4};
+		bool imageStorageSRGB {false};
+		bool swizzleBGR {false}; // TODO: When, why, and how?
+		ImagePixelStorageFormat storageFormat {ImagePixelStorageFormat::unorm};
+		ImageCompressionFormat compression {ImageCompressionFormat::none};
+	};
+
+
+	// ========================= //
+	// === Utility functions === //
+	// ========================= //
+
+	// It can be useful to check if an image format is supported by the GPU
+	// before trying to create images from it. This function comes in two versions:
+	// - directly query for VkFormat support (optimal tiling check included!)
+	// - find a VkImage which matches specified `ImageFormatInfo` struct
+	bool is_image_format_supported(VkFormat format, const Device* device);
+	bool is_image_format_supported(
+		const ImageFormatInfo* formatInfo, const Device* device);
+
+
+	// ========================= //
+	// === Image2D interface === //
+	// ========================= //
+
 	struct Image2DViewInfo
 	{
 		uint32_t baseMipLevel {0}; // aka. mip-lod-bias
@@ -138,12 +198,9 @@ namespace vtek
 
 		// NOTE: Format specification: either directly choose a `VkFormat` type,
 		// or let vtek figure out a supported format which most closely matches
-		// the provided parameters.
+		// the parameters provided in `formatInfo`.
 		VkFormat format {VK_FORMAT_UNDEFINED};
-		ImageChannels channels {ImageChannels::channels_4};
-		ImagePixelStorageFormat pixelStorageFormat {ImagePixelStorageFormat::unorm};
-		bool imageStorageSRGB {false};
-		bool swizzleBGR {false}; // TODO: When, why, and how?
+		ImageFormatInfo formatInfo {};
 
 		// Specify how the image should be used. At least one flag must be set.
 		EnumBitmask<ImageUsageFlag> usageFlags {0U};
