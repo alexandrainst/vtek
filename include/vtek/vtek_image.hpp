@@ -69,7 +69,7 @@ namespace vtek
 	{
 		none, // no compression applied
 		bc,   // block compression
-		etc2, // ETC2 alpha compression
+		eac, // ETC2 alpha compression
 		astc  // Adaptive Scalable Texture Compression (LDR profile)
 	};
 

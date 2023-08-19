@@ -225,40 +225,55 @@ vtek::Image2D* vtek::image2d_load(
 		return nullptr;
 	}
 
+	vtek::ImageFormatInfo formatInfo{};
+	formatInfo.channels = static_cast<vtek::ImageChannels>(imageData.channels);
+	formatInfo.imageStorageSRGB = info->loadSRGB;
+	formatInfo.swizzleBGR = false; // TODO: Things with stb ?
+	formatInfo.compression = vtek::ImageCompressionFormat::none;
+
 	// Retrieve format information
-	IPSFmt pixelFormat;
-	if (imageData.fdata != nullptr) {pixelFormat = IPSFmt::float32; } // TODO: ?
-	else if (imageData.data16 != nullptr) { pixelFormat = IPSFmt::float16; } // TODO: ?
-	else if (imageData.data != nullptr) { pixelFormat = IPSFmt::uint8; } // TODO: ?
+	if (imageData.data != nullptr) // data is 8-bit
+	{
+		formatInfo.storageFormat = IPSFmt::unorm;
+		formatInfo.channelSize = vtek::ImageChannelSize::channel_8;
+	}
+	else if (imageData.data16 != nullptr)
+	{
+		formatInfo.storageFormat = IPSFmt::unorm;
+		formatInfo.channelSize = vtek::ImageChannelSize::channel_16;
+	}
+	else if (imageData.fdata != nullptr)
+	{
+		formatInfo.storageFormat = IPSFmt::float32;
+		formatInfo.channelSize = vtek::ImageChannelSize::channel_32;
+	}
 	else
 	{
 		vtek_log_error("vtek_image.cpp: Image data was NULL!");
-		vtek::image_load_data_destroy(imageData);
+		vtek::image_load_data_destroy(&imageData);
 		return nullptr;
 	}
-	uint32_t channels = imageData.channels;
 
-	//VKFormat format = get_image_format(pixelFormat, channels);
-	VkFormat format= VK_FORMAT_UNDEFINED;
+	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
+	EnumBitmask<vtek::FormatFeatureFlag> featureFlags
+		= vtek::FormatFeatureFlag::sampledImage
+		| vtek::FormatFeatureFlag::sampledImageFilterLinear;
+	// TODO: How if we later create mip-maps by linear blitting?
+	// | VK_FORMAT_FEATURE_BLIT_DST_BIT; // ?
+
+	VkFormat format = vtek::get_format_color(&formatInfo, physDev, featureFlags);
 	if (format == VK_FORMAT_UNDEFINED)
 	{
 		vtek_log_error("Failed find a suitable image format for loaded image!");
-		vtek::image_load_data_destroy(imageData);
+		vtek::image_load_data_destroy(&imageData);
 		return nullptr;
 	}
 
-	if (imageData.data != nullptr) // data is 8-bit
-	{
-
-	}
-
-
-
-
 	vtek_log_debug(
-		"ImageLoadInfo: w={}, h={}, channels={}, floatingPoint={}",
+		"ImageLoadInfo: w={}, h={}, channels={}, data={}, data16={}, dataf={}",
 		imageData.width, imageData.height,
-		imageData.channels, imageData.floatingPoint);
+		imageData.channels, imageData.data != nullptr,
+		imageData.data16 != nullptr, imageData.fdata != nullptr);
 
 	// 2) Create Vulkan handle
 	vtek::Image2DInfo createInfo{};
@@ -270,10 +285,7 @@ vtek::Image2D* vtek::image2d_load(
 	createInfo.requireDedicatedAllocation = false;
 	createInfo.extent = { imageData.width, imageData.height };
 	createInfo.format = VK_FORMAT_UNDEFINED; // TODO: Specify in loader!
-	createInfo.channels = channels;
-	createInfo.pixelStorageFormat = vtek::ImagePixelStorageFormat::unorm;
-	createInfo.imageStorageSRGB = info->loadSRGB;
-	createInfo.swizzleBGR = false; // TODO: Is this a good assumption?
+	createInfo.formatInfo = formatInfo;
 	createInfo.usageFlags
 		= IUFlag::transfer_dst | IUFlag::sampled | IUFlag::color_attachment;
 	createInfo.initialLayout = vtek::ImageInitialLayout::preinitialized;
@@ -301,6 +313,9 @@ vtek::Image2D* vtek::image2d_load(
 	vtek::Image2D* image = vtek::image2d_create(&createInfo, device);
 	if (image == nullptr)
 	{
+		vtek_log_error(
+			"Failed to create 2D-image -- cannot proceed with image loading!");
+		vtek::image_load_data_destroy(&imageData);
 		return nullptr;
 	}
 

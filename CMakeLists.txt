@@ -161,6 +161,7 @@ set (src
     src/impl/vtek_vma_helpers.hpp
     src/glsl/vtek_glsl_shader_utils.hpp
 
+    src/imgutils/vtek_image_formats.cpp
     src/imgutils/vtek_image_load.cpp
     src/glsl/vtek_glsl_shader_utils.cpp
     src/vtek_allocator.cpp
