@@ -1,7 +1,9 @@
 #include "vtek_vulkan.pch"
 #include "vtek_image_formats.hpp"
 
+#include "vtek_format_support.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_physical_device.hpp"
 
 
 /* helper functions */
@@ -20,8 +22,10 @@ static void get_format_color_srgb(
 	}
 	else if (channels == 3)
 	{
+		vtek_log_debug("Load sRGB, 3 channels");
 		if (info->compression == vtek::ImageCompressionFormat::none)
 		{
+			vtek_log_debug("No compression");
 			if (info->swizzleBGR)
 			{
 				priorities.push_back(VK_FORMAT_B8G8R8_SRGB);
@@ -336,6 +340,25 @@ static void get_format_color_channel_2(
 
 
 
+/* initialization */
+vtek::FormatSupport::FormatSupport(const vtek::Device* device)
+{
+	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
+	std::vector<VkFormat> priorities;
+	vtek::EnumBitmask<vtek::FormatFeatureFlag> featureFlags
+		= vtek::FormatFeatureFlag::sampledImage
+		| vtek::FormatFeatureFlag::sampledImageFilterLinear;
+	VkFormat outFormat; // ignored here
+
+	priorities.push_back();
+	if (vtek::find_supported_image_format(
+		    hysDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, &outFormat))
+	{
+		mSRGB |= 0x01;
+	}
+	priorities.clear();
+}
+
 
 
 /* interface */
@@ -352,14 +375,20 @@ bool vtek::find_supported_image_format(
 		if (tiling == VK_IMAGE_TILING_LINEAR &&
 		    (properties.linearTilingFeatures & features) == features)
 		{
+			vtek_log_debug("LINEAR and features");
 			*outFormat = format;
 			return true;
 		}
 		else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
 		         (properties.optimalTilingFeatures & features) == features)
 		{
+			vtek_log_debug("OPTIMAL and features");
 			*outFormat = format;
 			return true;
+		}
+		else
+		{
+			vtek_log_debug("else");
 		}
 	}
 
@@ -396,6 +425,8 @@ VkFormat vtek::get_format_color(
 	{
 		vtek_log_debug("get_format_color 4 channels: Not implemented!");
 	}
+
+	vtek_log_debug("Found {} possible format matches", priorities.size());
 
 	bool find = find_supported_image_format(
 		physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, &outFormat);

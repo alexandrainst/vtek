@@ -225,6 +225,12 @@ vtek::Image2D* vtek::image2d_load(
 		return nullptr;
 	}
 
+	vtek_log_debug(
+		"ImageLoadInfo: w={}, h={}, channels={}, data={}, data16={}, dataf={}",
+		imageData.width, imageData.height,
+		imageData.channels, imageData.data != nullptr,
+		imageData.data16 != nullptr, imageData.fdata != nullptr);
+
 	vtek::ImageFormatInfo formatInfo{};
 	formatInfo.channels = static_cast<vtek::ImageChannels>(imageData.channels);
 	formatInfo.imageStorageSRGB = info->loadSRGB;
@@ -268,12 +274,6 @@ vtek::Image2D* vtek::image2d_load(
 		vtek::image_load_data_destroy(&imageData);
 		return nullptr;
 	}
-
-	vtek_log_debug(
-		"ImageLoadInfo: w={}, h={}, channels={}, data={}, data16={}, dataf={}",
-		imageData.width, imageData.height,
-		imageData.channels, imageData.data != nullptr,
-		imageData.data16 != nullptr, imageData.fdata != nullptr);
 
 	// 2) Create Vulkan handle
 	vtek::Image2DInfo createInfo{};

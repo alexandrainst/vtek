@@ -1,8 +1,6 @@
 #include "vtek_main.hpp"
 
 #include "impl/vtek_glfw_backend.hpp"
-// TODO: No longer use sAllocator ?
-//#include "impl/vtek_host_allocator.hpp"
 #include "impl/vtek_init.hpp"
 #include "vtek_logging.hpp"
 

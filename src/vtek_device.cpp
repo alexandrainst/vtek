@@ -798,6 +798,12 @@ vtek::Device* vtek::device_create(
 		return nullptr;
 	}
 
+	// Initial query for texture format support
+	//vtek::setup_format_support(physicalDevice);
+	// TODO: Consider instead creating a format cache!
+	// REVIEW: But oh, the combinatorial nightmare!
+	// NEXT: How about we just query format support BEFORE loading an image!!?!
+
 	// Log creation success and Vulkan version
 	auto vs = device->vulkanVersion;
 	vtek_log_info("Created Device with Vulkan v{}.{}.{}",

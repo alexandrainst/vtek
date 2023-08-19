@@ -3,12 +3,17 @@
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
+#include "impl/vtek_init.hpp"
 #include "vtek_image.hpp"
 #include "vtek_types.hpp"
 
 
 namespace vtek
 {
+	// ====================== //
+	// === Format queries === //
+	// ====================== //
+
 	enum class FormatFeatureFlag : uint32_t
 	{
 		sampledImage             = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
