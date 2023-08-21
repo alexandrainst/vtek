@@ -215,6 +215,14 @@ vtek::Image2D* vtek::image2d_load(
 	std::string_view filename, vtek::Device* device)
 {
 	vtek::ImageLoadInfo loadInfo{};
+	// TODO: Determine correct number of channels!
+	loadInfo.desiredChannels = 4;
+	if (info->loadSRGB)
+	{
+
+	}
+
+
 	vtek::ImageLoadData imageData{};
 
 	// 1) Load image from file
@@ -230,6 +238,16 @@ vtek::Image2D* vtek::image2d_load(
 		imageData.width, imageData.height,
 		imageData.channels, imageData.data != nullptr,
 		imageData.data16 != nullptr, imageData.fdata != nullptr);
+
+	if (imageData.data == nullptr && info->loadSRGB)
+	{
+		vtek_log_error(
+			"sRGB is not supported for {} -- Cannot load image \"{}\".",
+			"image which does not contain 8-bit data!",
+			filename);
+		vtek::image_load_data_destroy(&imageData);
+		return nullptr;
+	}
 
 	vtek::ImageFormatInfo formatInfo{};
 	formatInfo.channels = static_cast<vtek::ImageChannels>(imageData.channels);
@@ -284,10 +302,9 @@ vtek::Image2D* vtek::image2d_load(
 	// NOTE: For simplicity we just say no always!
 	createInfo.requireDedicatedAllocation = false;
 	createInfo.extent = { imageData.width, imageData.height };
-	createInfo.format = VK_FORMAT_UNDEFINED; // TODO: Specify in loader!
+	createInfo.format = format;
 	createInfo.formatInfo = formatInfo;
-	createInfo.usageFlags
-		= IUFlag::transfer_dst | IUFlag::sampled | IUFlag::color_attachment;
+	createInfo.usageFlags = IUFlag::transfer_dst | IUFlag::sampled;
 	createInfo.initialLayout = vtek::ImageInitialLayout::preinitialized;
 	createInfo.useMipmaps = info->createMipmaps;
 	createInfo.multisampling = vtek::MultisampleType::none;

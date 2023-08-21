@@ -57,7 +57,6 @@ bool vtek::image_load(
 	}
 
 	vtek::ImageFileType filetype = vtek::get_image_type(filename);
-	int desiredChannels = 0;
 
 	switch (filetype)
 	{
@@ -71,7 +70,7 @@ bool vtek::image_load(
 		return false;
 
 	case IFType::jpg: break;
-	case IFType::png: desiredChannels = STBI_rgb_alpha; break;
+	case IFType::png: break;
 	case IFType::tga: break;
 	case IFType::bmp: break;
 	case IFType::hdr: break;
@@ -82,6 +81,9 @@ bool vtek::image_load(
 
 	const char* const cpath = path.c_str();
 	int width, height, channels;
+	int desiredChannels = (info->desiredChannels < 0) ? 0 : info->desiredChannels;
+	desiredChannels = (desiredChannels > 4) ? 4 : desiredChannels;
+	bool loaded = false;
 
 	// Use a FILE* instead of opening the file several times
 	std::FILE* fd = std::fopen(cpath, "r");
@@ -94,33 +96,35 @@ bool vtek::image_load(
 	// Conditionally load floating-point data
 	if (stbi_is_hdr_from_file(fd))
 	{
+		vtek_log_debug("Load float image data");
 		outData->fdata = stbi_loadf_from_file(
 			fd, &width, &height, &channels, 0);
+		loaded = outData->fdata != nullptr;
 	}
 	else if (stbi_is_16_bit_from_file(fd))
 	{
-		// outData->data16 = stbi_load_from_file_16(
-		// 	fd, &width, &height, &channels, 0);
-		vtek_log_debug(
-			"vtek_image_load.cpp: 16-bit image loading is not implemented!");
-		std::fclose(fd);
-		return false;
+		vtek_log_debug("Load 16-bit image data");
+		outData->data16 = stbi_load_from_file_16(
+			fd, &width, &height, &channels, 0);
+		loaded = outData->data16 != nullptr;
 	}
 	else
 	{
+		vtek_log_debug("Load 8-bit image data");
 		outData->data = stbi_load_from_file(
-			fd, &width, &height, &channels, desiredChannels);
+			fd, &width, &height, &channels, info->desiredChannels);
+		loaded = outData->data != nullptr;
 	}
 
 	std::fclose(fd);
 
-	if (outData->data == nullptr || channels <= 0) // TODO: Proper check!
+	if (!loaded)
 	{
 		vtek_log_error("Failed to read image file: {}", stbi_failure_reason());
 		return false;
 	}
 
-	// TODO: Probably assert that width, height are non-negative!
+	// We shouldn't trust the int data type
 	if (width <= 0 || height <= 0 || channels <= 0)
 	{
 		vtek_log_fatal(
@@ -131,7 +135,11 @@ bool vtek::image_load(
 	}
 	outData->width = static_cast<uint32_t>(width);
 	outData->height = static_cast<uint32_t>(height);
-	outData->channels = static_cast<uint32_t>(channels);
+	// NOTE: When providing desired # channels to stbi, this number is still not
+	// returned from the load functions. And if this provided number is 0, we
+	// should ignore its value and return the ACTUAL number of channels in the image.
+	outData->channels = static_cast<uint32_t>(
+		(desiredChannels == 0) ? channels : desiredChannels);
 
 	return true;
 }

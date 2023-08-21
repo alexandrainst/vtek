@@ -1,9 +1,9 @@
 #include "vtek_vulkan.pch"
 #include "vtek_image_formats.hpp"
 
+#include "vtek_device.hpp"
 #include "vtek_format_support.hpp"
 #include "vtek_logging.hpp"
-#include "vtek_physical_device.hpp"
 
 
 /* helper functions */
@@ -343,16 +343,16 @@ static void get_format_color_channel_2(
 /* initialization */
 vtek::FormatSupport::FormatSupport(const vtek::Device* device)
 {
-	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
+	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
 	std::vector<VkFormat> priorities;
 	vtek::EnumBitmask<vtek::FormatFeatureFlag> featureFlags
 		= vtek::FormatFeatureFlag::sampledImage
 		| vtek::FormatFeatureFlag::sampledImageFilterLinear;
 	VkFormat outFormat; // ignored here
 
-	priorities.push_back();
+	priorities.push_back(VK_FORMAT_R8_SRGB);
 	if (vtek::find_supported_image_format(
-		    hysDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, &outFormat))
+		    physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, &outFormat))
 	{
 		mSRGB |= 0x01;
 	}

@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
-#include "impl/vtek_init.hpp"
 #include "vtek_image.hpp"
 #include "vtek_types.hpp"
 
