@@ -63,4 +63,11 @@ namespace vtek
 	VkFormat get_format_color(
 		const ImageFormatInfo* info, VkPhysicalDevice physDev,
 		EnumBitmask<FormatFeatureFlag> featureFlags);
+
+	enum class FormatDepthStencilTest
+	{
+		none, depth, stencil, depth_and_stencil
+	};
+
+	FormatDepthStencilTest get_format_depth_stencil_test(VkFormat format);
 }

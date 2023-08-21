@@ -31,6 +31,7 @@
 #include "vtek_camera.hpp"
 #include "vtek_command_buffer.hpp"
 #include "vtek_command_pool.hpp"
+#include "vtek_commands.hpp"
 #include "vtek_descriptor_pool.hpp"
 #include "vtek_descriptor_set.hpp"
 #include "vtek_descriptor_set_layout.hpp"

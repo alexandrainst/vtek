@@ -8,6 +8,7 @@
 #include "vtek_buffer.hpp"
 #include "vtek_command_buffer.hpp"
 #include "vtek_command_scheduler.hpp"
+#include "vtek_commands.hpp"
 #include "vtek_device.hpp"
 #include "vtek_fileio.hpp"
 #include "vtek_logging.hpp"
@@ -16,6 +17,7 @@ using IPSFmt = vtek::ImagePixelStorageFormat;
 using IAFlag = vtek::ImageAspectFlag;
 using IUFlag = vtek::ImageUsageFlag;
 using IFType = vtek::ImageFileType;
+using ILayout = vtek::ImageLayout;
 
 
 /* helper functions */
@@ -108,6 +110,49 @@ static VkImageAspectFlags get_image_aspect_flags(
 	return flags;
 }
 
+static const char* get_image_layout_str(vtek::ImageLayout layout)
+{
+	switch (layout)
+	{
+	case ILayout::undefined:
+		return "undefined";
+	case ILayout::general:
+		return "general";
+	case ILayout::color_attachment_optimal:
+		return "color_attachment_optimal";
+	case ILayout::depth_stencil_attachment_optimal:
+		return "depth_stencil_attachment_optimal";
+	case ILayout::depth_stencil_readonly_optimal:
+		return "depth_stencil_readonly_optimal";
+	case ILayout::shader_readonly_optimal:
+		return "shader_readonly_optimal";
+	case ILayout::transfer_src_optimal:
+		return "transfer_src_optimal";
+	case ILayout::transfer_dst_optimal:
+		return "transfer_dst_optimal";
+	case ILayout::preinitialized:
+		return "preinitialized";
+	case ILayout::depth_readonly_stencil_attachment_optimal:
+		return "depth_readonly_stencil_attachment_optimal";
+	case ILayout::depth_attachment_stencil_readonly_optimal:
+		return "depth_attachment_stencil_readonly_optimal";
+	case ILayout::depth_attachment_optimal:
+		return "depth_attachment_optimal";
+	case ILayout::depth_readonly_optimal:
+		return "depth_readonly_optimal";
+	case ILayout::stencil_attachment_optimal:
+		return "stencil_attachment_optimal";
+	case ILayout::stencil_readonly_optimal:
+		return "stencil_readonly_optimal";
+	case ILayout::readonly_optimal:
+		return "readonly_optimal";
+	case ILayout::attachment_optimal:
+		return "attachment_optimal";
+	default:
+		return "<default: missing switch-case>";
+	}
+}
+
 static VkImageView create_image2d_view(
 	vtek::Image2D* image, const vtek::Image2DViewInfo* viewInfo,
 	vtek::Device* device)
@@ -154,6 +199,70 @@ static VkImageView create_image2d_view(
 	}
 
 	return view;
+}
+
+
+
+/* utility functions */
+VkImageLayout vtek::get_image_layout(vtek::ImageLayout layout)
+{
+	switch (layout)
+	{
+		// Standard values, provided by Vulkan >= 1.0
+	case ILayout::undefined:
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	case ILayout::general:
+		return VK_IMAGE_LAYOUT_GENERAL;
+	case ILayout::color_attachment_optimal:
+		return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	case ILayout::depth_stencil_attachment_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	case ILayout::depth_stencil_readonly_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	case ILayout::shader_readonly_optimal:
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	case ILayout::transfer_src_optimal:
+		return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	case ILayout::transfer_dst_optimal:
+		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	case ILayout::preinitialized:
+		return VK_IMAGE_LAYOUT_PREINITIALIZED;
+
+		// Provided by Vulkan >= 1.1
+#if defined(VK_API_VERSION_1_1)
+	case ILayout::depth_readonly_stencil_attachment_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+	case ILayout::depth_attachment_stencil_readonly_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
+#endif
+
+		// Provided by Vulkan >= 1.2
+#if defined(VK_API_VERSION_1_2)
+	case ILayout::depth_attachment_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+	case ILayout::depth_readonly_optimal:
+		return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+	case ILayout::stencil_attachment_optimal:
+		return VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+	case ILayout::stencil_readonly_optimal:
+		return VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL;
+#endif
+
+		// Provided by Vulkan >= 1.3
+#if defined(VK_API_VERSION_1_3)
+	case ILayout::readonly_optimal:
+		return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+	case ILayout::attachment_optimal:
+		return VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+#endif
+
+	default:
+		vtek_log_error(
+			"get_image_layout(): Unrecognized enum: {} --",
+			get_image_layout_str(layout),
+			"Check if the installed Vulkan version supports this flag!");
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
 }
 
 
@@ -313,7 +422,7 @@ vtek::Image2D* vtek::image2d_load(
 	createInfo.format = format;
 	createInfo.formatInfo = formatInfo;
 	createInfo.usageFlags = IUFlag::transfer_dst | IUFlag::sampled;
-	createInfo.initialLayout = vtek::ImageInitialLayout::preinitialized;
+	createInfo.initialLayout = vtek::ImageInitialLayout::undefined;
 	createInfo.useMipmaps = info->createMipmaps;
 	createInfo.multisampling = vtek::MultisampleType::none;
 
@@ -388,9 +497,7 @@ vtek::Image2D* vtek::image2d_load(
 		return nullptr;
 	}
 
-	// 5) Copy image data to GPU memory
-
-	// TODO: Extract function when logic is in place
+	// 5) Create single-use command buffer
 	auto commandBuffer =
 		vtek::command_scheduler_begin_transfer(scheduler, device);
 	if (commandBuffer == nullptr)
@@ -404,6 +511,21 @@ vtek::Image2D* vtek::image2d_load(
 		return nullptr;
 	}
 
+	// 6) Create Initial layout transition
+	vtek::ImageLayoutTransitionCmdInfo initialBarrier{};
+	initialBarrier.image = image;
+	initialBarrier.oldLayout = vtek::ImageLayout::undefined;
+	initialBarrier.newLayout = vtek::ImageLayout::transfer_dst_optimal;
+	initialBarrier.srcStage = vtek::PipelineStage::top_of_pipe;
+	initialBarrier.dstStage = vtek::PipelineStage::transfer;
+	initialBarrier.srcQueue = nullptr; // TODO: Valid?
+	initialBarrier.dstQueue = transferQueue;
+	initialBarrier.srcAccessMask = 0;
+	initialBarrier.dstAccessMask = vtek::AccessMask::transfer_write;
+
+	vtek::cmd_image_layout_transition(commandBuffer, &initialBarrier);
+
+	// 7) Copy image data to GPU memory
 	VkBufferImageCopy copyRegion{};
 	copyRegion.bufferOffset = 0;
 	copyRegion.bufferRowLength = 0;
@@ -418,51 +540,27 @@ vtek::Image2D* vtek::image2d_load(
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 	VkBuffer stgBuf = vtek::buffer_get_handle(stagingBuffer);
 
-	// NOTE: dstImageLayout parameter was VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 	vkCmdCopyBufferToImage(
-		cmdBuf, stgBuf, image->vulkanHandle, VK_IMAGE_LAYOUT_PREINITIALIZED,
+		cmdBuf, stgBuf, image->vulkanHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		1, &copyRegion);
 
 	// TODO: Insert semaphore here?
 
+	// 7) Final layout transition
+	vtek::ImageLayoutTransitionCmdInfo finalBarrier{};
+	finalBarrier.image = image;
+	finalBarrier.oldLayout = vtek::ImageLayout::transfer_dst_optimal;
+	finalBarrier.newLayout = vtek::ImageLayout::shader_readonly_optimal;
+	finalBarrier.srcStage = vtek::PipelineStage::transfer;
+	finalBarrier.dstStage = vtek::PipelineStage::fragment_shader;
+	finalBarrier.srcQueue = transferQueue;
+	finalBarrier.dstQueue = graphicsQueue;
+	finalBarrier.srcAccessMask = vtek::AccessMask::transfer_write;
+	finalBarrier.dstAccessMask = vtek::AccessMask::shader_read;
 
-	// 6) Final layout transition
-	// TODO: It would be nice to have extract function from this!
-	// TODO: This would require adding a few members to the image struct!
+	vtek::cmd_image_layout_transition(commandBuffer, &finalBarrier);
 
-	VkImageMemoryBarrier barrier{};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.pNext = nullptr;
-	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-	barrier.image = image->vulkanHandle;
-	barrier.subresourceRange.baseMipLevel = 0; // TODO: Customize.
-	barrier.subresourceRange.levelCount = 1; // TODO: mip-maps?
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-	// It is possible to use `VK_IMAGE_LAYOUT_UNDEFINED` as the old layout
-	// if we don't care about the existing contents of the image.
-	// NOTE: oldLayout was VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-	barrier.oldLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	// If we are using the barrier to transfer queue family ownership, then
-	// these two fields should be indiced of the queue families. They must
-	// be set to `VK_QUEUE_FAMILY_IGNORED` if we don't want to do this (not
-	// the default value!).
-	// TODO: Is this right?
-	vtek_log_debug(
-		"Note the transfer of queue ownership on image memory barrier for final layout transition!");
-	barrier.srcQueueFamilyIndex = transferQueue->familyIndex;
-	barrier.dstQueueFamilyIndex = graphicsQueue->familyIndex;
-
-	vkCmdPipelineBarrier(
-		cmdBuf, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-		0, 0, nullptr, 0, nullptr, 1, &barrier);
-
+	// 8) End recording and submit command buffer
 	if (!vtek::command_scheduler_submit_transfer(scheduler, commandBuffer, device))
 	{
 		vtek_log_error(
@@ -489,4 +587,9 @@ VkImage vtek::image2d_get_handle(const vtek::Image2D* image)
 VkImageView vtek::image2d_get_view_handle(const vtek::Image2D* image)
 {
 	return image->viewHandle;
+}
+
+VkFormat vtek::image2d_get_format(const vtek::Image2D* image)
+{
+	return image->format;
 }

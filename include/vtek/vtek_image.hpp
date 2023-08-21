@@ -112,7 +112,11 @@ namespace vtek
 		// layout transition.
 		// NOTE: Pre-initialized is ONLY valid with linear tiling, and a manual
 		// layout transition into optimal tiling MUST be performed before the
-		// image may be read from.
+		// image may be read from. This severely limits the amount of supported
+		// image formats, since optimal tiling has way better support.
+		// NOTE: This implies the image to be located in HOST_VISIBLE memory,
+		// as only host mappings may modify the contents initially.
+		// NOTE: Hence, for most purposes this initial layout is not recommended.
 		preinitialized
 	};
 
@@ -180,6 +184,8 @@ namespace vtek
 	bool is_image_format_supported(VkFormat format, const Device* device);
 	bool is_image_format_supported(
 		const ImageFormatInfo* formatInfo, const Device* device);
+
+	VkImageLayout get_image_layout(ImageLayout layout);
 
 
 	// ========================= //
@@ -272,14 +278,5 @@ namespace vtek
 
 	VkImage image2d_get_handle(const Image2D* image);
 	VkImageView image2d_get_view_handle(const Image2D* image);
-
-
-	// ======================== //
-	// === Image operations === //
-	// ======================== //
-
-	// TODO: `image_transition_layout` ?
-	bool image_layout_transition(
-		Image2D* image, ImageLayout oldLayout, ImageLayout newLayout,
-		Device* device);
+	VkFormat image2d_get_format(const Image2D* image);
 }

@@ -432,3 +432,24 @@ VkFormat vtek::get_format_color(
 		physDev, priorities, VK_IMAGE_TILING_OPTIMAL, featureFlags, &outFormat);
 	return find ? outFormat : VK_FORMAT_UNDEFINED;
 }
+
+
+
+vtek::FormatDepthStencilTest vtek::get_format_depth_stencil_test(VkFormat format)
+{
+	switch (format)
+	{
+	case VK_FORMAT_D16_UNORM:
+	case VK_FORMAT_X8_D24_UNORM_PACK32:
+	case VK_FORMAT_D32_SFLOAT:
+		return vtek::FormatDepthStencilTest::depth;
+	case VK_FORMAT_S8_UINT:
+		return vtek::FormatDepthStencilTest::stencil;
+	case VK_FORMAT_D16_UNORM_S8_UINT:
+	case VK_FORMAT_D24_UNORM_S8_UINT:
+	case VK_FORMAT_D32_SFLOAT_S8_UINT:
+		return vtek::FormatDepthStencilTest::depth_and_stencil;
+	default:
+		return vtek::FormatDepthStencilTest::none;
+	}
+}
