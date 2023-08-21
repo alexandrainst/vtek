@@ -182,3 +182,9 @@ bool vtek::command_scheduler_submit_transfer(
 
 	return true;
 }
+
+vtek::Queue* vtek::command_scheduler_get_transfer_queue(
+	vtek::CommandScheduler* scheduler)
+{
+	return scheduler->transferQueue;
+}

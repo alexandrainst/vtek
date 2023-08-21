@@ -5,6 +5,9 @@
 #include "imgutils/vtek_image_formats.hpp"
 #include "impl/vtek_queue_struct.hpp"
 #include "impl/vtek_vma_helpers.hpp"
+#include "vtek_buffer.hpp"
+#include "vtek_command_buffer.hpp"
+#include "vtek_command_scheduler.hpp"
 #include "vtek_device.hpp"
 #include "vtek_fileio.hpp"
 #include "vtek_logging.hpp"
@@ -197,6 +200,8 @@ void vtek::image2d_destroy(vtek::Image2D* image)
 	if (image == nullptr) { return; }
 
 	vtek::allocator_image2d_destroy(image);
+	image->vulkanHandle = nullptr;
+	delete image;
 }
 
 vtek::Image2D* vtek::image2d_create(
@@ -221,7 +226,6 @@ vtek::Image2D* vtek::image2d_load(
 	{
 
 	}
-
 
 	vtek::ImageLoadData imageData{};
 
@@ -248,11 +252,12 @@ vtek::Image2D* vtek::image2d_load(
 		vtek::image_load_data_destroy(&imageData);
 		return nullptr;
 	}
+	void* imgData = nullptr;
 
 	vtek::ImageFormatInfo formatInfo{};
 	formatInfo.channels = static_cast<vtek::ImageChannels>(imageData.channels);
 	formatInfo.imageStorageSRGB = info->loadSRGB;
-	formatInfo.swizzleBGR = false; // TODO: Things with stb ?
+	formatInfo.swizzleBGR = false; // NOTE: Would require manual pixel swizzling!
 	formatInfo.compression = vtek::ImageCompressionFormat::none;
 
 	// Retrieve format information
@@ -260,16 +265,19 @@ vtek::Image2D* vtek::image2d_load(
 	{
 		formatInfo.storageFormat = IPSFmt::unorm;
 		formatInfo.channelSize = vtek::ImageChannelSize::channel_8;
+		imgData = imageData.data;
 	}
 	else if (imageData.data16 != nullptr)
 	{
 		formatInfo.storageFormat = IPSFmt::unorm;
 		formatInfo.channelSize = vtek::ImageChannelSize::channel_16;
+		imgData = imageData.data16;
 	}
 	else if (imageData.fdata != nullptr)
 	{
 		formatInfo.storageFormat = IPSFmt::float32;
 		formatInfo.channelSize = vtek::ImageChannelSize::channel_32;
+		imgData = imageData.fdata;
 	}
 	else
 	{
@@ -293,7 +301,7 @@ vtek::Image2D* vtek::image2d_load(
 		return nullptr;
 	}
 
-	// 2) Create Vulkan handle
+	// 2) Create destination image
 	vtek::Image2DInfo createInfo{};
 	// NOTE: If implementation supports VK_KHR_dedicated_allocation
 	// (or Vulkan >= 1.1), we can ask the implementation if it
@@ -310,16 +318,31 @@ vtek::Image2D* vtek::image2d_load(
 	createInfo.multisampling = vtek::MultisampleType::none;
 
 	// We must check if transfer/graphics queues are from same queue family!
-	vtek::Queue* transferQueue = vtek::device_get_transfer_queues(device)[0];
+	auto scheduler = vtek::device_get_command_scheduler(device);
+	vtek::Queue* transferQueue =
+		vtek::command_scheduler_get_transfer_queue(scheduler);
 	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
-	if (transferQueue->familyIndex == graphicsQueue->familyIndex)
+	// TODO: Optimization possibility: ONLY owned by transfer queue!!!
+	// TODO: Then later, during final layout transition, change ownership to graphics!!!
+	constexpr bool kOptimizedOwnership = false;
+	if constexpr (kOptimizedOwnership)
 	{
 		createInfo.sharingMode = vtek::ImageSharingMode::exclusive;
+		// NOTE: The sharing queues get ignored by Vulkan when mode is exclusive!
+		// TODO: So probably don't add them here => kind pointless!?
+		createInfo.sharingQueues = { transferQueue };
 	}
 	else
 	{
-		createInfo.sharingMode = vtek::ImageSharingMode::concurrent;
-		createInfo.sharingQueues = { transferQueue, graphicsQueue };
+		if (transferQueue->familyIndex == graphicsQueue->familyIndex)
+		{
+			createInfo.sharingMode = vtek::ImageSharingMode::exclusive;
+		}
+		else
+		{
+			createInfo.sharingMode = vtek::ImageSharingMode::concurrent;
+			createInfo.sharingQueues = { transferQueue, graphicsQueue };
+		}
 	}
 
 	createInfo.createImageView = true;
@@ -336,13 +359,125 @@ vtek::Image2D* vtek::image2d_load(
 		return nullptr;
 	}
 
-	// 3) Copy image data to GPU memory
 	uint64_t totalSize = vtek::image_load_data_get_size(&imageData);
 
-	vtek_log_debug("We still need to copy 2d-image data to GPU memory!");
+	// 3) Create staging buffer
+	vtek::BufferInfo stagingInfo{};
+	stagingInfo.disallowInternalStagingBuffer = true;
+	stagingInfo.requireHostVisibleStorage = true;
+	stagingInfo.size = totalSize;
+	stagingInfo.usageFlags = vtek::BufferUsageFlag::transfer_src;
+	stagingInfo.writePolicy = vtek::BufferWritePolicy::write_once;
+	vtek::Buffer* stagingBuffer = vtek::buffer_create(&stagingInfo, device);
+	if (stagingBuffer == nullptr)
+	{
+		vtek_log_error("Failed to create staging buffer for image loading!");
+		vtek::image_load_data_destroy(&imageData);
+		vtek::image2d_destroy(image);
+		return nullptr;
+	}
 
-	vtek_log_error("image2d_load(): Not implemented!");
-	return nullptr;
+	// 4) Write image data to staging buffer
+	vtek::BufferRegion stagingRegion{};
+	if (!vtek::buffer_write_data(stagingBuffer, imgData, &stagingRegion, device))
+	{
+		vtek_log_error("Failed to write image data to staging buffer!");
+		vtek::image_load_data_destroy(&imageData);
+		vtek::image2d_destroy(image);
+		vtek::buffer_destroy(stagingBuffer);
+		return nullptr;
+	}
+
+	// 5) Copy image data to GPU memory
+
+	// TODO: Extract function when logic is in place
+	auto commandBuffer =
+		vtek::command_scheduler_begin_transfer(scheduler, device);
+	if (commandBuffer == nullptr)
+	{
+		vtek_log_error(
+			"Failed to begin single-use transfer command buffer -- {}",
+			"cannot write pixel data to image!");
+		vtek::image_load_data_destroy(&imageData);
+		vtek::image2d_destroy(image);
+		vtek::buffer_destroy(stagingBuffer);
+		return nullptr;
+	}
+
+	VkBufferImageCopy copyRegion{};
+	copyRegion.bufferOffset = 0;
+	copyRegion.bufferRowLength = 0;
+	copyRegion.bufferImageHeight = 0;
+	copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	copyRegion.imageSubresource.mipLevel = 0; // TODO: mip-maps?
+	copyRegion.imageSubresource.baseArrayLayer = 0;
+	copyRegion.imageSubresource.layerCount = 1; // TODO: mip-maps?
+	copyRegion.imageOffset = {0, 0, 0};
+	copyRegion.imageExtent = { imageData.width, imageData.height, 1};
+
+	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	VkBuffer stgBuf = vtek::buffer_get_handle(stagingBuffer);
+
+	// NOTE: dstImageLayout parameter was VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+	vkCmdCopyBufferToImage(
+		cmdBuf, stgBuf, image->vulkanHandle, VK_IMAGE_LAYOUT_PREINITIALIZED,
+		1, &copyRegion);
+
+	// TODO: Insert semaphore here?
+
+
+	// 6) Final layout transition
+	// TODO: It would be nice to have extract function from this!
+	// TODO: This would require adding a few members to the image struct!
+
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	barrier.image = image->vulkanHandle;
+	barrier.subresourceRange.baseMipLevel = 0; // TODO: Customize.
+	barrier.subresourceRange.levelCount = 1; // TODO: mip-maps?
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+	// It is possible to use `VK_IMAGE_LAYOUT_UNDEFINED` as the old layout
+	// if we don't care about the existing contents of the image.
+	// NOTE: oldLayout was VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+	barrier.oldLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	// If we are using the barrier to transfer queue family ownership, then
+	// these two fields should be indiced of the queue families. They must
+	// be set to `VK_QUEUE_FAMILY_IGNORED` if we don't want to do this (not
+	// the default value!).
+	// TODO: Is this right?
+	vtek_log_debug(
+		"Note the transfer of queue ownership on image memory barrier for final layout transition!");
+	barrier.srcQueueFamilyIndex = transferQueue->familyIndex;
+	barrier.dstQueueFamilyIndex = graphicsQueue->familyIndex;
+
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+	if (!vtek::command_scheduler_submit_transfer(scheduler, commandBuffer, device))
+	{
+		vtek_log_error(
+			"Failed to submit transfer of image data to command scheduler!");
+		vtek::image_load_data_destroy(&imageData);
+		vtek::image2d_destroy(image);
+		vtek::buffer_destroy(stagingBuffer);
+		return nullptr;
+	}
+
+	// Free data
+	vtek::image_load_data_destroy(&imageData);
+	vtek::buffer_destroy(stagingBuffer);
+
+	return image;
 }
 
 

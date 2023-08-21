@@ -153,9 +153,9 @@ void vtek::image_load_data_destroy(vtek::ImageLoadData* loadData)
 uint64_t vtek::image_load_data_get_size(const vtek::ImageLoadData* loadData)
 {
 	uint32_t channelSize =
-		(loadData->data != nullptr) ? 1 :
-		(loadData->data16 != nullptr) ? 2 :
-		(loadData->fdata != nullptr) ? 32 :
+		(loadData->data != nullptr) ? 1U :
+		(loadData->data16 != nullptr) ? 2U :
+		(loadData->fdata != nullptr) ? 4U :
 		0;
 
 	return channelSize * loadData->channels * loadData->width * loadData->height;
