@@ -304,12 +304,19 @@ vtek::Image2D* vtek::image2d_create(
 	return image;
 }
 
-void vtek::image2d_destroy(vtek::Image2D* image)
+void vtek::image2d_destroy(vtek::Image2D* image, vtek::Device* device)
 {
 	if (image == nullptr) { return; }
 
+	VkDevice dev = vtek::device_get_handle(device);
+
+	if (image->viewHandle != VK_NULL_HANDLE)
+	{
+		vkDestroyImageView(dev, image->viewHandle, nullptr);
+	}
+
 	vtek::allocator_image2d_destroy(image);
-	image->vulkanHandle = nullptr;
+	*image = {}; // zero-initialize
 	delete image;
 }
 
@@ -482,7 +489,7 @@ vtek::Image2D* vtek::image2d_load(
 	{
 		vtek_log_error("Failed to create staging buffer for image loading!");
 		vtek::image_load_data_destroy(&imageData);
-		vtek::image2d_destroy(image);
+		vtek::image2d_destroy(image, device);
 		return nullptr;
 	}
 
@@ -492,7 +499,7 @@ vtek::Image2D* vtek::image2d_load(
 	{
 		vtek_log_error("Failed to write image data to staging buffer!");
 		vtek::image_load_data_destroy(&imageData);
-		vtek::image2d_destroy(image);
+		vtek::image2d_destroy(image, device);
 		vtek::buffer_destroy(stagingBuffer);
 		return nullptr;
 	}
@@ -506,7 +513,7 @@ vtek::Image2D* vtek::image2d_load(
 			"Failed to begin single-use transfer command buffer -- {}",
 			"cannot write pixel data to image!");
 		vtek::image_load_data_destroy(&imageData);
-		vtek::image2d_destroy(image);
+		vtek::image2d_destroy(image, device);
 		vtek::buffer_destroy(stagingBuffer);
 		return nullptr;
 	}
@@ -518,7 +525,7 @@ vtek::Image2D* vtek::image2d_load(
 	initialBarrier.newLayout = vtek::ImageLayout::transfer_dst_optimal;
 	initialBarrier.srcStage = vtek::PipelineStage::top_of_pipe;
 	initialBarrier.dstStage = vtek::PipelineStage::transfer;
-	initialBarrier.srcQueue = nullptr; // TODO: Valid?
+	initialBarrier.srcQueue = graphicsQueue; // TODO: Valid?
 	initialBarrier.dstQueue = transferQueue;
 	initialBarrier.srcAccessMask = 0;
 	initialBarrier.dstAccessMask = vtek::AccessMask::transfer_write;
@@ -566,7 +573,7 @@ vtek::Image2D* vtek::image2d_load(
 		vtek_log_error(
 			"Failed to submit transfer of image data to command scheduler!");
 		vtek::image_load_data_destroy(&imageData);
-		vtek::image2d_destroy(image);
+		vtek::image2d_destroy(image, device);
 		vtek::buffer_destroy(stagingBuffer);
 		return nullptr;
 	}

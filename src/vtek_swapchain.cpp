@@ -408,18 +408,11 @@ static bool create_depth_images(
 	return true;
 }
 
-static void destroy_depth_images(vtek::Swapchain* swapchain, VkDevice dev)
+static void destroy_depth_images(vtek::Swapchain* swapchain, vtek::Device* device)
 {
-	for (auto& view : swapchain->depthImageViews)
-	{
-		if (view != VK_NULL_HANDLE)
-		{
-			vkDestroyImageView(dev, view, nullptr);
-		}
-	}
 	for (auto& image : swapchain->depthImages)
 	{
-		vtek::image2d_destroy(image);
+		vtek::image2d_destroy(image, device);
 	}
 
 	swapchain->depthImageViews.clear();
@@ -1311,7 +1304,7 @@ bool vtek::swapchain_recreate(
 	return true;
 }
 
-void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* device)
+void vtek::swapchain_destroy(vtek::Swapchain* swapchain, vtek::Device* device)
 {
 	if (swapchain == nullptr || swapchain->vulkanHandle == VK_NULL_HANDLE) return;
 
@@ -1320,7 +1313,7 @@ void vtek::swapchain_destroy(vtek::Swapchain* swapchain, const vtek::Device* dev
 	destroy_frame_sync_objects(swapchain, dev);
 
 	destroy_swapchain_image_views(swapchain, dev);
-	destroy_depth_images(swapchain, dev);
+	destroy_depth_images(swapchain, device);
 	destroy_swapchain_handle(swapchain, dev);
 	swapchain->isInvalidated = false;
 

@@ -540,8 +540,30 @@ int main()
 
 
 
+	// Cleanup
+	vtek::device_wait_idle(device);
 
+	vtek::graphics_pipeline_destroy(pipelineWireframe, device);
+	vtek::graphics_pipeline_destroy(pipeline, device);
+	vtek::buffer_destroy(uniformBufferCamera);
+	vtek::descriptor_set_destroy(descriptorSetCamera);
+	vtek::descriptor_set_layout_destroy(descriptorSetLayoutCamera, device);
+	vtek::descriptor_pool_destroy(descriptorPool, device);
+	vtek::image2d_destroy(texture, device);
+	vtek::model_destroy(model, device);
+	vtek::graphics_shader_destroy(shader, device);
+	vtek::camera_destroy(gCamera);
+	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device);
+	vtek::command_pool_destroy(graphicsCommandPool, device);
+	vtek::swapchain_destroy(swapchain, device);
+	vtek::device_destroy(device);
+	vtek::physical_device_release(physicalDevice);
+	vtek::window_surface_destroy(surface, instance);
+	vtek::instance_destroy(instance);
+	vtek::window_destroy(gWindow);
 
+	log_info("Program Success!");
+	vtek::terminate();
 
 	return 0;
 }

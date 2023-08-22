@@ -262,7 +262,7 @@ namespace vtek
 	// ======================= //
 
 	Image2D* image2d_create(const Image2DInfo* info, Device* device);
-	void image2d_destroy(Image2D* image);
+	void image2d_destroy(Image2D* image, Device* device);
 
 	// TODO: Alternative image creation, using a specific allocator
 	Image2D* image2d_create(const Image2DInfo* info, Allocator* allocator);
