@@ -21,6 +21,9 @@ namespace vtek
 
 		bool loadNormals {false};
 		bool loadTextureCoordinates {false};
+
+		// Various options
+		bool flipUVs {false};
 	};
 
 	// Loads an obj model from disk and buffer its vertex data to GPU memory.

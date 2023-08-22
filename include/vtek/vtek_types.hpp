@@ -43,6 +43,14 @@ namespace vtek
 			Assign(_vc.val);
 			return *this;
 		}
+		inline ValueClamp& operator+= (Type _val) {
+			Assign(val + _val);
+			return *this;
+		}
+		inline ValueClamp& operator-= (Type _val) {
+			Assign(val - _val);
+			return *this;
+		}
 		inline const Type& operator()() const { return val; }
 		inline constexpr const Type& get() const { return val; }
 

@@ -8,6 +8,7 @@ uint32_t gFramebufferHeight = 0U;
 vtek::KeyboardMap gKeyboardMap;
 vtek::Camera* gCamera = nullptr;
 vtek::Uniform_m4_v4 gCameraUniform;
+vtek::FloatClamp<0.01f, 10.0f> gCameraExposure = 1.05f;
 // TODO: Implement pipeline derivation!
 // TODO: Depth testing switch by depth function as dynamic pipeline state!
 bool gRenderWireframe = false;
@@ -97,6 +98,14 @@ void update_movement()
 	else if (gKeyboardMap.get_key(KeyboardKey::e)) {
 		vtek::camera_roll_right_radians(gCamera, rotateSpeed);
 	}
+
+	// Adjust camera exposure
+	if (gKeyboardMap.get_key(KeyboardKey::numpad_add)) {
+		gCameraExposure += 0.01f;
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::numpad_subtract)) {
+		gCameraExposure -= 0.01f;
+	}
 }
 
 /* helper functions */
@@ -109,7 +118,8 @@ bool update_camera_uniform(
 	// Packed data
 	gCameraUniform.m4 = *(vtek::camera_get_projection_matrix(gCamera));
 	gCameraUniform.m4 *= *(vtek::camera_get_view_matrix(gCamera));
-	gCameraUniform.v4 = glm::vec4(vtek::camera_get_position(gCamera), 0.0f);
+	gCameraUniform.v4 = glm::vec4(
+		vtek::camera_get_position(gCamera), gCameraExposure.get());
 
 	// Update uniform buffer
 	vtek::BufferRegion region{
@@ -409,6 +419,7 @@ int main()
 	modelInfo.keepVertexDataInMemory = false; // Preferred usage
 	modelInfo.loadNormals = true;
 	modelInfo.loadTextureCoordinates = true;
+	modelInfo.flipUVs = true;
 	vtek::Model* model = vtek::model_load_obj(
 		&modelInfo, modeldir, "viking_room.obj", device);
 	if (model == nullptr)
@@ -463,7 +474,9 @@ int main()
 	vtek::DescriptorLayoutBinding descriptorBindingCamera{};
 	descriptorBindingCamera.type = vtek::DescriptorType::uniform_buffer;
 	descriptorBindingCamera.binding = 0;
-	descriptorBindingCamera.shaderStages = vtek::ShaderStage::vertex;
+	descriptorBindingCamera.shaderStages
+		= vtek::ShaderStage::vertex
+		| vtek::ShaderStage::fragment;
 	descriptorBindingCamera.updateAfterBind = false;
 	vtek::DescriptorLayoutBinding descriptorBindingSampler{};
 	descriptorBindingSampler.type = vtek::DescriptorType::combined_image_sampler;
