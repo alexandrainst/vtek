@@ -5,7 +5,9 @@
 #include "vtek_descriptor_pool.hpp"
 #include "vtek_descriptor_set_layout.hpp"
 #include "vtek_device.hpp"
+#include "vtek_image.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_sampler.hpp"
 
 #include <deque>
 #include <vector>
@@ -17,6 +19,7 @@ struct vtek::DescriptorSet
 	VkDescriptorSet vulkanHandle {VK_NULL_HANDLE};
 
 	std::deque<VkDescriptorBufferInfo> bufferInfos;
+	std::deque<VkDescriptorImageInfo> imageInfos;
 	std::vector<VkWriteDescriptorSet> writeDescriptors;
 };
 
@@ -89,11 +92,32 @@ bool vtek::descriptor_set_bind_sampler()
 	return false;
 }
 
-bool vtek::descriptor_set_bind_combined_image_sampler()
+bool vtek::descriptor_set_bind_combined_image2d_sampler(
+	vtek::DescriptorSet* set, uint32_t binding,
+	vtek::Sampler* sampler, vtek::Image2D* image, vtek::ImageLayout imageLayout)
 {
-	vtek_log_error("vtek::descriptor_set_bind_combined_image_sampler(): {}",
-	               "Not implemented!");
-	return false;
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = vtek::get_image_layout(imageLayout);
+	imageInfo.imageView = vtek::image2d_get_view_handle(image);
+	imageInfo.sampler = vtek::sampler_get_handle(sampler);
+	set->imageInfos.emplace_back(imageInfo);
+
+	VkWriteDescriptorSet writeSet{};
+	writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeSet.pNext = nullptr;
+	writeSet.dstSet = set->vulkanHandle;
+	writeSet.dstBinding = binding; // TODO: Is this binding valid?
+
+	writeSet.dstArrayElement = 0;
+	writeSet.descriptorCount = 1; // Number of elements in `pImageInfo`.
+	writeSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeSet.pImageInfo = &(set->imageInfos.back());
+	writeSet.pBufferInfo = nullptr;
+	writeSet.pTexelBufferView = nullptr;
+
+	set->writeDescriptors.emplace_back(writeSet);
+
+	return true;
 }
 
 bool vtek::descriptor_set_bind_sampled_image()

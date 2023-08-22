@@ -23,11 +23,14 @@ struct vtek::Model
 {
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec3> normals;
+	std::vector<glm::vec2> texCoords;
 
 	uint32_t numVertices {0U};
 
 	vtek::Buffer* vertexBuffer {nullptr};
 	vtek::Buffer* normalBuffer {nullptr};
+	vtek::Buffer* texCoordBuffer {nullptr};
+	vtek::Buffer* indexBuffer {nullptr}; // TODO: Next item is to try this instead!
 };
 
 
@@ -38,7 +41,7 @@ static void load_scene_mesh(
 {
 	//bool vertices = true; // REVIEW: Why would we ever _not_ want to load vertex positions!
 	bool normals = mesh->HasNormals() && info->loadNormals;
-	//bool texCoords = false; // TODO: Needs an image loader in place in vtek first!
+	bool texCoords = mesh->HasTextureCoords(0) && info->loadTextureCoordinates;
 	//bool tangents = false; // TODO: Needs an implementation of normal mapping!
 
 	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
@@ -50,6 +53,11 @@ static void load_scene_mesh(
 		{
 			model->normals.push_back(glm::vec3(
 				mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z));
+		}
+		if (texCoords)
+		{
+			model->texCoords.push_back(glm::vec2(
+				mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y));
 		}
 	}
 }
@@ -87,7 +95,7 @@ static bool create_buffers(
 	model->vertexBuffer = vtek::buffer_create(&bufferInfo, device);
 	if (model->vertexBuffer == nullptr)
 	{
-		log_error("Failed to create vertex buffer for model vertices!");
+		vtek_log_error("Failed to create vertex buffer for model vertices!");
 		return false;
 	}
 
@@ -96,10 +104,11 @@ static bool create_buffers(
 		.size = bufferInfo.size
 	};
 	// TODO: We could do `vtek::buffer_write_data(buffers[], void* data[], region[], device)` ?
+	// TODO: This is a REALLY good todo! :)
 	if (!vtek::buffer_write_data(
 		    model->vertexBuffer, model->vertices.data(), &region, device))
 	{
-		log_error("Failed to write data to model vertex buffer!");
+		vtek_log_error("Failed to write data to model vertex buffer!");
 		return false;
 	}
 
@@ -109,14 +118,34 @@ static bool create_buffers(
 		model->normalBuffer = vtek::buffer_create(&bufferInfo, device);
 		if (model->normalBuffer == nullptr)
 		{
-			log_error("Failed to create vertex buffer for model normals!");
+			vtek_log_error("Failed to create vertex buffer for model normals!");
 			return false;
 		}
 
 		if (!vtek::buffer_write_data(
 			    model->normalBuffer, model->normals.data(), &region, device))
 		{
-			log_error("Failed to write data to model normal buffer!");
+			vtek_log_error("Failed to write data to model normal buffer!");
+			return false;
+		}
+	}
+
+	// Texture coordinates
+	if (info->loadTextureCoordinates && model->texCoords.size() > 0)
+	{
+		bufferInfo.size = sizeof(glm::vec2) * model->vertices.size();
+		model->texCoordBuffer = vtek::buffer_create(&bufferInfo, device);
+		if (model->texCoordBuffer == nullptr)
+		{
+			vtek_log_error("Failed to create vertex buffer for model texcoords!");
+			return false;
+		}
+
+		region.size = bufferInfo.size;
+		if (!vtek::buffer_write_data(
+			    model->texCoordBuffer, model->texCoords.data(), &region, device))
+		{
+			vtek_log_error("Failed to write data to model texcoord buffer!");
 			return false;
 		}
 	}
@@ -135,6 +164,11 @@ static void destroy_model_buffers(vtek::Model* model, vtek::Device* device)
 	{
 		vtek::buffer_destroy(model->normalBuffer);
 		model->normalBuffer = nullptr;
+	}
+	if (model->texCoordBuffer != nullptr)
+	{
+		vtek::buffer_destroy(model->texCoordBuffer);
+		model->texCoordBuffer = nullptr;
 	}
 }
 
@@ -225,6 +259,11 @@ const vtek::Buffer* vtek::model_get_vertex_buffer(vtek::Model* model)
 const vtek::Buffer* vtek::model_get_normal_buffer(vtek::Model* model)
 {
 	return model->normalBuffer;
+}
+
+const vtek::Buffer* vtek::model_get_texcoord_buffer(vtek::Model* model)
+{
+	return model->texCoordBuffer;
 }
 
 uint32_t vtek::model_get_num_vertices(vtek::Model* model)

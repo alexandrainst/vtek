@@ -27,6 +27,7 @@ struct vtek::Device
 	VkPhysicalDevice physicalHandle {VK_NULL_HANDLE};
 	vtek::VulkanVersion vulkanVersion {1, 0, 0};
 
+	VkPhysicalDeviceProperties physicalProperties {};
 	VkPhysicalDeviceFeatures enabledFeatures {};
 	vtek::DeviceExtensions enabledExtensions {};
 
@@ -775,6 +776,9 @@ vtek::Device* vtek::device_create(
 	// Store physical device handle (might be needed later for various purposes)
 	device->physicalHandle = physDev;
 
+	// Store physical device properties, might be needed later
+	device->physicalProperties = *physDevProps;
+
 	// Create device allocator for buffers and images
 	device->allocator = vtek::allocator_create_default(device, instance);
 	if (device->allocator == nullptr)
@@ -872,6 +876,12 @@ const VkPhysicalDeviceFeatures* vtek::device_get_enabled_features(
 	const vtek::Device* device)
 {
 	return &device->enabledFeatures;
+}
+
+const VkPhysicalDeviceProperties* vtek::device_get_physical_properties(
+	const vtek::Device* device)
+{
+	return &device->physicalProperties;
 }
 
 vtek::Allocator* vtek::device_get_allocator(const vtek::Device* device)

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "vtek_object_handles.hpp"
+
+#include "vtek_image.hpp"
 #include "vtek_uniform_data.hpp"
 
 
@@ -26,7 +28,9 @@ namespace vtek
 
 	bool descriptor_set_bind_sampler();
 
-	bool descriptor_set_bind_combined_image_sampler();
+	bool descriptor_set_bind_combined_image2d_sampler(
+		DescriptorSet* set, uint32_t binding,
+		Sampler* sampler, Image2D* image, ImageLayout imageLayout);
 
 	bool descriptor_set_bind_sampled_image();
 

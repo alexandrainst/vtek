@@ -306,7 +306,7 @@ bool vtek::allocator_image2d_create(
 		imageInfo.mipLevels = 1;
 	}
 
-	if (info->initialLayout == vtek::ImageInitialLayout::preinitialized ||
+	if (info->initialLayout == vtek::ImageInitialLayout::preinitialized &&
 	    info->usageFlags.has_flag(vtek::ImageUsageFlag::transfer_dst))
 	{
 		imageInfo.tiling = VK_IMAGE_TILING_LINEAR;

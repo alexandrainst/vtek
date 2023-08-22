@@ -200,7 +200,6 @@ bool recordCommandBuffer(
 	}
 
 	glm::vec3 clearColor(0.15f, 0.15f, 0.15f);
-	// TODO: Ensure the swapchain has a depth buffer (or several!)
 	vtek::swapchain_dynamic_rendering_begin(
 		swapchain, imageIndex, commandBuffer, clearColor);
 
@@ -209,7 +208,7 @@ bool recordCommandBuffer(
 	// Dynamic state
 	vkCmdSetCullMode(cmdBuf, vtek::get_cull_mode(gCullMode));
 
-	// TODO: Bind vertex buffer for model
+	// Bind vertex buffer for model
 	VkBuffer buffers[2] = {
 		vtek::buffer_get_handle(vtek::model_get_vertex_buffer(model)),
 		vtek::buffer_get_handle(vtek::model_get_normal_buffer(model))
@@ -217,8 +216,8 @@ bool recordCommandBuffer(
 	VkDeviceSize offsets[2] = { 0, 0 };
 	vkCmdBindVertexBuffers(cmdBuf, 0, 2, buffers, offsets);
 
-	// TODO: Bind descriptor set for the pipeline:
-	// TODO: m4 push constant, m4 uniform
+	// Bind descriptor set for the pipeline:
+	// m4 push constant, m4 uniform
 	VkDescriptorSet descriptorSetHandles[2] = {
 		vtek::descriptor_set_get_handle(descriptorSets[0]),
 		vtek::descriptor_set_get_handle(descriptorSets[1]),

@@ -122,9 +122,24 @@ vtek::Sampler* vtek::sampler_create(
 	createInfo.addressModeW = addrMode;
 	// TODO: What is the difference between this and `baseMipLevel` in image views ?
 	createInfo.mipLodBias = 0.0f;
-	createInfo.anisotropyEnable = VulkanBool(info->anisotropicFiltering).get();
-	createInfo.maxAnisotropy = info->maxAnisotropy.get();
 
+	// Anisotropic filtering
+	if (info->anisotropicFiltering)
+	{
+		createInfo.anisotropyEnable = VK_TRUE;
+		// Calculate the maximally supported value on the physical device
+		float givenMax = info->maxAnisotropy.get();
+		auto props = vtek::device_get_physical_properties(device);
+		float realMax = props->limits.maxSamplerAnisotropy;
+		createInfo.maxAnisotropy = (givenMax > realMax) ? realMax : givenMax;
+	}
+	else
+	{
+		createInfo.anisotropyEnable = VK_FALSE;
+		createInfo.maxAnisotropy = 0.0f;
+	}
+
+	// Depth comparison OP
 	if (info->depthCompareOp == vtek::SamplerDepthCompareOp::never)
 	{
 		createInfo.compareEnable = VK_FALSE;
@@ -165,6 +180,9 @@ void vtek::sampler_destroy(vtek::Sampler* sampler, vtek::Device* device)
 
 	VkDevice dev = vtek::device_get_handle(device);
 	vkDestroySampler(dev, sampler->vulkanHandle, nullptr);
+
+	*sampler = {};
+	delete sampler;
 }
 
 VkSampler vtek::sampler_get_handle(const vtek::Sampler* sampler)

@@ -17,10 +17,9 @@ namespace vtek
 	{
 		// If for some reason the vertex data should reside in main memory
 		// after loading a model, enable this value.
-		bool keepVertexDataInMemory {false};
+		bool keepVertexDataInMemory {false}; // TODO: Not implemented!
 
-		bool loadNormals {false};  // TODO: ?
-
+		bool loadNormals {false};
 		bool loadTextureCoordinates {false};
 	};
 
@@ -33,6 +32,7 @@ namespace vtek
 
 	const Buffer* model_get_vertex_buffer(Model* model);
 	const Buffer* model_get_normal_buffer(Model* model);
+	const Buffer* model_get_texcoord_buffer(Model* model);
 
 	uint32_t model_get_num_vertices(Model* model);
 }

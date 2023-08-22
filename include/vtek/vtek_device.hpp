@@ -81,6 +81,8 @@ namespace vtek
 	const DeviceExtensions* device_get_enabled_extensions(const Device* device);
 	const VkPhysicalDeviceFeatures* device_get_enabled_features(
 		const Device* device);
+	const VkPhysicalDeviceProperties* device_get_physical_properties(
+		const Device* device);
 
 	Allocator* device_get_allocator(const Device* device);
 	CommandScheduler* device_get_command_scheduler(const Device* device);
