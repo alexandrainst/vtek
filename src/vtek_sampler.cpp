@@ -120,8 +120,6 @@ vtek::Sampler* vtek::sampler_create(
 	createInfo.addressModeU = addrMode;
 	createInfo.addressModeV = addrMode;
 	createInfo.addressModeW = addrMode;
-	// TODO: What is the difference between this and `baseMipLevel` in image views ?
-	createInfo.mipLodBias = 0.0f;
 
 	// Anisotropic filtering
 	if (info->anisotropicFiltering)
@@ -151,8 +149,10 @@ vtek::Sampler* vtek::sampler_create(
 		createInfo.compareOp = get_depth_compare_op(info->depthCompareOp);
 	}
 
-	// May be used to clamp the computed LOD value.
+	// May be used to bias or clamp the computed LOD value.
 	// NOTE: Not implemented yet here.
+	// TODO: What is the difference between this and `baseMipLevel` in image views ?
+	createInfo.mipLodBias = 0.0f;
 	createInfo.minLod = 0.0f;
 	createInfo.maxLod = VK_LOD_CLAMP_NONE; // Avoid setting a maximum
 	createInfo.borderColor = get_border_color(info->borderColor);

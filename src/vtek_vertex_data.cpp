@@ -109,3 +109,17 @@ void vtek::VertexBufferBindings::add_buffer(VAT vt1, VAT vt2, VIR rate)
 	mBindDesc.emplace_back(bindDesc);
 	mBindCount++;
 }
+
+void vtek::VertexBufferBindings::add_buffer(VAT vt1, VAT vt2, VAT vt3, VIR rate)
+{
+	vtek_log_error(
+		"vtek_vertex_data.cpp: add_buffer(vt1, vt2, vt3, rate): Not implemented!");
+}
+
+void vtek::VertexBufferBindings::add_buffer(
+	VAT vt1, VAT vt2, VAT vt3, VAT vt4, VIR rate)
+{
+	vtek_log_error(
+		"vtek_vertex_data.cpp: add_buffer(vt1, vt2, vt3, vt4, rate): {}",
+		"Not implemented!");
+}

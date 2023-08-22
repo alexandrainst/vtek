@@ -46,7 +46,11 @@ namespace vtek
 		using VAT = VertexAttributeType;
 		using VIR = VertexInputRate;
 
+		// When a vertex buffer contains a single attribute
 		void add_buffer(VAT vt, VIR rate);
+
+		// When a vertex buffer contains several interleaved attributes
+		// Example: [ vertex, normal, texcoord, vertex, normal, texcoord, ... ]
 		void add_buffer(VAT vt1, VAT vt2, VIR rate);
 		void add_buffer(VAT vt1, VAT vt2, VAT vt3, VIR rate);
 		void add_buffer(VAT vt1, VAT vt2, VAT vt3, VAT vt4, VIR rate);
@@ -74,7 +78,6 @@ namespace vtek
 		glm::vec2 pos;
 
 		// descriptions, only static access
-		// TODO: Does this work?
 		static constexpr VertexAttributeType kVertexType =
 			VertexAttributeType::vec2;
 	};

@@ -194,7 +194,7 @@ vtek::Model* vtek::model_load_obj(
 	//read_flags |= aiProcess_JoinIdenticalVertices;
 
 	// NOTE: Optional UV-flip, might not be needed for Vulkan!
-	//read_flags |= aiProcess_FlipUVs;
+	read_flags |= aiProcess_FlipUVs;
 
 	// NOTE: Optional tangent space for normal mapping (I think?)
 	//read_flags |= aiProcess_CalcTangentSpace;
