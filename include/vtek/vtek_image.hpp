@@ -44,13 +44,6 @@ namespace vtek
 		unorm_pack16,
 		unorm_pack32,
 		snorm_pack32,
-
-
-		// pack_unorm16,
-		// pack_unorm32,
-		// pack_uscaled32,
-		// pack_float16,
-		// pack_float32
 	};
 
 	enum class ImageChannelSize
@@ -65,11 +58,12 @@ namespace vtek
 		special
 	};
 
-	enum class ImageCompressionFormat
+	enum class ImageCompressionScheme
 	{
 		none, // no compression applied
 		bc,   // block compression
-		eac, // ETC2 alpha compression
+		etc2, // Ericsson texture compression
+		eac,  // ETC2 alpha compression
 		astc  // Adaptive Scalable Texture Compression (LDR profile)
 	};
 
@@ -95,6 +89,7 @@ namespace vtek
 		metadata = 0x0008,
 		// Image aspects for multi-planar image formats.
 		// NOTE: plane 0/1 requires Vulkan >= 1.1, plane 2 requires Vulkan >= 1.3.
+		// NOTE: Multi-planar formats are probably only useful for video decoding.
 		plane_0  = 0x0010,
 		plane_1  = 0x0020,
 		plane_2  = 0x0040
@@ -169,7 +164,8 @@ namespace vtek
 		bool swizzleBGR {false}; // TODO: When, why, and how?
 		ImagePixelStorageFormat storageFormat {ImagePixelStorageFormat::unorm};
 		ImageChannelSize channelSize {ImageChannelSize::channel_8};
-		ImageCompressionFormat compression {ImageCompressionFormat::none};
+		ImageCompressionScheme compression {ImageCompressionScheme::none};
+		bool multiPlanarFormat {false};
 	};
 
 

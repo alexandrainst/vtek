@@ -255,6 +255,7 @@ int main()
 	windowInfo.cursorDisabled = true;
 	windowInfo.width = 1024;
 	windowInfo.height = 1024;
+	windowInfo.fullscreen = true;
 	gWindow = vtek::window_create(&windowInfo);
 	if (gWindow == nullptr)
 	{

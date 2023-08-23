@@ -338,6 +338,124 @@ static void get_format_color_channel_2(
 	}
 }
 
+static void get_format_color_channel_3(
+	const vtek::ImageFormatInfo* info, std::vector<VkFormat>& priorities)
+{
+	if (info->channelSize == vtek::ImageChannelSize::channel_8)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::unorm:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8_UNORM : VK_FORMAT_R8G8B8_UNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8_SNORM : VK_FORMAT_R8G8B8_SNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8_USCALED : VK_FORMAT_R8G8B8_USCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8_SSCALED : VK_FORMAT_R8G8B8_SSCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8_UINT : VK_FORMAT_R8G8B8_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8_SINT : VK_FORMAT_R8G8B8_SINT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_16 &&
+	         !info->swizzleBGR)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::unorm:
+			priorities.push_back(VK_FORMAT_R16G16B16_UNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm:
+			priorities.push_back(VK_FORMAT_R16G16B16_SNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled:
+			priorities.push_back(VK_FORMAT_R16G16B16_USCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled:
+			priorities.push_back(VK_FORMAT_R16G16B16_SSCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R16G16B16_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R16G16B16_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R16G16B16_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_32 &&
+	         !info->swizzleBGR)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R32G32B32_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R32G32B32_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R32G32B32_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_64 &&
+	         !info->swizzleBGR)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R64G64B64_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R64G64B64_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R64G64B64_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::special)
+	{
+
+	}
+
+
+	priorities.push_back();
+	priorities.push_back();
+	priorities.push_back();
+}
+
 
 
 /* initialization */
