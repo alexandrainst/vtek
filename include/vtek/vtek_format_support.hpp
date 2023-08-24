@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vulkan/vulkan.h>
 #include <cstdint>
 
 #include "vtek_object_handles.hpp"
@@ -8,27 +9,12 @@
 
 namespace vtek
 {
-	// REVIEW: We might still want to use this class as a global format database
-	class FormatSupport
-	{
-	public:
-		FormatSupport(const Device* device);
-
-		inline bool sRGB_channel_1() { return mSRGB & 0x01; }
-		inline bool sRGB_channel_2() { return mSRGB & 0x02; }
-		inline bool sRGB_channel_3() { return mSRGB & 0x04; }
-
-		//bool
-
-	private:
-		VkPhysicalDevice physicalDevice {VK_NULL_HANDLE};
-		uint8_t mSRGB {0U};
-	};
-
-	// NOTE: Implemented in src/imgutils/vtek_image_formats.cpp
+	// ========================== //
+	// === Format description === //
+	// ========================== //
 
 	// 1:1 mapping of formats in the Vulkan specification
-	enum class Format
+	enum class Format : uint16_t
 	{
 		undefined,
 
@@ -149,7 +135,7 @@ namespace vtek
 		astc_12x12_unorm_block, astc_12x12_srgb_block,
 
 		// ===
-		// === All formats below here requires Vulkan >= 1.1 === //
+		// === All formats below here requires Vulkan >= 1.1
 		// ===
 
 		// Two special formats that encode a 2x1 rectangle (see SPEC.)
@@ -194,7 +180,7 @@ namespace vtek
 		g16_b16_r16_3plane_444_unorm,
 
 		// ===
-		// === All formats below here requires Vulkan >= 1.3 === //
+		// === All formats below here requires Vulkan >= 1.3
 		// ===
 
 		// More special multi-planar formats (see SPEC.)
@@ -223,40 +209,167 @@ namespace vtek
 		astc_12x12_sfloat_block
 	};
 
-	enum class ImageTiling
+	enum class FormatCompression : uint8_t
 	{
-		optimal, linear
+		// no compression (default)
+		none,
+
+		// block compression
+		any_bc, bc1, bc2, bc3, bc4, bc5, bc6h, bc7,
+
+		// Ericsson texture compression
+		etc2,
+
+		// ETC2 alpha compression
+		eac,
+
+		// Adaptive Scalable Texture Compression (LDR profile)
+		astc_4x4,
+		astc_5x4, astc_5x5,
+		astc_6x5, astc_6x6,
+		astc_8x5, astc_8x6, astc_8x8,
+		astc_10x5, astc_10x6, astc_10x8, astc_10x10,
+		astc_12x10, astc_12x12,
 	};
+
+	enum class FormatStorageType
+	{
+		unorm,   // float in range [0, 1]
+		snorm,   // float in range [-1, 1]
+		uscaled, // unsigned int converted to float
+		sscaled, // signed int converted to float
+		uint,    // unsigned int
+		sint,    // signed int
+		ufloat,  // unsigned float
+		sfloat,  // signed float
+		float16, // half-precision float per-component
+		float32, // 32-bit float per-component
+
+		// all channels packed in x bits, with y format
+		unorm_pack8,
+		unorm_pack16,
+		unorm_pack32,
+		snorm_pack32,
+		ufloat_pack32,
+		uscaled_pack32,
+		sscaled_pack32,
+		uint_pack32,
+		sint_pack32
+	};
+
+	enum class FormatChannels : uint32_t
+	{
+		channels_1 = 1,
+		channels_2 = 2,
+		channels_3 = 3,
+		channels_4 = 4
+	};
+
+	enum class FormatChannelSize
+	{
+		// exactly 8, 16, 32, or 64 bits for each channel of each pixel
+		channel_8,
+		channel_16,
+		channel_32,
+		channel_64,
+
+		// everything else, like packed/compressed formats
+		special
+	};
+
+	enum class FormatFeature : uint32_t
+	{
+		sampled_image,
+		storage_image,
+		storage_image_atomic,
+		uniform_texel_buffer,
+
+		storage_texel_buffer,
+		storage_texel_buffer_atomic,
+		vertex_buffer,
+		color_attachment,
+		color_attachment_blend,
+		depth_stencil_attachment,
+		blit_src,
+		blit_dst,
+		sampled_image_filter_linear,
+
+		// Provided by Vulkan >= 1.1
+		transfer_src,
+		transfer_dst,
+		midpoint_chroma_samples,
+		sampled_image_ycbcr_conv_lin_filter,
+		sampled_image_ycbcr_conv_sep_rec_filter,
+		sampled_image_ycbcr_conv_chroma_Rec_ex,
+		sampled_image_ycbcr_conv_chroma_rec_ex_force,
+		disjoint_bit,
+		cosited_chroma_samples,
+
+		// Provided by Vulkan >= 1.2
+		sampled_image_filter_minmax
+	};
+
+
+	// ============================== //
+	// === Supported format query === //
+	// ============================== //
+
+	// Forward-declaration, defined further below
+	class SupportedFormat;
 
 	struct FormatQuery
 	{
-		ImageTiling tiling {ImageTiling::optimal};
+		Format format {Format::undefined};
+		bool linearTiling {false};
 		EnumBitmask<FormatFeature> features {};
 	};
-
-	// Check if the device supports a given image format, specified by overloads:
-	// - ImageFormatInfo: Specific number of channels, sRGB, compression, etc.
-	// - FormatQuery
-	bool has_format_support(
-		const ImageFormatInfo* info, const FormatQuery* query,
-		const Device* device, SupportedFormat* outSupport);
 
 	bool has_format_support(
 		const FormatQuery* query, const Device* device,
 		SupportedFormat* outSupport);
 
 
+	// Specify how vtek should search for a suitable Vulkan image format.
+	// The restrictions are prioritized as such:
+	// 1) compression
+	// 2) sRGB
+	// 3) number of channels
+	// 4) channel size
+	// 5) storage type
+	// 6) swizzled channels
+	struct FormatInfo
+	{
+		FormatChannels channels {FormatChannels::channels_4};
+		bool sRGB {false};
+		bool swizzleBGR {false}; // TODO: When, why, and how?
+		FormatStorageType storageType {FormatStorageType::unorm};
+		FormatChannelSize channelSize {FormatChannelSize::channel_8};
+		FormatCompression compression {FormatCompression::none};
+	};
+
+	// Check if the device supports a given image format, specified by overloads:
+	// - ImageFormatInfo: Specific number of channels, sRGB, compression, etc.
+	// - FormatQuery
+	bool has_format_support(
+		const FormatInfo* info, const FormatQuery* query,
+		const Device* device, SupportedFormat* outSupport);
+
+
+	// ======================== //
+	// === Supported format === //
+	// ======================== //
+
 	class SupportedFormat
 	{
 	public:
-		VkFormat get() const;
 		inline SupportedFormat() {}
-		SupportedFormat& operator=(const SupportedFormat& sf) {} // TODO: Invalid!
-
 		bool operator==(Format _format) const;
 
+		// Get the underlying Vulkan format
+		VkFormat get() const;
+
 		// Retrieve format properties
-		ImageChannels get_num_channels() const;
+		FormatChannels get_num_channels() const;
 		bool has_alpha() const;
 		bool is_srgb() const;
 		bool is_compressed() const;
@@ -267,19 +380,49 @@ namespace vtek
 		bool has_depth() const;
 		bool has_stencil() const;
 
-		ImageCompressionScheme get_compression_scheme() const;
-		ImagePixelStorageFormat get_storage_format() const;
-		EnumBitmask<ImageUsageFlag> get_supported_usage_flags() const; // TODO: ?
-		EnumBitmask<FormatFeatureFlag> get_supported_format_features() const;
+		FormatCompression get_compression_scheme() const;
+		FormatStorageType get_storage_type() const;
+		EnumBitmask<FormatFeature> get_supported_features() const;
 
 	private:
-		inline SupportedFormat(VkFormat _format) : format(_format) {}
+		// Only the friend function may properly construct this object
+		friend bool vtek::has_format_support(
+			const FormatQuery*,const Device*,SupportedFormat*);
+		SupportedFormat(Format _format) : format(_format) {}
 
-		ImageCompressionScheme compressionScheme;
-		FormatCompressionType compressionType;
-		uint32_t propertyMask {0U};
 		Format format {Format::undefined};
-		const VkFormat fmt {VK_FORMAT_UNDEFINED};
+		VkFormat fmt {VK_FORMAT_UNDEFINED};
+
+		FormatCompression compression {FormatCompression::none};
+		FormatStorageType storage {FormatStorageType::unorm};
+		EnumBitmask<FormatFeature> features {};
+		uint32_t propertyMask {0U};
 		// TODO: Store VkFormatFeatureFlags ?
 	};
+
+
+
+
+
+
+
+	// REVIEW: We might still want to use this class as a global format database
+	class FormatSupport
+	{
+	public:
+		FormatSupport(const Device* device);
+
+		inline bool sRGB_channel_1() { return mSRGB & 0x01; }
+		inline bool sRGB_channel_2() { return mSRGB & 0x02; }
+		inline bool sRGB_channel_3() { return mSRGB & 0x04; }
+
+		//bool
+
+	private:
+		VkPhysicalDevice physicalDevice {VK_NULL_HANDLE};
+		uint8_t mSRGB {0U};
+	};
+
+	// NOTE: Implemented in src/imgutils/vtek_image_formats.cpp
+
 };

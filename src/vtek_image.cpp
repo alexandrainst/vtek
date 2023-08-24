@@ -13,7 +13,7 @@
 #include "vtek_fileio.hpp"
 #include "vtek_logging.hpp"
 
-using IPSFmt = vtek::ImagePixelStorageFormat;
+using FSType = vtek::FormatStorageType;
 using IAFlag = vtek::ImageAspectFlag;
 using IUFlag = vtek::ImageUsageFlag;
 using IFType = vtek::ImageFileType;
@@ -370,29 +370,29 @@ vtek::Image2D* vtek::image2d_load(
 	}
 	void* imgData = nullptr;
 
-	vtek::ImageFormatInfo formatInfo{};
-	formatInfo.channels = static_cast<vtek::ImageChannels>(imageData.channels);
-	formatInfo.imageStorageSRGB = info->loadSRGB;
+	vtek::FormatInfo formatInfo{};
+	formatInfo.channels = static_cast<vtek::FormatChannels>(imageData.channels);
+	formatInfo.sRGB = info->loadSRGB;
 	formatInfo.swizzleBGR = false; // NOTE: Would require manual pixel swizzling!
-	formatInfo.compression = vtek::ImageCompressionFormat::none;
+	formatInfo.compression = vtek::FormatCompression::none;
 
 	// Retrieve format information
 	if (imageData.data != nullptr) // data is 8-bit
 	{
-		formatInfo.storageFormat = IPSFmt::unorm;
-		formatInfo.channelSize = vtek::ImageChannelSize::channel_8;
+		formatInfo.storageType = FSType::unorm;
+		formatInfo.channelSize = vtek::FormatChannelSize::channel_8;
 		imgData = imageData.data;
 	}
 	else if (imageData.data16 != nullptr)
 	{
-		formatInfo.storageFormat = IPSFmt::unorm;
-		formatInfo.channelSize = vtek::ImageChannelSize::channel_16;
+		formatInfo.storageType = FSType::unorm;
+		formatInfo.channelSize = vtek::FormatChannelSize::channel_16;
 		imgData = imageData.data16;
 	}
 	else if (imageData.fdata != nullptr)
 	{
-		formatInfo.storageFormat = IPSFmt::float32;
-		formatInfo.channelSize = vtek::ImageChannelSize::channel_32;
+		formatInfo.storageType = FSType::float32;
+		formatInfo.channelSize = vtek::FormatChannelSize::channel_32;
 		imgData = imageData.fdata;
 	}
 	else
@@ -403,9 +403,9 @@ vtek::Image2D* vtek::image2d_load(
 	}
 
 	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
-	EnumBitmask<vtek::FormatFeatureFlag> featureFlags
-		= vtek::FormatFeatureFlag::sampledImage
-		| vtek::FormatFeatureFlag::sampledImageFilterLinear;
+	EnumBitmask<vtek::FormatFeature> featureFlags
+		= vtek::FormatFeature::sampled_image
+		| vtek::FormatFeature::sampled_image_filter_linear;
 	// TODO: How if we later create mip-maps by linear blitting?
 	// | VK_FORMAT_FEATURE_BLIT_DST_BIT; // ?
 
@@ -427,7 +427,6 @@ vtek::Image2D* vtek::image2d_load(
 	createInfo.requireDedicatedAllocation = false;
 	createInfo.extent = { imageData.width, imageData.height };
 	createInfo.format = format;
-	createInfo.formatInfo = formatInfo;
 	createInfo.usageFlags = IUFlag::transfer_dst | IUFlag::sampled;
 	createInfo.initialLayout = vtek::ImageInitialLayout::undefined;
 	createInfo.useMipmaps = info->createMipmaps;

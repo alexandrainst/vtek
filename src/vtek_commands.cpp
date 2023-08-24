@@ -16,8 +16,8 @@ void vtek::cmd_image_layout_transition(
 	barrier.pNext = nullptr;
 	// It is possible to use `VK_IMAGE_LAYOUT_UNDEFINED` as the old layout
 	// if we don't care about the existing contents of the image.
-	barrier.oldLayout = get_image_layout(info->oldLayout);
-	barrier.newLayout = get_image_layout(info->newLayout);
+	barrier.oldLayout = vtek::get_image_layout(info->oldLayout);
+	barrier.newLayout = vtek::get_image_layout(info->newLayout);
 	barrier.image = vtek::image2d_get_handle(info->image);
 	barrier.srcAccessMask = vtek::get_access_mask(info->srcAccessMask);
 	barrier.dstAccessMask = vtek::get_access_mask(info->dstAccessMask);

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string_view>
 
+#include "vtek_format_support.hpp"
 #include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vulkan_types.hpp"
@@ -14,91 +15,6 @@ namespace vtek
 	// =========================== //
 	// === Image creation info === //
 	// =========================== //
-
-	enum class ImageChannels : uint32_t
-	{
-		channels_1 = 1,
-		channels_2 = 2,
-		channels_3 = 3,
-		channels_4 = 4
-	};
-
-	enum class ImagePixelStorageFormat
-	{
-		unorm, // float in range [0, 1]
-		snorm, // float in range [-1, 1]
-
-		uscaled, // unsigned int converted to float
-		sscaled, // signed int converted to float
-
-		uint, // unsigned int
-		sint, // signed int
-
-		ufloat, // unsigned float
-		sfloat, // signed float
-
-		float16, // half-precision float per-component
-		float32, // 32-bit float per-component
-
-		unorm_pack8,
-		unorm_pack16,
-		unorm_pack32,
-		snorm_pack32,
-		ufloat_pack32,
-		uscaled_pack32,
-		sscaled_pack32,
-		uint_pack32,
-		sint_pack32
-	};
-
-	enum class ImageChannelSize
-	{
-		// exactly 8, 16, 32, or 64 bits for each channel of each pixel
-		channel_8,
-		channel_16,
-		channel_32,
-		channel_64,
-
-		// everything else, like packed/compressed formats
-		special
-	};
-
-	enum class FormatCompressionType
-	{
-		none,
-		bc1,
-		bc2,
-		bc3,
-		bc4,
-		bc5,
-		bc6h,
-		bc7,
-		etc2,
-		eac,
-		astc_4x4,
-		astc_5x5,
-		astc_5x5,
-		astc_6x5,
-		astc_6x6,
-		astc_8x5,
-		astc_8x6,
-		astc_8x8,
-		astc_10x5,
-		astc_10x6,
-		astc_10x8,
-		astc_10x10,
-		astc_12x10,
-		astc_12x12,
-	};
-
-	enum class ImageCompressionScheme
-	{
-		none, // no compression applied
-		bc,   // block compression
-		etc2, // Ericsson texture compression
-		eac,  // ETC2 alpha compression
-		astc  // Adaptive Scalable Texture Compression (LDR profile)
-	};
 
 	enum class ImageUsageFlag : uint32_t
 	{
@@ -181,38 +97,10 @@ namespace vtek
 		exclusive, concurrent
 	};
 
-	// Specify how vtek should search for a suitable Vulkan image format.
-	// The restrictions are prioritized as such:
-	// 1. sRGB
-	// 2. Number of channels
-	// 3. Storage format
-	// 4: Swizzled channels
-	// 5. Compression
-	// TODO: Fill out here!
-	// NOTE: The more restrictions placed, the lower possibility of a match!
-	struct ImageFormatInfo
-	{
-		ImageChannels channels {ImageChannels::channels_4};
-		bool imageStorageSRGB {false};
-		bool swizzleBGR {false}; // TODO: When, why, and how?
-		ImagePixelStorageFormat storageFormat {ImagePixelStorageFormat::unorm};
-		ImageChannelSize channelSize {ImageChannelSize::channel_8};
-		ImageCompressionScheme compression {ImageCompressionScheme::none};
-		bool multiPlanarFormat {false};
-	};
-
 
 	// ========================= //
 	// === Utility functions === //
 	// ========================= //
-
-	// It can be useful to check if an image format is supported by the GPU
-	// before trying to create images from it. This function comes in two versions:
-	// - directly query for VkFormat support (optimal tiling check included!)
-	// - find a VkImage which matches specified `ImageFormatInfo` struct
-	bool is_image_format_supported(VkFormat format, const Device* device);
-	bool is_image_format_supported(
-		const ImageFormatInfo* formatInfo, const Device* device);
 
 	VkImageLayout get_image_layout(ImageLayout layout);
 
@@ -244,11 +132,11 @@ namespace vtek
 
 		VkExtent2D extent {0U, 0U};
 
-		// NOTE: Format specification: either directly choose a `VkFormat` type,
-		// or let vtek figure out a supported format which most closely matches
-		// the parameters provided in `formatInfo`.
+		// Format specification:
+		// 1) Directly specify a Vulkan format (not recommended, GPU support unsafe!)
+		// 2) Query a known supported format (recommended path)
 		VkFormat format {VK_FORMAT_UNDEFINED};
-		ImageFormatInfo formatInfo {};
+		SupportedFormat supportedFormat {};
 
 		// Specify how the image should be used. At least one flag must be set.
 		EnumBitmask<ImageUsageFlag> usageFlags {0U};

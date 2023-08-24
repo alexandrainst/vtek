@@ -1,6 +1,8 @@
 #include "vtek_vulkan.pch"
 #include "vtek_format_support.hpp"
 
+#include "vtek_logging.hpp"
+
 using vfmt = vtek::Format;
 
 
@@ -290,63 +292,79 @@ static constexpr uint32_t kDepthBit         = 0x0100;
 static constexpr uint32_t kStencilBit       = 0x0200;
 static constexpr uint32_t kDepthStencilBits = kDepthBit | kStencilBit;
 
-VkFormat SupportedFormat::get() const
+VkFormat vtek::SupportedFormat::get() const
 {
 	return fmt;
 }
 
-bool SupportedFormat::operator==(vtek::Format _format)
+bool vtek::SupportedFormat::operator==(vtek::Format _format) const
 {
 	return format == _format;
 }
 
-vtek::ImageChannels SupportedFormat::get_num_channels()
+vtek::FormatChannels vtek::SupportedFormat::get_num_channels() const
 {
 	// # channels stored in first two bits
-	return static_cast<vtek::ImageChannels>(propertyMask & kChannelBits);
+	return static_cast<vtek::FormatChannels>(propertyMask & kChannelBits);
 }
 
-bool SupportedFormat::has_alpha()
+bool vtek::SupportedFormat::has_alpha() const
 {
 	return propertyMask & kAlphaBit;
 }
 
-bool SupportedFormat::is_srgb()
+bool vtek::SupportedFormat::is_srgb() const
 {
 	return propertyMask & kSrgbBit;
 }
 
-bool SupportedFormat::is_compressed()
+bool vtek::SupportedFormat::is_compressed() const
 {
 	return propertyMask & kCompressedBit;
 }
 
-bool SupportedFormat::is_linear_tiling_supported()
+bool vtek::SupportedFormat::is_linear_tiling_supported() const
 {
 	return propertyMask & kLinearTilingBit;
 }
 
-bool SupportedFormat::is_blue_endian()
+bool vtek::SupportedFormat::is_blue_endian() const
 {
 	return propertyMask & kBlueEndianBit;
 }
 
-bool SupportedFormat::is_alpha_first()
+bool vtek::SupportedFormat::is_alpha_first() const
 {
 	return propertyMask & kAlphaFirstBit;
 }
 
-bool SupportedFormat::is_depth_stencil()
+bool vtek::SupportedFormat::is_depth_stencil() const
 {
 	return propertyMask & kDepthStencilBits;
 }
 
-bool SupportedFormat::has_depth() const
+bool vtek::SupportedFormat::has_depth() const
 {
 	return propertyMask & kDepthBit;
 }
 
-bool SupportedFormat::has_stencil() const
+bool vtek::SupportedFormat::has_stencil() const
 {
 	return propertyMask & kStencilBit;
+}
+
+vtek::FormatCompression vtek::SupportedFormat::get_compression_scheme() const
+{
+	return compression;
+}
+
+vtek::FormatStorageType vtek::SupportedFormat::get_storage_type() const
+{
+	return storage;
+}
+
+vtek::EnumBitmask<vtek::FormatFeature>
+vtek::SupportedFormat::get_supported_features() const
+{
+	return features;
 }
