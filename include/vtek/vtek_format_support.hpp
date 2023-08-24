@@ -98,139 +98,129 @@ namespace vtek
 		r32g32b32a32_uint, r32g32b32a32_sint, r32g32b32a32_sfloat,
 
 		// 64-bit formats
-		r64_uint = 110,
-		r64_sint = 111,
-		r64_sfloat = 112,
-		r64g64_uint = 113,
-		r64g64_sint = 114,
-		r64g64_sfloat = 115,
-		r64g64b64_uint = 116,
-		r64g64b64_sint = 117,
-		r64g64b64_sfloat = 118,
-		r64g64b64a64_uint = 119,
-		r64g64b64a64_sint = 120,
-		r64g64b64a64_sfloat = 121,
-		b10g11r11_ufloat_pack32 = 122,
-		e5b9g9r9_ufloat_pack32 = 123,
-		d16_unorm = 124,
-		x8_d24_unorm_pack32 = 125,
-		d32_sfloat = 126,
-		s8_uint = 127,
-		d16_unorm_s8_uint = 128,
-		d24_unorm_s8_uint = 129,
-		d32_sfloat_s8_uint = 130,
-		bc1_rgb_unorm_block = 131,
-		bc1_rgb_srgb_block = 132,
-		bc1_rgba_unorm_block = 133,
-		bc1_rgba_srgb_block = 134,
-		bc2_unorm_block = 135,
-		bc2_srgb_block = 136,
-		bc3_unorm_block = 137,
-		bc3_srgb_block = 138,
-		bc4_unorm_block = 139,
-		bc4_snorm_block = 140,
-		bc5_unorm_block = 141,
-		bc5_snorm_block = 142,
-		bc6h_ufloat_block = 143,
-		bc6h_sfloat_block = 144,
-		bc7_unorm_block = 145,
-		bc7_srgb_block = 146,
-		etc2_r8g8b8_unorm_block = 147,
-		etc2_r8g8b8_srgb_block = 148,
-		etc2_r8g8b8a1_unorm_block = 149,
-		etc2_r8g8b8a1_srgb_block = 150,
-		etc2_r8g8b8a8_unorm_block = 151,
-		etc2_r8g8b8a8_srgb_block = 152,
-		eac_r11_unorm_block = 153,
-		eac_r11_snorm_block = 154,
-		eac_r11g11_unorm_block = 155,
-		eac_r11g11_snorm_block = 156,
-		astc_4x4_unorm_block = 157,
-		astc_4x4_srgb_block = 158,
-		astc_5x4_unorm_block = 159,
-		astc_5x4_srgb_block = 160,
-		astc_5x5_unorm_block = 161,
-		astc_5x5_srgb_block = 162,
-		astc_6x5_unorm_block = 163,
-		astc_6x5_srgb_block = 164,
-		astc_6x6_unorm_block = 165,
-		astc_6x6_srgb_block = 166,
-		astc_8x5_unorm_block = 167,
-		astc_8x5_srgb_block = 168,
-		astc_8x6_unorm_block = 169,
-		astc_8x6_srgb_block = 170,
-		astc_8x8_unorm_block = 171,
-		astc_8x8_srgb_block = 172,
-		astc_10x5_unorm_block = 173,
-		astc_10x5_srgb_block = 174,
-		astc_10x6_unorm_block = 175,
-		astc_10x6_srgb_block = 176,
-		astc_10x8_unorm_block = 177,
-		astc_10x8_srgb_block = 178,
-		astc_10x10_unorm_block = 179,
-		astc_10x10_srgb_block = 180,
-		astc_12x10_unorm_block = 181,
-		astc_12x10_srgb_block = 182,
-		astc_12x12_unorm_block = 183,
-		astc_12x12_srgb_block = 184,
+		r64_uint, r64_sint, r64_sfloat,
+		r64g64_uint, r64g64_sint, r64g64_sfloat,
+		r64g64b64_uint, r64g64b64_sint, r64g64b64_sfloat,
+		r64g64b64a64_uint, r64g64b64a64_sint, r64g64b64a64_sfloat,
 
-		// Provided by VK_VERSION_1_1
-		g8b8g8r8_422_unorm = 1000156000,
-		b8g8r8g8_422_unorm = 1000156001,
-		g8_b8_r8_3plane_420_unorm = 1000156002,
-		g8_b8r8_2plane_420_unorm = 1000156003,
-		g8_b8_r8_3plane_422_unorm = 1000156004,
-		g8_b8r8_2plane_422_unorm = 1000156005,
-		g8_b8_r8_3plane_444_unorm = 1000156006,
-		r10x6_unorm_pack16 = 1000156007,
-		r10x6g10x6_unorm_2pack16 = 1000156008,
-		r10x6g10x6b10x6a10x6_unorm_4pack16 = 1000156009,
-		g10x6b10x6g10x6r10x6_422_unorm_4pack16 = 1000156010,
-		b10x6g10x6r10x6g10x6_422_unorm_4pack16 = 1000156011,
-		g10x6_b10x6_r10x6_3plane_420_unorm_3pack16 = 1000156012,
-		g10x6_b10x6r10x6_2plane_420_unorm_3pack16 = 1000156013,
-		g10x6_b10x6_r10x6_3plane_422_unorm_3pack16 = 1000156014,
-		g10x6_b10x6r10x6_2plane_422_unorm_3pack16 = 1000156015,
-		g10x6_b10x6_r10x6_3plane_444_unorm_3pack16 = 1000156016,
-		r12x4_unorm_pack16 = 1000156017,
-		r12x4g12x4_unorm_2pack16 = 1000156018,
-		r12x4g12x4b12x4a12x4_unorm_4pack16 = 1000156019,
-		g12x4b12x4g12x4r12x4_422_unorm_4pack16 = 1000156020,
-		b12x4g12x4r12x4g12x4_422_unorm_4pack16 = 1000156021,
-		g12x4_b12x4_r12x4_3plane_420_unorm_3pack16 = 1000156022,
-		g12x4_b12x4r12x4_2plane_420_unorm_3pack16 = 1000156023,
-		g12x4_b12x4_r12x4_3plane_422_unorm_3pack16 = 1000156024,
-		g12x4_b12x4r12x4_2plane_422_unorm_3pack16 = 1000156025,
-		g12x4_b12x4_r12x4_3plane_444_unorm_3pack16 = 1000156026,
-		g16b16g16r16_422_unorm = 1000156027,
-		b16g16r16g16_422_unorm = 1000156028,
-		g16_b16_r16_3plane_420_unorm = 1000156029,
-		g16_b16r16_2plane_420_unorm = 1000156030,
-		g16_b16_r16_3plane_422_unorm = 1000156031,
-		g16_b16r16_2plane_422_unorm = 1000156032,
-		g16_b16_r16_3plane_444_unorm = 1000156033,
+		// Special packed 3-channel format, e.g. used for bloom
+		b10g11r11_ufloat_pack32,
 
-		// Provided by VK_VERSION_1_3
-		g8_b8r8_2plane_444_unorm = 1000330000,
-		g10x6_b10x6r10x6_2plane_444_unorm_3pack16 = 1000330001,
-		g12x4_b12x4r12x4_2plane_444_unorm_3pack16 = 1000330002,
-		g16_b16r16_2plane_444_unorm = 1000330003,
-		a4r4g4b4_unorm_pack16 = 1000340000,
-		a4b4g4r4_unorm_pack16 = 1000340001,
-		astc_4x4_sfloat_block = 1000066000,
-		astc_5x4_sfloat_block = 1000066001,
-		astc_5x5_sfloat_block = 1000066002,
-		astc_6x5_sfloat_block = 1000066003,
-		astc_6x6_sfloat_block = 1000066004,
-		astc_8x5_sfloat_block = 1000066005,
-		astc_8x6_sfloat_block = 1000066006,
-		astc_8x8_sfloat_block = 1000066007,
-		astc_10x5_sfloat_block = 1000066008,
-		astc_10x6_sfloat_block = 1000066009,
-		astc_10x8_sfloat_block = 1000066010,
-		astc_10x10_sfloat_block = 1000066011,
-		astc_12x10_sfloat_block = 1000066012,
-		astc_12x12_sfloat_block = 1000066013
+		// Special packed 4-channel format; 'e' probably means HDRE radiance!
+		e5b9g9r9_ufloat_pack32,
+
+		// Depth/stencil formats
+		d16_unorm, x8_d24_unorm_pack32, d32_sfloat, s8_uint,
+		d16_unorm_s8_uint, d24_unorm_s8_uint, d32_sfloat_s8_uint,
+
+		// Block-compressed formats
+		bc1_rgb_unorm_block, bc1_rgb_srgb_block,
+		bc1_rgba_unorm_block, bc1_rgba_srgb_block,
+		bc2_unorm_block, bc2_srgb_block,
+		bc3_unorm_block, bc3_srgb_block,
+		bc4_unorm_block, bc4_snorm_block,
+		bc5_unorm_block, bc5_snorm_block,
+		bc6h_ufloat_block, bc6h_sfloat_block,
+		bc7_unorm_block, bc7_srgb_block,
+
+		// Ericsson compressed formats (ETC2)
+		etc2_r8g8b8_unorm_block, etc2_r8g8b8_srgb_block,
+		etc2_r8g8b8a1_unorm_block, etc2_r8g8b8a1_srgb_block,
+		etc2_r8g8b8a8_unorm_block, etc2_r8g8b8a8_srgb_block,
+
+		// ETC2 alpha-compressed formats
+		eac_r11_unorm_block, eac_r11_snorm_block,
+		eac_r11g11_unorm_block, eac_r11g11_snorm_block,
+
+		// ASTC-compressed formats, both unorm and sRGB
+		astc_4x4_unorm_block, astc_4x4_srgb_block,
+		astc_5x4_unorm_block, astc_5x4_srgb_block,
+		astc_5x5_unorm_block, astc_5x5_srgb_block,
+		astc_6x5_unorm_block, astc_6x5_srgb_block,
+		astc_6x6_unorm_block, astc_6x6_srgb_block,
+		astc_8x5_unorm_block, astc_8x5_srgb_block,
+		astc_8x6_unorm_block, astc_8x6_srgb_block,
+		astc_8x8_unorm_block, astc_8x8_srgb_block,
+		astc_10x5_unorm_block, astc_10x5_srgb_block,
+		astc_10x6_unorm_block, astc_10x6_srgb_block,
+		astc_10x8_unorm_block, astc_10x8_srgb_block,
+		astc_10x10_unorm_block, astc_10x10_srgb_block,
+		astc_12x10_unorm_block, astc_12x10_srgb_block,
+		astc_12x12_unorm_block, astc_12x12_srgb_block,
+
+		// ===
+		// === All formats below here requires Vulkan >= 1.1 === //
+		// ===
+
+		// Two special formats that encode a 2x1 rectangle (see SPEC.)
+		g8b8g8r8_422_unorm, b8g8r8g8_422_unorm,
+
+		// Multi-planar formats; probably intended for Y'CrCb conversion (see SPEC.)
+		g8_b8_r8_3plane_420_unorm, g8_b8r8_2plane_420_unorm,
+		g8_b8_r8_3plane_422_unorm, g8_b8r8_2plane_422_unorm,
+		g8_b8_r8_3plane_444_unorm,
+
+		// Special packed 16-bit formats; for each channel x bits are unused
+		r10x6_unorm_pack16,
+		r10x6g10x6_unorm_2pack16,
+		r10x6g10x6b10x6a10x6_unorm_4pack16,
+		g10x6b10x6g10x6r10x6_422_unorm_4pack16,
+		b10x6g10x6r10x6g10x6_422_unorm_4pack16,
+
+		// Multi-planar formats with x unused bits for each channel
+		g10x6_b10x6_r10x6_3plane_420_unorm_3pack16,
+		g10x6_b10x6r10x6_2plane_420_unorm_3pack16,
+		g10x6_b10x6_r10x6_3plane_422_unorm_3pack16,
+		g10x6_b10x6r10x6_2plane_422_unorm_3pack16,
+		g10x6_b10x6_r10x6_3plane_444_unorm_3pack16,
+
+		// More special formats, as described above, in order given by SPEC.
+		r12x4_unorm_pack16,
+		r12x4g12x4_unorm_2pack16,
+		r12x4g12x4b12x4a12x4_unorm_4pack16,
+		g12x4b12x4g12x4r12x4_422_unorm_4pack16,
+		b12x4g12x4r12x4g12x4_422_unorm_4pack16,
+		g12x4_b12x4_r12x4_3plane_420_unorm_3pack16,
+		g12x4_b12x4r12x4_2plane_420_unorm_3pack16,
+		g12x4_b12x4_r12x4_3plane_422_unorm_3pack16,
+		g12x4_b12x4r12x4_2plane_422_unorm_3pack16,
+		g12x4_b12x4_r12x4_3plane_444_unorm_3pack16,
+		g16b16g16r16_422_unorm,
+		b16g16r16g16_422_unorm,
+		g16_b16_r16_3plane_420_unorm,
+		g16_b16r16_2plane_420_unorm,
+		g16_b16_r16_3plane_422_unorm,
+		g16_b16r16_2plane_422_unorm,
+		g16_b16_r16_3plane_444_unorm,
+
+		// ===
+		// === All formats below here requires Vulkan >= 1.3 === //
+		// ===
+
+		// More special multi-planar formats (see SPEC.)
+		g8_b8r8_2plane_444_unorm,
+		g10x6_b10x6r10x6_2plane_444_unorm_3pack16,
+		g12x4_b12x4r12x4_2plane_444_unorm_3pack16,
+		g16_b16r16_2plane_444_unorm,
+
+		// Packed four-channel formats with 4 bits per channel and alpha first
+		a4r4g4b4_unorm_pack16, a4b4g4r4_unorm_pack16,
+
+		// ASTC-compressed formats, signed float storage
+		astc_4x4_sfloat_block,
+		astc_5x4_sfloat_block,
+		astc_5x5_sfloat_block,
+		astc_6x5_sfloat_block,
+		astc_6x6_sfloat_block,
+		astc_8x5_sfloat_block,
+		astc_8x6_sfloat_block,
+		astc_8x8_sfloat_block,
+		astc_10x5_sfloat_block,
+		astc_10x6_sfloat_block,
+		astc_10x8_sfloat_block,
+		astc_10x10_sfloat_block,
+		astc_12x10_sfloat_block,
+		astc_12x12_sfloat_block
 	};
 
 	enum class ImageTiling
@@ -263,21 +253,33 @@ namespace vtek
 		inline SupportedFormat() {}
 		SupportedFormat& operator=(const SupportedFormat& sf) {} // TODO: Invalid!
 
+		bool operator==(Format _format) const;
+
 		// Retrieve format properties
 		ImageChannels get_num_channels() const;
+		bool has_alpha() const;
 		bool is_srgb() const;
 		bool is_compressed() const;
 		bool is_linear_tiling_supported() const;
+		bool is_blue_endian() const;
+		bool is_alpha_first() const;
+		bool is_depth_stencil() const;
+		bool has_depth() const;
+		bool has_stencil() const;
+
 		ImageCompressionScheme get_compression_scheme() const;
 		ImagePixelStorageFormat get_storage_format() const;
 		EnumBitmask<ImageUsageFlag> get_supported_usage_flags() const; // TODO: ?
 		EnumBitmask<FormatFeatureFlag> get_supported_format_features() const;
 
-
 	private:
 		inline SupportedFormat(VkFormat _format) : format(_format) {}
 
-		const VkFormat format {VK_FORMAT_UNDEFINED};
+		ImageCompressionScheme compressionScheme;
+		FormatCompressionType compressionType;
+		uint32_t propertyMask {0U};
+		Format format {Format::undefined};
+		const VkFormat fmt {VK_FORMAT_UNDEFINED};
 		// TODO: Store VkFormatFeatureFlags ?
 	};
 };

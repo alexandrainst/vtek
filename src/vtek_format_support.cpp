@@ -275,3 +275,78 @@ static VkFormat get_format(vtek::Format format)
 		return VK_FORMAT_UNDEFINED;
 	}
 }
+
+
+
+/* supported format class */
+static constexpr uint32_t kChannelBits      = 0x0003;
+static constexpr uint32_t kAlphaBit         = 0x0004;
+static constexpr uint32_t kSrgbBit          = 0x0008;
+static constexpr uint32_t kCompressedBit    = 0x0010;
+static constexpr uint32_t kLinearTilingBit  = 0x0020;
+static constexpr uint32_t kBlueEndianBit    = 0x0040;
+static constexpr uint32_t kAlphaFirstBit    = 0x0080;
+static constexpr uint32_t kDepthBit         = 0x0100;
+static constexpr uint32_t kStencilBit       = 0x0200;
+static constexpr uint32_t kDepthStencilBits = kDepthBit | kStencilBit;
+
+VkFormat SupportedFormat::get() const
+{
+	return fmt;
+}
+
+bool SupportedFormat::operator==(vtek::Format _format)
+{
+	return format == _format;
+}
+
+vtek::ImageChannels SupportedFormat::get_num_channels()
+{
+	// # channels stored in first two bits
+	return static_cast<vtek::ImageChannels>(propertyMask & kChannelBits);
+}
+
+bool SupportedFormat::has_alpha()
+{
+	return propertyMask & kAlphaBit;
+}
+
+bool SupportedFormat::is_srgb()
+{
+	return propertyMask & kSrgbBit;
+}
+
+bool SupportedFormat::is_compressed()
+{
+	return propertyMask & kCompressedBit;
+}
+
+bool SupportedFormat::is_linear_tiling_supported()
+{
+	return propertyMask & kLinearTilingBit;
+}
+
+bool SupportedFormat::is_blue_endian()
+{
+	return propertyMask & kBlueEndianBit;
+}
+
+bool SupportedFormat::is_alpha_first()
+{
+	return propertyMask & kAlphaFirstBit;
+}
+
+bool SupportedFormat::is_depth_stencil()
+{
+	return propertyMask & kDepthStencilBits;
+}
+
+bool SupportedFormat::has_depth() const
+{
+	return propertyMask & kDepthBit;
+}
+
+bool SupportedFormat::has_stencil() const
+{
+	return propertyMask & kStencilBit;
+}

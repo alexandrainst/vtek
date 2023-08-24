@@ -452,36 +452,214 @@ static void get_format_color_channel_3(
 			priorities.push_back(VK_FORMAT_B10G11R11_UFLOAT_PACK32);
 		}
 	}
-
-
-	priorities.push_back();
-	priorities.push_back();
-	priorities.push_back();
 }
 
-static void get_format_color_channel_3(
+static void get_format_color_channel_4(
 	const vtek::ImageFormatInfo* info, std::vector<VkFormat>& priorities)
 {
 	if (info->channelSize == vtek::ImageChannelSize::channel_8)
 	{
-
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::unorm:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R8G8B8A8_UNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_SNORM : VK_FORMAT_R8G8B8A8_SNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_USCALED : VK_FORMAT_R8G8B8A8_USCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_SSCALED : VK_FORMAT_R8G8B8A8_SSCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_UINT : VK_FORMAT_R8G8B8A8_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(
+				(info->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_SINT : VK_FORMAT_R8G8B8A8_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::unorm_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_UNORM_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_SNORM_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_USCALED_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_SSCALED_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::uint_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_UINT_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::sint_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_SINT_PACK32);
+			break;
+		default:
+			break;
+		}
 	}
 	else if (info->channelSize == vtek::ImageChannelSize::channel_16)
 	{
-
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::unorm:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_UNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_SNORM);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_USCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_SSCALED);
+			break;
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_SFLOAT);
+			break;
+		default:
+			break;
+		}
 	}
 	else if (info->channelSize == vtek::ImageChannelSize::channel_32)
 	{
-
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R32G32B32A32_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R32G32B32A32_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+			break;
+		default:
+			break;
+		}
 	}
 	else if (info->channelSize == vtek::ImageChannelSize::channel_64)
 	{
-
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::uint:
+			priorities.push_back(VK_FORMAT_R64G64B64A64_UINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sint:
+			priorities.push_back(VK_FORMAT_R64G64B64A64_SINT);
+			break;
+		case vtek::ImagePixelStorageFormat::sfloat:
+			priorities.push_back(VK_FORMAT_R64G64B64A64_SFLOAT);
+			break;
+		default:
+			break;
+		}
 	}
-	else if (info->channelSize == vtek::ImageChannelSize::special)
+	else if (info->channelSize == vtek::ImageChannelSize::special &&
+	         !info->swizzleBGR)
 	{
-
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::unorm_pack16:
+			priorities.push_back(VK_FORMAT_R4G4B4A4_UNORM_PACK16);
+#if defined(VK_API_VERSION_1_3)
+			priorities.push_back(VK_FORMAT_A4R4G4B4_UNORM_PACK16);
+#endif
+			priorities.push_back(VK_FORMAT_R5G5B5A1_UNORM_PACK16);
+			priorities.push_back(VK_FORMAT_A1R5G5B5_UNORM_PACK16);
+			break;
+		case vtek::ImagePixelStorageFormat::unorm_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_UNORM_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_SNORM_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_USCALED_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_SSCALED_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::uint_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_UINT_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::sint_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_SINT_PACK32);
+			break;
+		default:
+			break;
+		}
 	}
+	else if (info->channelSize == vtek::ImageChannelSize::special &&
+	         info->swizzleBGR)
+	{
+		switch (info->storageFormat)
+		{
+		case vtek::ImagePixelStorageFormat::unorm_pack16:
+			priorities.push_back(VK_FORMAT_B4G4R4A4_UNORM_PACK16);
+#if defined(VK_API_VERSION_1_3)
+			priorities.push_back(VK_FORMAT_A4B4G4R4_UNORM_PACK16);
+#endif
+			priorities.push_back(VK_FORMAT_B5G5R5A1_UNORM_PACK16);
+			break;
+		case vtek::ImagePixelStorageFormat::unorm_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_UNORM_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::snorm_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_SNORM_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::uscaled_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_USCALED_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::sscaled_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_SSCALED_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::uint_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_UINT_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::sint_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_SINT_PACK32);
+			break;
+		case vtek::ImagePixelStorageFormat::ufloat_pack32:
+			priorities.push_back(VK_FORMAT_E5B9G9R9_UFLOAT_PACK32);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static void get_format_compressed_srgb(
+	const vtek::ImageFormatInfo* info, std::vector<VkFormat>& priorities)
+{
+	vtek_log_error("get_format_compressed_srgb(): Not implemented!");
+}
+
+static void get_format_compressed(
+	const vtek::ImageFormatInfo* info, std::vector<VkFormat>& priorities)
+{
+	vtek_log_error("get_format_compressed(): Not implemented!");
 }
 
 
@@ -554,7 +732,14 @@ VkFormat vtek::get_format_color(
 	// TODO: Independent function for all compressed formats!
 	if (info->compression != vtek::ImageCompressionScheme::none)
 	{
-
+		if (info->imageStorageSRGB)
+		{
+			get_format_compressed_srgb(info, priorities);
+		}
+		else
+		{
+			get_format_compressed(info, priorities);
+		}
 	}
 	else if (info->imageStorageSRGB)
 	{

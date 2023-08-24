@@ -29,7 +29,7 @@ namespace vtek
 		snorm, // float in range [-1, 1]
 
 		uscaled, // unsigned int converted to float
-		sscaled, // (signed) int converted to float
+		sscaled, // signed int converted to float
 
 		uint, // unsigned int
 		sint, // signed int
@@ -44,7 +44,11 @@ namespace vtek
 		unorm_pack16,
 		unorm_pack32,
 		snorm_pack32,
-		ufloat_pack32
+		ufloat_pack32,
+		uscaled_pack32,
+		sscaled_pack32,
+		uint_pack32,
+		sint_pack32
 	};
 
 	enum class ImageChannelSize
@@ -57,6 +61,34 @@ namespace vtek
 
 		// everything else, like packed/compressed formats
 		special
+	};
+
+	enum class FormatCompressionType
+	{
+		none,
+		bc1,
+		bc2,
+		bc3,
+		bc4,
+		bc5,
+		bc6h,
+		bc7,
+		etc2,
+		eac,
+		astc_4x4,
+		astc_5x5,
+		astc_5x5,
+		astc_6x5,
+		astc_6x6,
+		astc_8x5,
+		astc_8x6,
+		astc_8x8,
+		astc_10x5,
+		astc_10x6,
+		astc_10x8,
+		astc_10x10,
+		astc_12x10,
+		astc_12x12,
 	};
 
 	enum class ImageCompressionScheme
