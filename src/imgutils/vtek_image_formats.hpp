@@ -13,7 +13,7 @@ namespace vtek
 	// === Format queries === //
 	// ====================== //
 
-	enum class FormatFeatureFlag : uint32_t
+	enum class FormatFeature : uint32_t
 	{
 		sampledImage             = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
 		storageImage             = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT,
@@ -54,7 +54,7 @@ namespace vtek
 		VkPhysicalDevice physicalDevice,
 		std::vector<VkFormat> prioritizedCandidates,
 		VkImageTiling tiling,
-		EnumBitmask<FormatFeatureFlag> featureFlags,
+		EnumBitmask<FormatFeature> featureFlags,
 		VkFormat* outFormat);
 
 	// Find a suitable format matching provided parameters.
@@ -62,7 +62,7 @@ namespace vtek
 	// TODO: Better return bool instead?
 	VkFormat get_format_color(
 		const ImageFormatInfo* info, VkPhysicalDevice physDev,
-		EnumBitmask<FormatFeatureFlag> featureFlags);
+		EnumBitmask<FormatFeature> featureFlags);
 
 	enum class FormatDepthStencilTest
 	{

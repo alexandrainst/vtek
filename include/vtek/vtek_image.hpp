@@ -44,6 +44,7 @@ namespace vtek
 		unorm_pack16,
 		unorm_pack32,
 		snorm_pack32,
+		ufloat_pack32
 	};
 
 	enum class ImageChannelSize

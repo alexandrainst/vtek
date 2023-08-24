@@ -447,13 +447,41 @@ static void get_format_color_channel_3(
 	}
 	else if (info->channelSize == vtek::ImageChannelSize::special)
 	{
-
+		if (info->storageFormat == vtek::ImagePixelStorageFormat::ufloat_pack32)
+		{
+			priorities.push_back(VK_FORMAT_B10G11R11_UFLOAT_PACK32);
+		}
 	}
 
 
 	priorities.push_back();
 	priorities.push_back();
 	priorities.push_back();
+}
+
+static void get_format_color_channel_3(
+	const vtek::ImageFormatInfo* info, std::vector<VkFormat>& priorities)
+{
+	if (info->channelSize == vtek::ImageChannelSize::channel_8)
+	{
+
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_16)
+	{
+
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_32)
+	{
+
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::channel_64)
+	{
+
+	}
+	else if (info->channelSize == vtek::ImageChannelSize::special)
+	{
+
+	}
 }
 
 
@@ -523,7 +551,12 @@ VkFormat vtek::get_format_color(
 	std::vector<VkFormat> priorities;
 	uint32_t channels = static_cast<uint32_t>(info->channels);
 
-	if (info->imageStorageSRGB)
+	// TODO: Independent function for all compressed formats!
+	if (info->compression != vtek::ImageCompressionScheme::none)
+	{
+
+	}
+	else if (info->imageStorageSRGB)
 	{
 		get_format_color_srgb(info, priorities);
 	}
