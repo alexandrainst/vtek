@@ -595,7 +595,7 @@ VkFormatFeatureFlags vtek::get_format_features(
 	if (features.has_flag(vtek::FormatFeature::sampled_image)) {
 		flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
 	}
-	if (features.has_flag(vtek::FormatFeature::sampled_image)) {
+	if (features.has_flag(vtek::FormatFeature::storage_image)) {
 		flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 	}
 	if (features.has_flag(vtek::FormatFeature::storage_image_atomic)) {
@@ -677,7 +677,7 @@ bool vtek::find_supported_image_format(
 	VkFormat* outFormat)
 {
 	VkFormatFeatureFlags features = vtek::get_format_features(featureFlags);
-	for (const VkFormat& format : prioritizedCandidates)
+	for (VkFormat format : prioritizedCandidates)
 	{
 		VkFormatProperties properties;
 		vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &properties);

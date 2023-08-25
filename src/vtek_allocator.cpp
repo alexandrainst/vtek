@@ -296,7 +296,10 @@ bool vtek::allocator_image2d_create(
 		imageInfo.format = info->format;
 	}
 	else {
-		// TODO: Calculate format!
+		vtek_log_debug(
+			"vtek_allocator.cpp: allocator_image2d_create(): {}",
+			"vkFormat not specified, SupportedFormat might not be implemented!");
+		imageInfo.format = info->supportedFormat.get();
 	}
 
 	if (info->useMipmaps) {

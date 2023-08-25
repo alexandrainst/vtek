@@ -279,34 +279,33 @@ namespace vtek
 
 	enum class FormatFeature : uint32_t
 	{
-		sampled_image,
-		storage_image,
-		storage_image_atomic,
-		uniform_texel_buffer,
-
-		storage_texel_buffer,
-		storage_texel_buffer_atomic,
-		vertex_buffer,
-		color_attachment,
-		color_attachment_blend,
-		depth_stencil_attachment,
-		blit_src,
-		blit_dst,
-		sampled_image_filter_linear,
+		sampled_image               = 0x00000001U,
+		storage_image               = 0x00000002U,
+		storage_image_atomic        = 0x00000004U,
+		uniform_texel_buffer        = 0x00000008U,
+		storage_texel_buffer        = 0x00000010U,
+		storage_texel_buffer_atomic = 0x00000020U,
+		vertex_buffer               = 0x00000040U,
+		color_attachment            = 0x00000080U,
+		color_attachment_blend      = 0x00000100U,
+		depth_stencil_attachment    = 0x00000200U,
+		blit_src                    = 0x00000400U,
+		blit_dst                    = 0x00000800U,
+		sampled_image_filter_linear = 0x00001000U,
 
 		// Provided by Vulkan >= 1.1
-		transfer_src,
-		transfer_dst,
-		midpoint_chroma_samples,
-		sampled_image_ycbcr_conv_lin_filter,
-		sampled_image_ycbcr_conv_sep_rec_filter,
-		sampled_image_ycbcr_conv_chroma_Rec_ex,
-		sampled_image_ycbcr_conv_chroma_rec_ex_force,
-		disjoint_bit,
-		cosited_chroma_samples,
+		transfer_src                                 = 0x00002000U,
+		transfer_dst                                 = 0x00004000U,
+		midpoint_chroma_samples                      = 0x00008000U,
+		sampled_image_ycbcr_conv_lin_filter          = 0x00010000U,
+		sampled_image_ycbcr_conv_sep_rec_filter      = 0x00020000U,
+		sampled_image_ycbcr_conv_chroma_Rec_ex       = 0x00040000U,
+		sampled_image_ycbcr_conv_chroma_rec_ex_force = 0x00080000U,
+		disjoint_bit                                 = 0x00100000U,
+		cosited_chroma_samples                       = 0x00200000U,
 
 		// Provided by Vulkan >= 1.2
-		sampled_image_filter_minmax
+		sampled_image_filter_minmax = 0x00400000U
 	};
 
 
