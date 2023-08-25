@@ -234,6 +234,8 @@ namespace vtek
 
 	enum class FormatStorageType
 	{
+		srgb,    // encoded sRGB color; storage type not applicable
+
 		unorm,   // float in range [0, 1]
 		snorm,   // float in range [-1, 1]
 		uscaled, // unsigned int converted to float
@@ -246,6 +248,7 @@ namespace vtek
 		float32, // 32-bit float per-component
 
 		// all channels packed in x bits, with y format
+		srgb_pack32,
 		unorm_pack8,
 		unorm_pack16,
 		unorm_pack32,
@@ -254,7 +257,13 @@ namespace vtek
 		uscaled_pack32,
 		sscaled_pack32,
 		uint_pack32,
-		sint_pack32
+		sint_pack32,
+
+		// More special storage types
+		unused8_unorm24_pack32,
+		unorm16_uint8,
+		unorm24_uint8,
+		sfloat32_uint8,
 	};
 
 	enum class FormatChannels : uint32_t
@@ -267,7 +276,8 @@ namespace vtek
 
 	enum class FormatChannelSize
 	{
-		// exactly 8, 16, 32, or 64 bits for each channel of each pixel
+		// exactly 4, 8, 16, 32, or 64 bits for each channel of each pixel
+		channel_4, // TODO: Not completely implemented!
 		channel_8,
 		channel_16,
 		channel_32,
@@ -383,11 +393,15 @@ namespace vtek
 		FormatStorageType get_storage_type() const;
 		EnumBitmask<FormatFeature> get_supported_features() const;
 
+		inline bool has_feature(FormatFeature feature) {
+			return features.has_flag(feature);
+		}
+
 	private:
 		// Only the friend function may properly construct this object
 		friend bool vtek::has_format_support(
 			const FormatQuery*,const Device*,SupportedFormat*);
-		SupportedFormat(Format _format) : format(_format) {}
+		SupportedFormat(Format _format, VkFormat _fmt, bool linearTiling);
 
 		Format format {Format::undefined};
 		VkFormat fmt {VK_FORMAT_UNDEFINED};

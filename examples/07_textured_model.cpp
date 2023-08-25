@@ -8,7 +8,7 @@ uint32_t gFramebufferHeight = 0U;
 vtek::KeyboardMap gKeyboardMap;
 vtek::Camera* gCamera = nullptr;
 vtek::Uniform_m4_v4 gCameraUniform;
-vtek::FloatClamp<0.01f, 10.0f> gCameraExposure = 1.05f;
+vtek::FloatClamp<0.01f, 50.0f> gCameraExposure = 1.05f;
 // TODO: Implement pipeline derivation!
 // TODO: Depth testing switch by depth function as dynamic pipeline state!
 bool gRenderWireframe = false;
@@ -101,10 +101,10 @@ void update_movement()
 
 	// Adjust camera exposure
 	if (gKeyboardMap.get_key(KeyboardKey::numpad_add)) {
-		gCameraExposure += 0.01f;
+		gCameraExposure += 0.015f;
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::numpad_subtract)) {
-		gCameraExposure -= 0.01f;
+		gCameraExposure -= 0.015f;
 	}
 }
 
