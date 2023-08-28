@@ -283,6 +283,7 @@ static VkFormat get_format(vtek::Format format)
 
 using FCSize = vtek::FormatChannelSize;
 using SType = vtek::FormatStorageType;
+using FCompr = vtek::FormatCompression;
 
 struct FormatDetails
 {
@@ -297,6 +298,7 @@ struct FormatDetails
 	bool depth {false};
 	bool stencil {false};
 	SType storageType {SType::unorm};
+	bool planar {false};
 };
 
 static void get_format_details(vtek::Format format, FormatDetails* details)
@@ -900,7 +902,7 @@ static void get_format_details(vtek::Format format, FormatDetails* details)
 		details->channelSize = FCSize::channel_64;
 		return;
 
-	case vfmt::b10g11r11_ufloat_pack32:
+	case vfmt::b10g11r11_ufloat_pack32: // TODO: How to handle this format?
 		details->channels = 3; details->blueEndian = true;
 		details->storageType = SType::ufloat_pack32;
 		details->channelSize = FCSize::special;
@@ -952,226 +954,549 @@ static void get_format_details(vtek::Format format, FormatDetails* details)
 		details->channelSize = FCSize::special;
 		return;
 
+		// NOTE: The detailing of compressed formats might be incomplete!
 
-
-
-
-
-
-
-
-
-		/*
-	case vfmt::bc1_rgb_unorm_block:  return VK_FORMAT_BC1_RGB_UNORM_BLOCK;
+	case vfmt::bc1_rgb_unorm_block:
+		details->compression = FCompr::bc1;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::bc1_rgb_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::bc1;
+		return;
 
-	case vfmt::bc1_rgba_unorm_block: return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+	case vfmt::bc1_rgba_unorm_block:
+		details->compression = FCompr::bc1; details->alpha = true;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::bc1_rgba_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::bc1; details->alpha = true;
+		return;
 
-	case vfmt::bc2_unorm_block:      return VK_FORMAT_BC2_UNORM_BLOCK;
+	case vfmt::bc2_unorm_block:
+		details->compression = FCompr::bc2;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::bc2_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::bc2;
+		return;
 
-	case vfmt::bc3_unorm_block:      return VK_FORMAT_BC3_UNORM_BLOCK;
+	case vfmt::bc3_unorm_block:
+		details->compression = FCompr::bc3;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::bc3_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::bc3;
+		return;
 
-	case vfmt::bc4_unorm_block:      return VK_FORMAT_BC4_UNORM_BLOCK;
-	case vfmt::bc4_snorm_block:      return VK_FORMAT_BC4_SNORM_BLOCK;
-	case vfmt::bc5_unorm_block:      return VK_FORMAT_BC5_UNORM_BLOCK;
-	case vfmt::bc5_snorm_block:      return VK_FORMAT_BC5_SNORM_BLOCK;
-	case vfmt::bc6h_ufloat_block:    return VK_FORMAT_BC6H_UFLOAT_BLOCK;
-	case vfmt::bc6h_sfloat_block:    return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-	case vfmt::bc7_unorm_block:      return VK_FORMAT_BC7_UNORM_BLOCK;
+	case vfmt::bc4_unorm_block:
+		details->compression = FCompr::bc4;
+		details->storageType = SType::unorm_block;
+		return;
+
+	case vfmt::bc4_snorm_block:
+		details->compression = FCompr::bc4;
+		details->storageType = SType::snorm_block;
+		return;
+
+	case vfmt::bc5_unorm_block:
+		details->compression = FCompr::bc5;
+		details->storageType = SType::unorm_block;
+		return;
+
+	case vfmt::bc5_snorm_block:
+		details->compression = FCompr::bc5;
+		details->storageType = SType::snorm_block;
+		return;
+
+	case vfmt::bc6h_ufloat_block:
+		details->compression = FCompr::bc6h;
+		details->storageType = SType::ufloat_block;
+		return;
+
+	case vfmt::bc6h_sfloat_block:
+		details->compression = FCompr::bc6h;
+		details->storageType = SType::sfloat_block;
+		return;
+
+	case vfmt::bc7_unorm_block:
+		details->compression = FCompr::bc7;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::bc7_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::bc7;
+		return;
 
-	case vfmt::etc2_r8g8b8_unorm_block:   return VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK;
+	case vfmt::etc2_r8g8b8_unorm_block:
+		details->compression = FCompr::etc2;
+		details->storageType = SType::unorm_block;
+		return;
+
 	case vfmt::etc2_r8g8b8_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::etc2;
+		return;
 
-	case vfmt::etc2_r8g8b8a1_unorm_block: return VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK;
+	case vfmt::etc2_r8g8b8a1_unorm_block:
+		details->compression = FCompr::etc2; details->alpha = true;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::etc2_r8g8b8a1_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::etc2; details->alpha = true;
+		return;
 
-	case vfmt::etc2_r8g8b8a8_unorm_block: return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+	case vfmt::etc2_r8g8b8a8_unorm_block:
+		details->compression = FCompr::etc2; details->alpha = true;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::etc2_r8g8b8a8_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::etc2; details->alpha = true;
+		return;
 
 	case vfmt::eac_r11_unorm_block:
+		details->compression = FCompr::eac;
+		details->storageType = SType::unorm_block;
+		details->channelSize = FCSize::special;
+		return;
 
 	case vfmt::eac_r11_snorm_block:
+		details->compression = FCompr::eac;
+		details->storageType = SType::snorm_block;
+		details->channelSize = FCSize::special;
+		return;
 
 	case vfmt::eac_r11g11_unorm_block:
+		details->compression = FCompr::eac;
+		details->storageType = SType::unorm_block;
+		details->channelSize = FCSize::special;
+		return;
 
 	case vfmt::eac_r11g11_snorm_block:
+		details->compression = FCompr::eac;
+		details->storageType = SType::snorm_block;
+		details->channelSize = FCSize::special;
+		return;
 
 	case vfmt::astc_4x4_unorm_block:
+		details->compression = FCompr::astc_4x4;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_4x4_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_4x4;
+		return;
 
 	case vfmt::astc_5x4_unorm_block:
+		details->compression = FCompr::astc_5x4;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_5x4_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_5x4;
+		return;
 
 	case vfmt::astc_5x5_unorm_block:
+		details->compression = FCompr::astc_5x5;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_5x5_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_5x5;
+		return;
 
 	case vfmt::astc_6x5_unorm_block:
+		details->compression = FCompr::astc_6x5;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_6x5_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_6x5;
+		return;
 
 	case vfmt::astc_6x6_unorm_block:
+		details->compression = FCompr::astc_6x6;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_6x6_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_6x6;
+		return;
 
 	case vfmt::astc_8x5_unorm_block:
+		details->compression = FCompr::astc_8x5;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_8x5_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_8x5;
+		return;
 
 	case vfmt::astc_8x6_unorm_block:
+		details->compression = FCompr::astc_8x6;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_8x6_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_8x6;
+		return;
 
 	case vfmt::astc_8x8_unorm_block:
+		details->compression = FCompr::astc_8x8;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_8x8_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_8x8;
+		return;
 
 	case vfmt::astc_10x5_unorm_block:
+		details->compression = FCompr::astc_10x5;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_10x5_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_10x5;
+		return;
 
 	case vfmt::astc_10x6_unorm_block:
+		details->compression = FCompr::astc_10x6;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_10x6_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_10x6;
+		return;
 
 	case vfmt::astc_10x8_unorm_block:
+		details->compression = FCompr::astc_10x8;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_10x8_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_10x8;
+		return;
 
 	case vfmt::astc_10x10_unorm_block:
+		details->compression = FCompr::astc_10x10;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_10x10_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_10x10;
+		return;
 
 	case vfmt::astc_12x10_unorm_block:
+		details->compression = FCompr::astc_12x10;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_12x10_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_12x10;
+		return;
 
 	case vfmt::astc_12x12_unorm_block:
+		details->compression = FCompr::astc_12x12;
+		details->storageType = SType::unorm_block;
+		return;
 
 	case vfmt::astc_12x12_srgb_block:
-		details->sRGB = true; details->storageType = SType::srgb;
+		details->sRGB = true; details->storageType = SType::srgb_block;
+		details->compression = FCompr::astc_12x12;
+		return;
 
-
-
-
-
-
-
-
+		// NOTE: Most of the formats below are weird and (mostly) unhandled!
 
 	// Provided by VK_VERSION_1_1
-	case vfmt::g8b8g8r8_422_unorm:        return VK_FORMAT_G8B8G8R8_422_UNORM;
-	case vfmt::b8g8r8g8_422_unorm:        return VK_FORMAT_B8G8R8G8_422_UNORM;
-	case vfmt::g8_b8_r8_3plane_420_unorm: return VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM;
-	case vfmt::g8_b8r8_2plane_420_unorm:  return VK_FORMAT_G8_B8R8_2PLANE_420_UNORM;
-	case vfmt::g8_b8_r8_3plane_422_unorm: return VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM;
-	case vfmt::g8_b8r8_2plane_422_unorm:  return VK_FORMAT_G8_B8R8_2PLANE_422_UNORM;
-	case vfmt::g8_b8_r8_3plane_444_unorm: return VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM;
-	case vfmt::r10x6_unorm_pack16:        return VK_FORMAT_R10X6_UNORM_PACK16;
-	case vfmt::r10x6g10x6_unorm_2pack16:  return VK_FORMAT_R10X6G10X6_UNORM_2PACK16;
+	case vfmt::g8b8g8r8_422_unorm:
+		details->channels = 3; details->storageType = SType::rect_422;
+		return;
+
+	case vfmt::b8g8r8g8_422_unorm:
+		details->channels = 3; details->storageType = SType::rect_422;
+		return;
+
+	case vfmt::g8_b8_r8_3plane_420_unorm:
+		details->planar = true;
+		return;
+
+	case vfmt::g8_b8r8_2plane_420_unorm:
+		details->planar = true;
+		return;
+
+	case vfmt::g8_b8_r8_3plane_422_unorm:
+		details->planar = true;
+		return;
+
+	case vfmt::g8_b8r8_2plane_422_unorm:
+		details->planar = true;
+		return;
+
+	case vfmt::g8_b8_r8_3plane_444_unorm:
+		details->planar = true;
+		return;
+
+	case vfmt::r10x6_unorm_pack16:
+		details->channels = 1; details->channelSize = FCSize::special;
+		details->storageType = SType::unorm10_unused6_pack16;
+		return;
+
+	case vfmt::r10x6g10x6_unorm_2pack16:
+		details->channels = 2; details->channelSize = FCSize::special;
+		details->storageType = SType::unorm10_unused6_pack16;
+		return;
+
 	case vfmt::r10x6g10x6b10x6a10x6_unorm_4pack16:
-		return VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16;
+		details->alpha = true; details->channelSize = FCSize::special;
+		details->storageType = SType::unorm10_unused6_pack16;
+		return;
+
 	case vfmt::g10x6b10x6g10x6r10x6_422_unorm_4pack16:
-		return VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16;
+		details->channels = 3; details->channelSize = FCSize::special;
+		details->storageType = SType::rect_422;
+		return;
+
 	case vfmt::b10x6g10x6r10x6g10x6_422_unorm_4pack16:
-		return VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16;
+		details->channels = 3; details->channelSize = FCSize::special;
+		details->storageType = SType::rect_422;
+		return;
+
 	case vfmt::g10x6_b10x6_r10x6_3plane_420_unorm_3pack16:
-		return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g10x6_b10x6r10x6_2plane_420_unorm_3pack16:
-		return VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g10x6_b10x6_r10x6_3plane_422_unorm_3pack16:
-		return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g10x6_b10x6r10x6_2plane_422_unorm_3pack16:
-		return VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g10x6_b10x6_r10x6_3plane_444_unorm_3pack16:
-		return VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16;
-	case vfmt::r12x4_unorm_pack16:       return VK_FORMAT_R12X4_UNORM_PACK16;
-	case vfmt::r12x4g12x4_unorm_2pack16: return VK_FORMAT_R12X4G12X4_UNORM_2PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::r12x4_unorm_pack16:
+		details->channels = 1; details->channelSize = FCSize::special;
+		details->storageType = SType::unorm12_unused4_pack16;
+		return;
+
+	case vfmt::r12x4g12x4_unorm_2pack16:
+		details->channels = 2; details->channelSize = FCSize::special;
+		details->storageType = SType::unorm12_unused4_pack16;
+		return;
+
 	case vfmt::r12x4g12x4b12x4a12x4_unorm_4pack16:
-		return VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16;
+		details->channelSize = FCSize::special;
+		details->storageType = SType::unorm12_unused4_pack16;
+		return;
+
 	case vfmt::g12x4b12x4g12x4r12x4_422_unorm_4pack16:
-		return VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16;
+		details->channels = 3; details->channelSize = FCSize::special;
+		details->storageType = SType::rect_422;
+		return;
+
 	case vfmt::b12x4g12x4r12x4g12x4_422_unorm_4pack16:
-		return VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16;
+		details->channels = 3; details->channelSize = FCSize::special;
+		details->storageType = SType::rect_422;
+		return;
+
 	case vfmt::g12x4_b12x4_r12x4_3plane_420_unorm_3pack16:
-		return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g12x4_b12x4r12x4_2plane_420_unorm_3pack16:
-		return VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g12x4_b12x4_r12x4_3plane_422_unorm_3pack16:
-		return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g12x4_b12x4r12x4_2plane_422_unorm_3pack16:
-		return VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g12x4_b12x4_r12x4_3plane_444_unorm_3pack16:
-		return VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16;
-	case vfmt::g16b16g16r16_422_unorm:       return VK_FORMAT_G16B16G16R16_422_UNORM;
-	case vfmt::b16g16r16g16_422_unorm:       return VK_FORMAT_B16G16R16G16_422_UNORM;
-	case vfmt::g16_b16_r16_3plane_420_unorm: return VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM;
-	case vfmt::g16_b16r16_2plane_420_unorm:  return VK_FORMAT_G16_B16R16_2PLANE_420_UNORM;
-	case vfmt::g16_b16_r16_3plane_422_unorm: return VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM;
-	case vfmt::g16_b16r16_2plane_422_unorm:  return VK_FORMAT_G16_B16R16_2PLANE_422_UNORM;
-	case vfmt::g16_b16_r16_3plane_444_unorm: return VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::g16b16g16r16_422_unorm:
+		details->channelSize = FCSize::channel_16;
+		details->storageType = SType::rect_422;
+		return;
+
+	case vfmt::b16g16r16g16_422_unorm:
+		details->channelSize = FCSize::channel_16;
+		details->storageType = SType::rect_422;
+		return;
+
+	case vfmt::g16_b16_r16_3plane_420_unorm:
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::g16_b16r16_2plane_420_unorm:
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::g16_b16_r16_3plane_422_unorm:
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::g16_b16r16_2plane_422_unorm:
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::g16_b16_r16_3plane_444_unorm:
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
 
 	// Provided by VK_VERSION_1_3
-	case vfmt::g8_b8r8_2plane_444_unorm:    return VK_FORMAT_G8_B8R8_2PLANE_444_UNORM;
+	case vfmt::g8_b8r8_2plane_444_unorm:
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g10x6_b10x6r10x6_2plane_444_unorm_3pack16:
-		return VK_FORMAT_G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
 	case vfmt::g12x4_b12x4r12x4_2plane_444_unorm_3pack16:
-		return VK_FORMAT_G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16;
-	case vfmt::g16_b16r16_2plane_444_unorm: return VK_FORMAT_G16_B16R16_2PLANE_444_UNORM;
-	case vfmt::a4r4g4b4_unorm_pack16:       return VK_FORMAT_A4R4G4B4_UNORM_PACK16;
-	case vfmt::a4b4g4r4_unorm_pack16:       return VK_FORMAT_A4B4G4R4_UNORM_PACK16;
-	case vfmt::astc_4x4_sfloat_block:       return VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK;
-	case vfmt::astc_5x4_sfloat_block:       return VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK;
-	case vfmt::astc_5x5_sfloat_block:       return VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK;
-	case vfmt::astc_6x5_sfloat_block:       return VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK;
-	case vfmt::astc_6x6_sfloat_block:       return VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK;
-	case vfmt::astc_8x5_sfloat_block:       return VK_FORMAT_ASTC_8x5_SFLOAT_BLOCK;
-	case vfmt::astc_8x6_sfloat_block:       return VK_FORMAT_ASTC_8x6_SFLOAT_BLOCK;
-	case vfmt::astc_8x8_sfloat_block:       return VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK;
-	case vfmt::astc_10x5_sfloat_block:      return VK_FORMAT_ASTC_10x5_SFLOAT_BLOCK;
-	case vfmt::astc_10x6_sfloat_block:      return VK_FORMAT_ASTC_10x6_SFLOAT_BLOCK;
-	case vfmt::astc_10x8_sfloat_block:      return VK_FORMAT_ASTC_10x8_SFLOAT_BLOCK;
-	case vfmt::astc_10x10_sfloat_block:     return VK_FORMAT_ASTC_10x10_SFLOAT_BLOCK;
-	case vfmt::astc_12x10_sfloat_block:     return VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK;
-	case vfmt::astc_12x12_sfloat_block:     return VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK;
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::g16_b16r16_2plane_444_unorm:
+		details->planar = true; details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::a4r4g4b4_unorm_pack16:
+		details->alpha = true; details->alphaFirst = true;
+		details->channelSize = FCSize::channel_4;
+		details->storageType = SType::unorm_pack16;
+		return;
+
+	case vfmt::a4b4g4r4_unorm_pack16:
+		details->alpha = true; details->alphaFirst = true;
+		details->channelSize = FCSize::channel_4; details->blueEndian = true;
+		details->storageType = SType::unorm_pack16;
+		return;
+
+	case vfmt::astc_4x4_sfloat_block:
+		details->compression = FCompr::astc_4x4;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_5x4_sfloat_block:
+		details->compression = FCompr::astc_5x4;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_5x5_sfloat_block:
+		details->compression = FCompr::astc_5x5;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_6x5_sfloat_block:
+		details->compression = FCompr::astc_6x5;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_6x6_sfloat_block:
+		details->compression = FCompr::astc_6x6;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_8x5_sfloat_block:
+		details->compression = FCompr::astc_8x5;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_8x6_sfloat_block:
+		details->compression = FCompr::astc_8x6;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_8x8_sfloat_block:
+		details->compression = FCompr::astc_8x8;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_10x5_sfloat_block:
+		details->compression = FCompr::astc_10x5;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_10x6_sfloat_block:
+		details->compression = FCompr::astc_10x6;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_10x8_sfloat_block:
+		details->compression = FCompr::astc_10x8;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_10x10_sfloat_block:
+		details->compression = FCompr::astc_10x10;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_12x10_sfloat_block:
+		details->compression = FCompr::astc_12x10;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
+	case vfmt::astc_12x12_sfloat_block:
+		details->compression = FCompr::astc_12x12;
+		details->storageType = SType::sfloat_block;
+		details->channelSize = FCSize::special;
+		return;
+
 	default:
 		vtek_log_error("vtek_format_support.cpp: unrecognized format enum!");
-		return VK_FORMAT_UNDEFINED;
-	*/
+		return;
 	}
 }
 
@@ -1220,6 +1545,7 @@ constexpr uint32_t kAlphaFirstBit    = 0x0080;
 constexpr uint32_t kDepthBit         = 0x0100;
 constexpr uint32_t kStencilBit       = 0x0200;
 constexpr uint32_t kDepthStencilBits = kDepthBit | kStencilBit;
+constexpr uint32_t kPlanarBit        = 0x0400;
 
 // private constructor
 vtek::SupportedFormat::SupportedFormat(
@@ -1259,6 +1585,9 @@ vtek::SupportedFormat::SupportedFormat(
 	// depth/stencil
 	propertyMask |= (details.depth) ? kDepthBit : 0U;
 	propertyMask |= (details.stencil) ? kStencilBit : 0U;
+
+	// planar
+	propertyMask |= (details.planar) ? kPlanarBit : 0U;
 }
 
 bool vtek::SupportedFormat::operator==(vtek::Format _format) const
@@ -1320,6 +1649,11 @@ bool vtek::SupportedFormat::has_depth() const
 bool vtek::SupportedFormat::has_stencil() const
 {
 	return propertyMask & kStencilBit;
+}
+
+bool vtek::SupportedFormat::is_planar() const
+{
+	return propertyMask & kPlanarBit;
 }
 
 vtek::FormatCompression vtek::SupportedFormat::get_compression_scheme() const

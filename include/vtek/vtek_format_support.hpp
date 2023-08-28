@@ -215,6 +215,13 @@ namespace vtek
 		none,
 
 		// block compression
+		// bc1-3 are S3TC/DXT
+		// bc4-5 are RGTC
+		// - specialized in encoding 1-2 uncorrelated channels
+		// - good for normal maps, metallic-roughness maps,
+		// bc6-7 are BPTC
+		// - designed to compress higher-quality color images at 8bpp
+		// - bc6 supports HDR images
 		any_bc, bc1, bc2, bc3, bc4, bc5, bc6h, bc7,
 
 		// Ericsson texture compression
@@ -264,6 +271,18 @@ namespace vtek
 		unorm16_uint8,
 		unorm24_uint8,
 		sfloat32_uint8,
+		unorm10_unused6_pack16,
+		unorm12_unused4_pack16,
+
+		// encoded rectangle types
+		rect_422,
+
+		// compressed storage blocks
+		srgb_block,
+		unorm_block,
+		snorm_block,
+		ufloat_block,
+		sfloat_block
 	};
 
 	enum class FormatChannels : uint32_t
@@ -388,6 +407,8 @@ namespace vtek
 		bool is_depth_stencil() const;
 		bool has_depth() const;
 		bool has_stencil() const;
+		// NOTE: Planar texture formats are internally unhandled!
+		bool is_planar() const;
 
 		FormatCompression get_compression_scheme() const;
 		FormatStorageType get_storage_type() const;
