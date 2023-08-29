@@ -16,11 +16,25 @@ endif()
 
 
 # --------------------------------------------------------------------------------
+# Set VTEK_UNIT_TESTS_CONF to ON if we are building vtek
+# --------------------------------------------------------------------------------
+# Same check as above, just for unit tests
+if(NOT DEFINED VTEK_UNIT_TESTS_CONF)
+    if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+        set(VTEK_UNIT_TESTS_CONF ON)
+    else()
+        set(VTEK_UNIT_TESTS_CONF OFF)
+    endif()
+endif()
+
+
+# --------------------------------------------------------------------------------
 # Project configuration
 # --------------------------------------------------------------------------------
 option(VTEK_BUILD_WARNINGS "Enable compiler warnings" ON)
 option(VTEK_SHARED_LIB "Build vtek as shared library" ON)
 option(VTEK_CREATE_EXAMPLES "Build example programs" ${VTEK_EXAMPLES_CONF})
+option(VTEK_CREATE_UNIT_TESTS "Build unit tests" ${VTEK_UNIT_TESTS_CONF})
 
 if(VTEK_SHARED_LIB)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -199,10 +213,10 @@ set (src
     )
 
 if(VTEK_SHARED_LIB)
-    message("Build vtek as shared library")
+    message(STATUS "Build vtek as shared library")
     add_library(vtek SHARED ${src})
 else()
-    message("Build vtek as static library")
+    message(STATUS "Build vtek as static library")
     add_library(vtek STATIC ${src})
 endif()
 unset(VTEK_SHARED_LIB CACHE) # remove from cache to force reset each time we run cmake
@@ -243,6 +257,7 @@ target_link_libraries(vtek LINK_PUBLIC
 # Conditionally build example programs
 # --------------------------------------------------------------------------------
 if(VTEK_CREATE_EXAMPLES)
+    message(STATUS "Generate example programs")
     set(examples
         examples/01_triangle.cpp
         examples/02_triangle_move.cpp
@@ -264,4 +279,41 @@ if(VTEK_CREATE_EXAMPLES)
         target_compile_options(${exname} PRIVATE -ggdb3)
     endforeach()
 
+endif()
+
+
+# --------------------------------------------------------------------------------
+# Confitionally build unit tests
+# --------------------------------------------------------------------------------
+if(VTEK_CREATE_UNIT_TESTS)
+    message(STATUS "Generate unit tests")
+    set(unit_test_src
+        tests/test_camera.cpp
+        tests/test_formats.cpp
+    )
+
+    # Display terminal output on failed tests
+    list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
+
+    enable_testing()
+    add_custom_target(unit_tests)
+
+    # Output tests to custom "UnitTests" subfolder
+    set(VTEK_TEMP_RUNTIME_OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/UnitTests)
+
+    foreach(utpath ${unit_test_src})
+        cmake_path(GET utpath STEM utname)
+        add_executable(${utname} ${utpath})
+        target_link_libraries(${utname} LINK_PUBLIC vtek::vtek)
+        target_compile_definitions(${utname} PRIVATE SPDLOG_COMPILED_LIB)
+        target_link_directories(${utname} PUBLIC ${CMAKE_OUTPUT_DIR})
+        target_compile_options(${utname} PRIVATE -ggdb3)
+
+        add_test(NAME ${utname} COMMAND ${utname})
+        add_dependencies(unit_tests ${utname})
+    endforeach()
+
+    # Restore output directory in case it's needed after this section
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${VTEK_TEMP_RUNTIME_OUTPUT_DIR})
 endif()
