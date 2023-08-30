@@ -8,7 +8,7 @@
 
 namespace vtek
 {
-	struct DeviceCreateInfo
+	struct DeviceInfo
 	{
 		// TODO: Since these were specified during physical device pick, they
 		// should probably be removed from here!
@@ -70,7 +70,7 @@ namespace vtek
 
 
 	Device* device_create(
-		const DeviceCreateInfo* info, const Instance* instance,
+		const DeviceInfo* info, const Instance* instance,
 		const PhysicalDevice* physicalDevice);
 
 	void device_destroy(Device* device);

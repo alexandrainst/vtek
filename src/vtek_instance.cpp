@@ -223,7 +223,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
 
 
 /* instance functions */
-vtek::Instance* vtek::instance_create(vtek::InstanceCreateInfo* info)
+vtek::Instance* vtek::instance_create(vtek::InstanceInfo* info)
 {
 	if (info->enableValidationLayers && !checkValidationLayerSupport())
 	{

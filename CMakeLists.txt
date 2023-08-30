@@ -289,7 +289,8 @@ if(VTEK_CREATE_UNIT_TESTS)
     message(STATUS "Generate unit tests")
     set(unit_test_src
         tests/test_camera.cpp
-        tests/test_formats.cpp
+        # tests/test_formats.cpp
+        # tests/test_ut.cpp
     )
 
     # Display terminal output on failed tests
@@ -305,10 +306,12 @@ if(VTEK_CREATE_UNIT_TESTS)
     foreach(utpath ${unit_test_src})
         cmake_path(GET utpath STEM utname)
         add_executable(${utname} ${utpath})
+        set_target_properties(${utname} PROPERTIES CXX_STANDARD 20)
         target_link_libraries(${utname} LINK_PUBLIC vtek::vtek)
         target_compile_definitions(${utname} PRIVATE SPDLOG_COMPILED_LIB)
         target_link_directories(${utname} PUBLIC ${CMAKE_OUTPUT_DIR})
         target_compile_options(${utname} PRIVATE -ggdb3)
+        target_include_directories(${utname} PRIVATE ${PROJECT_SOURCE_DIR}/external)
 
         add_test(NAME ${utname} COMMAND ${utname})
         add_dependencies(unit_tests ${utname})

@@ -94,7 +94,7 @@ struct QueueFamilySelections
 
 
 static bool create_queue_infos(
-	const vtek::DeviceCreateInfo* info,
+	const vtek::DeviceInfo* info,
 	const vtek::PhysicalDevice* physicalDevice,
 	std::vector<VkDeviceQueueCreateInfo>& createInfos,
 	QueueFamilySelections* queueSelections)
@@ -326,7 +326,7 @@ static bool create_queue_infos(
 
 // Call this function _after_ device creation to create the queues
 static void create_device_queues(
-	vtek::Device* device, const vtek::DeviceCreateInfo* info,
+	vtek::Device* device, const vtek::DeviceInfo* info,
 	const QueueFamilySelections* selections)
 {
 	VkDevice handle = device->vulkanHandle;
@@ -647,7 +647,7 @@ static bool use_descriptor_indexing_features(
 
 /* device interface */
 vtek::Device* vtek::device_create(
-	const vtek::DeviceCreateInfo* info, const vtek::Instance* instance,
+	const vtek::DeviceInfo* info, const vtek::Instance* instance,
 	const vtek::PhysicalDevice* physicalDevice)
 {
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
