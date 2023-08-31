@@ -55,6 +55,8 @@ namespace vtek
 }
 
 
+#if !defined(VTEK_DISABLE_LOGGING)
+
 /*
  * Core logging functions.
  * These are for *internal* usage inside the engine.
@@ -62,10 +64,8 @@ namespace vtek
 template<typename... Args>
 inline void vtek_log_trace(const char* message, const Args &... args)
 {
-	//#if defined(YGG_DEBUG) && !defined(YGG_DISABLE_LOGGING)
 	vtek::LogContainer::sVtekLogger->trace(
 		SPDLOG_FMT_RUNTIME(message), args...);
-	//#endif
 }
 
 template<typename... Args>
@@ -152,3 +152,44 @@ VTEK_API inline void log_fatal(const char* message, const Args &... args)
 	vtek::LogContainer::sClientLogger->critical(
 		SPDLOG_FMT_RUNTIME(message), args...);
 }
+
+
+#else
+
+template<typename... Args>
+inline void vtek_log_trace(const char* message, const Args &... args) {}
+
+template<typename... Args>
+inline void vtek_log_debug(const char* message, const Args &... args) {}
+
+template<typename... Args>
+inline void vtek_log_info(const char* message, const Args &... args) {}
+
+template<typename... Args>
+inline void vtek_log_warn(const char* message, const Args &... args) {}
+
+template<typename... Args>
+inline void vtek_log_error(const char* message, const Args &... args) {}
+
+template<typename... Args>
+inline void vtek_log_fatal(const char* message, const Args &... args) {}
+
+template<typename... Args>
+VTEK_API inline void log_trace(const char* message, const Args &... args) {}
+
+template<typename... Args>
+VTEK_API inline void log_debug(const char* message, const Args &... args) {}
+
+template<typename... Args>
+VTEK_API inline void log_info(const char* message, const Args &... args) {}
+
+template<typename... Args>
+VTEK_API inline void log_warn(const char* message, const Args &... args) {}
+
+template<typename... Args>
+VTEK_API inline void log_error(const char* message, const Args &... args) {}
+
+template<typename... Args>
+VTEK_API inline void log_fatal(const char* message, const Args &... args) {}
+
+#endif

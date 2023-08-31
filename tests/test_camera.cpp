@@ -1,50 +1,73 @@
+#define VTEK_DISABLE_LOGGING
 #include <vtek/vtek.hpp>
-#include <boost/ut.hpp>
 #include <random>
+#include <iostream>
+
+// Define what ut needs
+std::ostream& operator<<(std::ostream& s, const glm::vec3& v)
+{
+	return s << '[' << v.x << ',' << v.y << ',' << v.z << ']';
+}
+#include <boost/ut.hpp>
 
 using namespace boost::ut;
+
+bool vec3_eq(const glm::vec3& v1, const glm::vec3& v2)
+{
+	constexpr float eps = glm::epsilon<float>();
+	auto feq = [=](float f1, float f2){ return glm::abs(f1-f2) < eps; };
+	return feq(v1.x, v2.x) && feq(v1.y, v2.y) && feq(v1.z, v2.z);
+}
+
+
 
 bool test_create_camera()
 {
 	vtek::Camera* cam = vtek::camera_create();
-	bool ret = cam != nullptr;
+	bool ret = cam == nullptr;
 	vtek::camera_destroy(cam);
 	return ret;
 }
 
-bool vec3_eq(const glm::vec3& v1, const glm::vec3& v2)
+void test_camera_default_lookat()
 {
-	constexpr float eps = 0.000001f;
-	auto feq = [](float f1, float f2){ return glm::abs(f1-f2) < eps; };
-	return feq(v1.x, v2.x) && feq(v1.y, v2.y) && feq(v1.z, v2.z);
-}
-
-bool test_camera_default_lookat()
-{
-	bool success = true;
-
 	vtek::Camera* cam = vtek::camera_create();
 	glm::vec3 pos   {0.0f, 0.0f, 0.0f};
 	glm::vec3 front {1.0f, 0.0f, 0.0f};
 	glm::vec3 up    {0.0f, 0.0f, 1.0f};
 	vtek::camera_set_lookat(cam, pos, front, up);
 
-	glm::vec3 cpos   = vtek::camera_get_position(cam);
-	glm::vec3 cfront = vtek::camera_get_front(cam);
-	glm::vec3 cup    = vtek::camera_get_up(cam);
+	"default_lookat"_test = [&pos, &front, &up, &cam]{
+		glm::vec3 cpos = vtek::camera_get_position(cam);
+		expect(vec3_eq(pos, cpos)) << "invalid position: " << pos << " != " << cpos;
 
-	"default_lookat"_test = [&pos, &cpos, &success]{
-		expect(success = vec3_eq(pos, cpos));
+		glm::vec3 cfront = vtek::camera_get_front(cam);
+		expect(vec3_eq(front, cfront)) << "invalid front: " << front << " != " << cfront;
+
+		glm::vec3 cup = vtek::camera_get_up(cam);
+		expect(vec3_eq(up, cup)) << "invalid front: " << up << " != " << cup;
 	};
-
-	return success;
 }
 
-bool test_create_camera_at_position(glm::vec3 pos)
+void test_camera_custom_lookat(glm::vec3 front, glm::vec3 up)
 {
-	//vtek::Camera* cam = vtek::camera_create();
-	return false;
+	vtek::Camera* cam = vtek::camera_create();
+	glm::vec3 pos   {0.0f, 0.0f, 0.0f};
+	vtek::camera_set_lookat(cam, pos, front, up);
+
+	"custom_lookat"_test = [=] {
+		glm::vec3 cpos = vtek::camera_get_position(cam);
+		expect(vec3_eq(pos, cpos)) << "invalid position: " << pos << " != " << cpos;
+
+		glm::vec3 cfront = vtek::camera_get_front(cam);
+		expect(vec3_eq(front, cfront)) << "invalid front: " << front << " != " << cfront;
+
+		glm::vec3 cup = vtek::camera_get_up(cam);
+		expect(vec3_eq(up, cup)) << "invalid front: " << up << " != " << cup;
+	};
 }
+
+
 
 int main()
 {
@@ -54,7 +77,8 @@ int main()
 	constexpr int kNumPosTests = 100;
 
 	"camera_tests"_test = []{
-		expect(test_create_camera()) << "Camera was nullptr!";
-		expect(test_camera_default_lookat());
+		expect(eq(test_create_camera(), "Camera was nullptr!"_b) >> fatal);
+		expect(1 > 4);
+		test_camera_default_lookat();
 	};
 }
