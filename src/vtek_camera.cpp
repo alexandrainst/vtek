@@ -83,7 +83,7 @@ void vtek::camera_set_perspective_frustrum(
 		glm::vec4(0.0f, -1.0f, 0.0f, 0.0f),
 		glm::vec4(0.0f,  0.0f, 0.5f, 0.0f),
 		glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
-	camera->projectionMatrix *= correction;
+	camera->projectionMatrix = correction * camera->projectionMatrix;
 }
 
 void vtek::camera_set_lookat(
@@ -120,7 +120,9 @@ void vtek::camera_set_lookat(
 		// we perform a few tricks to construct the correct coordinate space.
 		// Same above.
 		glm::vec3 right = glm::cross(-up, front);
-		camera->orientation = glm::quatLookAt(right, up);
+		//camera->orientation = glm::quatLookAt(-right, up); // close
+		//camera->orientation = glm::quatLookAt(up, right); // still not quite right
+		camera->orientation = glm::quatLookAt(front, -right);
 	}
 
 	camera->orientation = glm::normalize(camera->orientation);
@@ -266,7 +268,7 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 	float xCos = glm::cos(xOffset);
 	float xSin = glm::sin(xOffset);
 	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
-	camera->orientation = xRotor * camera->orientation;
+	camera->orientation = glm::normalize(xRotor * camera->orientation);
 
 	float yCos = glm::cos(yOffset);
 	float ySin = glm::sin(yOffset);

@@ -101,10 +101,12 @@ void update_movement()
 
 	// Adjust camera exposure
 	if (gKeyboardMap.get_key(KeyboardKey::numpad_add)) {
-		gCameraExposure += 0.015f;
+		//gCameraExposure += 0.015f;
+		gCameraExposure = gCameraExposure.get() * 1.04f;
 	}
 	else if (gKeyboardMap.get_key(KeyboardKey::numpad_subtract)) {
-		gCameraExposure -= 0.015f;
+		//gCameraExposure -= 0.015f;
+		gCameraExposure = gCameraExposure.get() * (1.0f / 1.04f);
 	}
 }
 

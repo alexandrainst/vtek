@@ -270,7 +270,7 @@ int main()
 	gKeyboardMap.reset();
 
 	// Create window
-	vtek::WindowCreateInfo windowInfo{};
+	vtek::WindowInfo windowInfo{};
 	windowInfo.title = "vtek example 06: Model loading";
 	windowInfo.resizeable = false;
 	windowInfo.cursorDisabled = true;
@@ -286,7 +286,7 @@ int main()
 	vtek::window_set_mouse_move_handler(gWindow, mouse_move_callback);
 
 	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
+	vtek::InstanceInfo instanceInfo{};
 	instanceInfo.applicationName = "06_model";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0); // TODO: vtek::AppVersion
 	instanceInfo.enableValidationLayers = true;
@@ -323,9 +323,9 @@ int main()
 	}
 
 	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
+	vtek::DeviceInfo deviceInfo{};
 	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
+		&deviceInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");
@@ -561,6 +561,7 @@ int main()
 	vtek::RasterizationState rasterizer{};
 	rasterizer.cullMode = vtek::CullMode::back; // enable back-face culling
 	rasterizer.polygonMode = vtek::PolygonMode::fill;
+	rasterizer.frontFace = vtek::FrontFace::clockwise;
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{};
 	depthStencil.depthTestEnable = true;

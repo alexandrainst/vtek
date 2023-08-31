@@ -286,7 +286,7 @@ int main()
 	gKeyboardMap.reset();
 
 	// Create window
-	vtek::WindowCreateInfo windowInfo{};
+	vtek::WindowInfo windowInfo{};
 	windowInfo.title = "vtek example 05: Camera";
 	windowInfo.resizeable = false;
 	windowInfo.cursorDisabled = true;
@@ -300,7 +300,7 @@ int main()
 	vtek::window_set_mouse_move_handler(gWindow, mouse_move_callback);
 
 	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
+	vtek::InstanceInfo instanceInfo{};
 	instanceInfo.applicationName = "camera";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0); // TODO: vtek::AppVersion
 	instanceInfo.enableValidationLayers = true;
@@ -337,9 +337,9 @@ int main()
 	}
 
 	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
+	vtek::DeviceInfo deviceInfo{};
 	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
+		&deviceInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");

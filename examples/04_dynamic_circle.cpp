@@ -287,7 +287,7 @@ int main()
 	}
 
 	// Create window
-	vtek::WindowCreateInfo windowInfo{};
+	vtek::WindowInfo windowInfo{};
 	windowInfo.title = "vtek example 04: Dynamic Circle";
 	windowInfo.resizeable = false;
 	windowInfo.width = 1200;
@@ -301,7 +301,7 @@ int main()
 	vtek::window_set_key_handler(window, key_callback);
 
 	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
+	vtek::InstanceInfo instanceInfo{};
 	instanceInfo.applicationName = "dynamic_circle";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
 	instanceInfo.enableValidationLayers = true;
@@ -337,10 +337,10 @@ int main()
 	}
 
 	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
-	deviceCreateInfo.asyncCommandScheduler = true; // true is default.
+	vtek::DeviceInfo deviceInfo{};
+	deviceInfo.asyncCommandScheduler = true; // true is default.
 	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
+		&deviceInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");

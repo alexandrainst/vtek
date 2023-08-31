@@ -45,7 +45,7 @@ int main()
 
 	// Create window
 	constexpr bool kFullscreen = true;
-	vtek::WindowCreateInfo windowInfo{};
+	vtek::WindowInfo windowInfo{};
 	windowInfo.title = "01_triangle";
 	windowInfo.cursorDisabled = false;
 	if (kFullscreen)
@@ -69,7 +69,7 @@ int main()
 	vtek::window_set_key_handler(window, keyCallback);
 
 	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
+	vtek::InstanceInfo instanceInfo{};
 	instanceInfo.applicationName = "triangle";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
 	instanceInfo.enableValidationLayers = true;
@@ -103,9 +103,9 @@ int main()
 	}
 
 	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
+	vtek::DeviceInfo deviceInfo{};
 	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
+		&deviceInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");
