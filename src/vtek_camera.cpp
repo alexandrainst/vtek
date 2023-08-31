@@ -73,6 +73,17 @@ void vtek::camera_set_perspective_frustrum(
 	camera->projectionMatrix = glm::perspectiveFov(
 		camera->fov, camera->windowSize.x, camera->windowSize.y,
 		camera->near, camera->far);
+
+	// Vulkan-trick because GLM was written for OpenGL, and Vulkan uses
+	// a right-handed coordinate system instead. Without this correction,
+	// geometry will be x-inverted in screen space. Described at:
+	// https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
+	glm::mat4 correction(
+		glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
+		glm::vec4(0.0f, -1.0f, 0.0f, 0.0f),
+		glm::vec4(0.0f,  0.0f, 0.5f, 0.0f),
+		glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
+	camera->projectionMatrix *= correction;
 }
 
 void vtek::camera_set_lookat(
@@ -99,19 +110,21 @@ void vtek::camera_set_lookat(
 			(glm::abs(glm::dot(front, {1, 0, 0})) > 0.9999f)
 			? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
 
-		glm::vec3 right = glm::cross(front, -alterntiveUp);
-		camera->orientation = glm::quatLookAt(-right, -front);
+		// glm::vec3 right = glm::cross(front, -alterntiveUp);
+		// camera->orientation = glm::quatLookAt(-right, -front);
+		camera->orientation = glm::quatLookAt(front, alterntiveUp);
 	}
 	else
 	{
 		// NOTE: glm::quatLookAt doesn't play well with Vulkan handedness, so
 		// we perform a few tricks to construct the correct coordinate space.
 		// Same above.
-		glm::vec3 right = glm::cross(front, -up);
-		camera->orientation = glm::quatLookAt(-right, -front);
+		glm::vec3 right = glm::cross(-up, front);
+		camera->orientation = glm::quatLookAt(right, up);
 	}
 
 	camera->orientation = glm::normalize(camera->orientation);
+	vtek::camera_update(camera);
 }
 
 void vtek::camera_set_lookat_orbit(
@@ -164,8 +177,8 @@ void vtek::camera_update(vtek::Camera* camera)
 	camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
 
 	camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, 1.0f));
-	camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, -1.0f, 0.0f));
-	camera->right = glm::normalize(glm::cross(camera->up, camera->front));
+	camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 1.0f, 0.0f));
+	camera->right = glm::normalize(glm::cross(-camera->up, camera->front));
 }
 
 void vtek::camera_move_left(vtek::Camera* camera, float distance)
@@ -208,7 +221,7 @@ void vtek::camera_roll_left_radians(vtek::Camera* camera, float angle)
 	angle *= 0.5f;
 	float cos = glm::cos(angle);
 	float sin = glm::sin(angle);
-	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, 1));
+	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
 
 	camera->orientation = glm::normalize(rotor * camera->orientation);
 }
@@ -218,7 +231,7 @@ void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
 	angle *= -0.5f;
 	float cos = glm::cos(angle);
 	float sin = glm::sin(angle);
-	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, 1));
+	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
 
 	camera->orientation = glm::normalize(rotor * camera->orientation);
 }
@@ -255,8 +268,8 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
 	camera->orientation = xRotor * camera->orientation;
 
-	float yCos = glm::cos(-yOffset);
-	float ySin = glm::sin(-yOffset);
+	float yCos = glm::cos(yOffset);
+	float ySin = glm::sin(yOffset);
 	glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
 	camera->orientation = glm::normalize(yRotor * camera->orientation);
 }

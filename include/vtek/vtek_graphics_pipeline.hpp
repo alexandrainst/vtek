@@ -165,7 +165,7 @@ namespace vtek
 	{
 		VulkanBool depthTestEnable {false};
 		VulkanBool depthWriteEnable {false};
-		DepthCompareOp depthCompareOp {DepthCompareOp::less};
+		DepthCompareOp depthCompareOp {DepthCompareOp::less_equal};
 		VulkanBool depthBoundsTestEnable {false};
 		FloatRange depthBounds {0.0f, 1.0f};
 		VulkanBool stencilTestEnable {false};

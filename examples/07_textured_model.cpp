@@ -249,7 +249,7 @@ int main()
 	gKeyboardMap.reset();
 
 	// Create window
-	vtek::WindowCreateInfo windowInfo{};
+	vtek::WindowInfo windowInfo{};
 	windowInfo.title = "vtek example 07: Drawing a textured model";
 	windowInfo.resizeable = false;
 	windowInfo.cursorDisabled = true;
@@ -266,7 +266,7 @@ int main()
 	vtek::window_set_mouse_move_handler(gWindow, mouse_move_callback);
 
 	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
+	vtek::InstanceInfo instanceInfo{};
 	instanceInfo.applicationName = "07_textured_model";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0); // TODO: vtek::AppVersion
 	instanceInfo.enableValidationLayers = true;
@@ -305,9 +305,9 @@ int main()
 	}
 
 	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
+	vtek::DeviceInfo deviceInfo{};
 	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
+		&deviceInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");
@@ -372,12 +372,12 @@ int main()
 	// Camera
 	gCamera = vtek::camera_create();
 	// TODO: Bug in camera!
-	// glm::vec3 camPos {-2.0968692f, -2.5813563f, -1.4253441f}; // {8.0f, 0.0f, 0.0f};
-	// glm::vec3 camFront {0.5990349f, 0.7475561f, 0.28690946f}; // {-1.0f, 0.0f, 0.0f};
-	// glm::vec3 camUp {-0.18743359f, -0.21744627f, 0.95790696f}; // {0.0f, 0.0f, 1.0f};
-	glm::vec3 camPos {8.0f, 0.0f, 0.0f};
-	glm::vec3 camFront {-1.0f, 0.0f, 0.0f};
-	glm::vec3 camUp {0.0f, 0.0f, 1.0f};
+	glm::vec3 camPos {-2.0968692f, -2.5813563f, -1.4253441f}; // {8.0f, 0.0f, 0.0f};
+	glm::vec3 camFront {0.5990349f, 0.7475561f, 0.28690946f}; // {-1.0f, 0.0f, 0.0f};
+	glm::vec3 camUp {-0.18743359f, -0.21744627f, 0.95790696f}; // {0.0f, 0.0f, 1.0f};
+	// glm::vec3 camPos {8.0f, 0.0f, 0.0f};
+	// glm::vec3 camFront {-1.0f, 0.0f, 0.0f};
+	// glm::vec3 camUp {0.0f, 0.0f, 1.0f};
 	vtek::camera_set_lookat(gCamera, camPos, camFront, camUp);
 	vtek::camera_set_window_size(gCamera, gFramebufferWidth, gFramebufferHeight);
 	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);

@@ -8,6 +8,8 @@
 // range of (0.0, 1.0) instead, which is forced by using this definition.
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
+#define GLM_FORCE_RIGHT_HANDED
+
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>

@@ -308,10 +308,18 @@ if(VTEK_CREATE_UNIT_TESTS)
         add_executable(${utname} ${utpath})
         set_target_properties(${utname} PROPERTIES CXX_STANDARD 20)
         target_link_libraries(${utname} LINK_PUBLIC vtek::vtek)
+        target_precompile_headers(${utname} PRIVATE
+            ${PROJECT_SOURCE_DIR}/pchs/vtek_vulkan.pch
+        )
         target_compile_definitions(${utname} PRIVATE SPDLOG_COMPILED_LIB)
         target_link_directories(${utname} PUBLIC ${CMAKE_OUTPUT_DIR})
         target_compile_options(${utname} PRIVATE -ggdb3)
-        target_include_directories(${utname} PRIVATE ${PROJECT_SOURCE_DIR}/external)
+        target_include_directories(${utname} PRIVATE
+            ${PROJECT_SOURCE_DIR}/external
+            ${PROJECT_SOURCE_DIR}/external/vma
+            ${PROJECT_SOURCE_DIR}/include/vtek
+            ${PROJECT_SOURCE_DIR}/pchs
+        )
 
         add_test(NAME ${utname} COMMAND ${utname})
         add_dependencies(unit_tests ${utname})

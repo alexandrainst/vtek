@@ -97,10 +97,19 @@ namespace vtek
 
 	void camera_translate(Camera* camera, glm::vec3 offset);
 
+	void camera_on_mouse_move(Camera* camera, double x, double y);
+
+	// ======================= //
+	// === Angular offsets === //
+	// ======================= //
 	void camera_roll_left_radians(Camera* camera, float angle);
 	void camera_roll_right_radians(Camera* camera, float angle);
 
-	void camera_on_mouse_move(Camera* camera, double x, double y);
+	void camera_pitch_up_radians(Camera* camera, float angle);
+	void camera_pitch_down_radians(Camera* camera, float angle);
+
+	void camera_bank_left_radians(Camera* camera, float angle);
+	void camera_bank_right_radians(Camera* camera, float angle);
 
 	// ======================= //
 	// === Retrieve values === //
