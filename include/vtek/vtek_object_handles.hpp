@@ -30,6 +30,7 @@ namespace vtek
 	// ======================= //
 	// === Utility Handles === //
 	// ======================= //
+	struct Camera;
 	struct Directory;
 	struct File;
 	struct Model;

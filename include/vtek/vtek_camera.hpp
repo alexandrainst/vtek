@@ -29,20 +29,121 @@
 #pragma once
 
 #include "vtek_glm_includes.hpp"
+#include "vtek_object_handles.hpp"
 
 #include <cstdint>
 
 
 namespace vtek
 {
-	struct Camera; // opaque handle
+	enum class CameraHandedness
+	{
+		left_handed, right_handed
+	};
 
-	// TODO: Info struct?
-	Camera* camera_create();
+	enum class CameraMode
+	{
+		// Represents the initial (invalid) state of a camera. A specific mode
+		// must be set before a camera can be used.
+		undefined,
+
+		// A freeform camera has no restrictions on pitch/roll, and can rotate
+		// freely with 3 degrees of freedom.
+		freeform,
+
+		// A first-person shooter (FPS) camera has roll disabled, pitch clamped
+		// in [-89, 89] degrees, and a universal "up" axis/direction.
+		fps,
+
+		// An fps-style camera with the additional restriction that all movement
+		// is restricted to the horizontal plane, ie. changes in pitch does not
+		// influence movement direction. The "horizontal" plane is specified as
+		// the 2D plane which has the provided "upAxis" as normal.
+		fps_grounded,
+
+		// A freeform-orbiting camera has its view direction focused on a single
+		// point-of-interest, with no restrictions on yaw/pitch/roll.
+		orbit_free,
+
+		// An fps-orbiting camera has the restrictions of an FPS-style camera,
+		// while also being in orbiting mode. This is suitable when roll is
+		// undesired.
+		orbit_fps
+	};
+
+	struct CameraInfo
+	{
+		// In order to suit the needs of various rendering platforms, we may
+		// specify the handedness of the world space coordinate system in which
+		// the camera is placed. This does not change the internal behaviour of
+		// Vulkan, and no change in shaders is necessary.
+		CameraHandedness worldSpaceHandedness {CameraHandedness::right_handed};
+
+		// Starting position of the camera. For orbiting cameras, this reflects
+		// the point-of-interest being looked at, instead of the actual camera
+		// location which is computed automatically.
+		glm::vec3 position {0.0f, 0.0f, 0.0f};
+	};
+
+	// NOTE: The created camera is not valid until one of the `camera_set_mode_*`
+	// functions has been called.
+	Camera* camera_create(const CameraInfo* info);
 	void camera_destroy(Camera* camera);
 
+	// NEXT: Improved interface
+
+	// =================== //
+	// === Camera mode === //
+	// =================== //
+	void camera_set_mode_freeform(Camera* camera, glm::vec3 up, glm::vec3 front);
+	void camera_set_mode_fps(Camera* camera, glm::vec3 upAxis, glm::vec3 front);
+	void camera_set_mode_fps_grounded(
+		Camera* camera, glm::vec3 upAxis, glm::vec3 front);
+	void camera_set_mode_orbit_free(
+		Camera* camera, glm::vec3 front, glm::vec3 up, float distance);
+	void camera_set_mode_orbit_fps(
+		Camera* camera, glm::vec3 upAxis, glm::vec3 up, float distance);
+
+	// Takes an extra parameter for clamping the pitch in [p,q], where both p and
+	// q must be in [-89,89], and p < q.
+	void camera_set_mode_fps(
+		Camera* camera, glm::vec3 upAxis, glm::vec3 front,
+		glm::vec2 pitchClampDegrees);
+
+	CameraMode camera_get_mode(Camera* camera);
+
+	// ========================== //
+	// === Camera perspective === //
+	// ========================== //
+
+	// The closest allowed distance between the camera location and its near
+	// clipping plane. Any lower (or negative) values will be clamped.
+	constexpr float kNearClippingPlaneMin = 0.1f;
+
+	// With fov unspecified, windowSize.y/windowSize.x will be used.
+	void camera_set_perspective(
+		Camera* camera, glm::uvec2 windowSize, float near, float far);
+
+	void camera_set_perspective(
+		Camera* camera, glm::uvec2 windowSize, float near, float far,
+		float fovDegrees);
+
+	// TODO: Implement
+	void camera_set_orthographic(
+		Camera* camera, float near, float far, float fovDegrees);
+
+
+
+
+
+
+
+
+
+	// NEXT: Old interface
+
 	// ======================== //
-	// === Camera Behaviour === //
+	// === Camera behaviour === //
 	// ======================== //
 	void camera_set_window_size(Camera* camera, uint32_t width, uint32_t height);
 

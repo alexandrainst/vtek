@@ -527,7 +527,8 @@ int main()
 		log_error("Failed to fill uniform buffer!");
 		return -1;
 	}
-	if (!update_descriptor_set(descriptorSet, uniformBufferCamera, texture, sampler, device))
+	if (!update_descriptor_set(
+		    descriptorSet, uniformBufferCamera, texture, sampler, device))
 	{
 		log_error("Failed to update descriptor set!");
 		return -1;

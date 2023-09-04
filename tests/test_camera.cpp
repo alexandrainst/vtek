@@ -28,7 +28,8 @@ bool vec3_eq(const glm::vec3& v1, const glm::vec3& v2)
 
 bool test_create_camera()
 {
-	vtek::Camera* cam = vtek::camera_create();
+	vtek::CameraInfo info{};
+	vtek::Camera* cam = vtek::camera_create(&info);
 	bool ret = cam != nullptr;
 	vtek::camera_destroy(cam);
 	return ret;
@@ -36,10 +37,13 @@ bool test_create_camera()
 
 void test_camera_default_lookat()
 {
-	vtek::Camera* cam = vtek::camera_create();
 	glm::vec3 pos   {0.0f, 0.0f, 0.0f};
 	glm::vec3 front {1.0f, 0.0f, 0.0f};
 	glm::vec3 up    {0.0f, 0.0f, 1.0f};
+
+	vtek::CameraInfo info{};
+	info.position = pos;
+	vtek::Camera* cam = vtek::camera_create(&info);
 	vtek::camera_set_lookat(cam, pos, front, up);
 
 	"default_lookat"_test = [&pos, &front, &up, &cam]{
@@ -56,8 +60,10 @@ void test_camera_default_lookat()
 
 void test_camera_custom_lookat(glm::vec3 front, glm::vec3 up)
 {
-	vtek::Camera* cam = vtek::camera_create();
 	glm::vec3 pos   {0.0f, 0.0f, 0.0f};
+	vtek::CameraInfo info{};
+	info.position = pos;
+	vtek::Camera* cam = vtek::camera_create(&info);
 	vtek::camera_set_lookat(cam, pos, front, up);
 
 	glm::vec3 cpos = vtek::camera_get_position(cam);

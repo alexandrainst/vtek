@@ -3,6 +3,12 @@
 
 #include "vtek_logging.hpp"
 
+#include <functional>
+
+// Function declarations for implementing the camera modes
+using tMouseMove = std::function<void(vtek::Camera*,double,double)>;
+using tRoll = std::function<void(vtek::Camera*,float)>;
+
 
 /* struct implementation */
 struct vtek::Camera
@@ -11,15 +17,15 @@ struct vtek::Camera
 	float lastX {0.0f};
 	float lastY {0.0f};
 
-	bool constrainPitch {false};
-	float pitchUpConstain {glm::half_pi<float>()};
-	float pitchDownConstrain {glm::half_pi<float>()};
+	bool constrainPitch {false}; // TODO: This goes away.
+	float pitchUpConstain {glm::half_pi<float>()}; // TODO: This goes away.
+	float pitchDownConstrain {glm::half_pi<float>()}; // TODO: This goes away.
 
 	// viewing frustrum
-	glm::vec2 windowSize {500.0, 500.0};
-	float fov = glm::radians(45.0f);
-	float near {0.1f}; // NOTE: This should never be 0!
-	float far = {100.0f};
+	glm::vec2 windowSize {500.0, 500.0}; // TODO: This goes away.
+	float fov {glm::radians(45.0f)};
+	float near {vtek::kNearClippingPlaneMin};
+	float far {100.0f};
 
 	glm::mat4 viewMatrix {1.0f};
 	glm::mat4 projectionMatrix {1.0f};
@@ -30,14 +36,183 @@ struct vtek::Camera
 	glm::vec3 right {0.0f, 1.0f, 0.0f};
 
 	glm::quat orientation {0.0f, 1.0f, 0.0f, 0.0f};
+
+	// camera mode
+	vtek::CameraMode mode {vtek::CameraMode::freeform};
+	tMouseMove fMouseMove {};
+	tRoll fRoll {};
 };
 
 
 
-/* interface */
-vtek::Camera* vtek::camera_create()
+/* camera modes */
+static void on_mouse_move_none(vtek::Camera* camera, double x, double y) {}
+static void roll_none(vtek::Camera*, float) {}
+
+static void on_mouse_move_freeform(vtek::Camera* camera, double x, double y);
+static void on_mouse_move_fps(vtek::Camera* camera, double x, double y);
+static void on_mouse_move_fps_grounded(vtek::Camera* camera, double x, double y);
+static void on_mouse_move_orbit_free(vtek::Camera* camera, double x, double y);
+static void on_mouse_move_orbit_fps(vtek::Camera* camera, double x, double y);
+
+static void on_mouse_move_initial(vtek::Camera* camera, double x, double y)
 {
-	return new vtek::Camera;
+	camera->lastX = x;
+	camera->lastY = y;
+
+	switch (camera->mode)
+	{
+	case vtek::CameraMode::undefined:
+		vtek_log_warn(
+			"No mode has been specified for camera -- {}",
+			"a default freeform orientation will be applied!");
+		return;
+	case vtek::CameraMode::freeform:
+		camera->fMouseMove = on_mouse_move_freeform;
+		on_mouse_move_freeform(camera, x, y);
+		return;
+	case vtek::CameraMode::fps:
+		camera->fMouseMove = on_mouse_move_fps;
+		on_mouse_move_fps(camera, x, y);
+		return;
+	case vtek::CameraMode::fps_grounded:
+		camera->fMouseMove = on_mouse_move_fps_grounded;
+		on_mouse_move_fps_grounded(camera, x, y);
+		return;
+	case vtek::CameraMode::orbit_free:
+		camera->fMouseMove = on_mouse_move_orbit_free;
+		on_mouse_move_orbit_free(camera, x, y);
+		return;
+	case vtek::CameraMode::orbit_fps:
+		camera->fMouseMove = on_mouse_move_orbit_fps;
+		on_mouse_move_orbit_fps(camera, x, y);
+		return;
+
+	default:
+		vtek_log_error(
+			"vtek_camera.cpp: on_mouse_move_initial: Invalid mode enum!");
+		camera->fMouseMove = on_mouse_move_none;
+		return;
+	}
+}
+
+static void on_mouse_move_freeform(vtek::Camera* camera, double x, double y)
+{
+	float xOffset = x - camera->lastX;
+	float yOffset = y - camera->lastY;
+	camera->lastX = x;
+	camera->lastY = y;
+
+	xOffset *= camera->mouseSensitivity;
+	yOffset *= camera->mouseSensitivity;
+
+	float xCos = glm::cos(xOffset);
+	float xSin = glm::sin(xOffset);
+	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
+	camera->orientation = glm::normalize(xRotor * camera->orientation);
+
+	float yCos = glm::cos(yOffset);
+	float ySin = glm::sin(yOffset);
+	glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
+	camera->orientation = glm::normalize(yRotor * camera->orientation);
+}
+
+static void on_mouse_move_fps(vtek::Camera* camera, double x, double y)
+{
+	float xOffset = x - camera->lastX;
+	float yOffset = y - camera->lastY;
+	camera->lastX = x;
+	camera->lastY = y;
+
+	xOffset *= camera->mouseSensitivity;
+	yOffset *= camera->mouseSensitivity;
+
+	// TODO: Constrain pitch here
+	if (camera->constrainPitch)
+	{
+
+	}
+
+	// TODO: Perhaps also check if roll is disabled?
+	// if(camera->disableRoll) { }
+
+	float xCos = glm::cos(xOffset);
+	float xSin = glm::sin(xOffset);
+	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
+	camera->orientation = glm::normalize(xRotor * camera->orientation);
+
+	float yCos = glm::cos(yOffset);
+	float ySin = glm::sin(yOffset);
+	glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
+	camera->orientation = glm::normalize(yRotor * camera->orientation);
+}
+
+static void on_mouse_move_orbit(vtek::Camera* camera, double x, double y)
+{
+
+}
+
+static void roll_freeform(vtek::Camera* camera, float angle)
+{
+	angle *= 0.5f;
+	float cos = glm::cos(angle);
+	float sin = glm::sin(angle);
+	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
+
+	camera->orientation = glm::normalize(rotor * camera->orientation);
+}
+
+
+
+static void roll_orbit(vtek::Camera* camera, float angle)
+{
+
+}
+
+
+static void set_mode_undefined(vtek::Camera* camera)
+{
+	camera->fMouseMove = []{}; // TODO: Possible?
+}
+
+static void set_mode_freeform(vtek::Camera* camera)
+{
+	camera->fMouseMove = on_mouse_move_freeform;
+	camera->fRoll = roll_freeform;
+}
+
+static void set_mode_fps(vtek::Camera* camera)
+{
+	camera->fMouseMove = on_mouse_move_fps;
+	camera->fRoll = roll_none;
+}
+
+static void set_mode_fps_grounded(vtek::Camera* camera)
+{
+
+}
+
+static void set_mode_orbit_free(vtek::Camera* camera)
+{
+
+}
+
+static void set_mode_orbit_fps(vtek::Camera* camera)
+{
+
+}
+
+
+
+/* interface */
+vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
+{
+	auto camera = new vtek::Camera;
+
+	// camera mode
+	set_type_undefined(camera);
+
+	return camera;
 }
 
 void vtek::camera_destroy(vtek::Camera* camera)
@@ -48,6 +223,34 @@ void vtek::camera_destroy(vtek::Camera* camera)
 }
 
 
+// NEXT: Improved interface
+
+void vtek::camera_set_perspective(
+	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far)
+{
+
+}
+
+void vtek::camera_set_perspective(
+	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far,
+	float fovDegrees)
+{
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// NEXT: Old interface
 
 // ========================== //
 // === Camera Orientation === //
@@ -76,7 +279,8 @@ void vtek::camera_set_perspective_frustrum(
 
 	// Vulkan-trick because GLM was written for OpenGL, and Vulkan uses
 	// a right-handed coordinate system instead. Without this correction,
-	// geometry will be x-inverted in screen space. Described at:
+	// geometry will be y-inverted in screen space, and the coordinate space
+	// will be left-handed. Described at:
 	// https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
 	glm::mat4 correction(
 		glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
@@ -106,26 +310,23 @@ void vtek::camera_set_lookat(
 	if (glm::abs(glm::dot(front, up)) > 0.9999f)
 	{
 		// Find an alternative up vector, which is not (nearly) parallel to front
-		glm::vec3 alterntiveUp =
+		glm::vec3 alternativeUp =
 			(glm::abs(glm::dot(front, {1, 0, 0})) > 0.9999f)
 			? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
 
-		// glm::vec3 right = glm::cross(front, -alterntiveUp);
-		// camera->orientation = glm::quatLookAt(-right, -front);
-		camera->orientation = glm::quatLookAt(front, alterntiveUp);
+		camera->orientation =  glm::conjugate(glm::quatLookAt(-front, alternativeUp));
 	}
 	else
 	{
-		// NOTE: glm::quatLookAt doesn't play well with Vulkan handedness, so
-		// we perform a few tricks to construct the correct coordinate space.
-		// Same above.
-		//glm::vec3 right = glm::cross(-up, front);
-		//camera->orientation = glm::quatLookAt(-right, up); // close
-		//camera->orientation = glm::quatLookAt(up, right); // still not quite right
-		camera->orientation = glm::inverse(glm::quatLookAt(-front, up));
+		// "Because the rotation given by quatLookAt(target-eye, up) is the inverse
+		// of the rotational part of lookAt(eye, center, up)"...
+		// So we inverse (ie. conjugate on unit quaternion!) to get the correct
+		// rotation. Described here:
+		// https://github.com/g-truc/glm/pull/659
+		camera->orientation = glm::conjugate(glm::quatLookAt(-front, up));
 	}
 
-	camera->orientation = glm::normalize(camera->orientation);
+	set_class_freeform(camera);
 	vtek::camera_update(camera);
 }
 
@@ -218,62 +419,44 @@ void vtek::camera_translate(vtek::Camera* camera, glm::vec3 offset)
 	camera->position += offset;
 }
 
+void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
+{
+	camera->fMouseMove(camera, x, y);
+}
+
+
+
+// ======================= //
+// === Angular offsets === //
+// ======================= //
 void vtek::camera_roll_left_radians(vtek::Camera* camera, float angle)
 {
-	angle *= 0.5f;
-	float cos = glm::cos(angle);
-	float sin = glm::sin(angle);
-	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
-
-	camera->orientation = glm::normalize(rotor * camera->orientation);
+	camera->fRoll(camera, angle);
 }
 
 void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
 {
-	angle *= -0.5f;
-	float cos = glm::cos(angle);
-	float sin = glm::sin(angle);
-	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
-
-	camera->orientation = glm::normalize(rotor * camera->orientation);
+	camera->fRoll(camera, -angle);
 }
 
-void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
+void vtek::camera_pitch_up_radians(vtek::Camera* camera, float angle)
 {
-	static bool first = true;
-	if (first)
-	{
-		camera->lastX = x;
-		camera->lastY = y;
-		first = false;
-	}
 
-	float xOffset = x - camera->lastX;
-	float yOffset = y - camera->lastY;
-	camera->lastX = x;
-	camera->lastY = y;
+}
 
-	xOffset *= camera->mouseSensitivity;
-	yOffset *= camera->mouseSensitivity;
+void vtek::camera_pitch_down_radians(vtek::Camera* camera, float angle)
+{
 
-	// TODO: Constrain pitch here
-	if (camera->constrainPitch)
-	{
+}
 
-	}
+void vtek::camera_bank_left_radians(vtek::Camera* camera, float angle)
+{
 
-	// TODO: Perhaps also check if roll is disabled?
-	// if(camera->disableRoll) { }
+}
 
-	float xCos = glm::cos(xOffset);
-	float xSin = glm::sin(xOffset);
-	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
-	camera->orientation = glm::normalize(xRotor * camera->orientation);
+void vtek::camera_bank_right_radians(vtek::Camera* camera, float angle)
+{
 
-	float yCos = glm::cos(yOffset);
-	float ySin = glm::sin(yOffset);
-	glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
-	camera->orientation = glm::normalize(yRotor * camera->orientation);
 }
 
 
