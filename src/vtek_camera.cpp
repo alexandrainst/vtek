@@ -119,10 +119,10 @@ void vtek::camera_set_lookat(
 		// NOTE: glm::quatLookAt doesn't play well with Vulkan handedness, so
 		// we perform a few tricks to construct the correct coordinate space.
 		// Same above.
-		glm::vec3 right = glm::cross(-up, front);
+		//glm::vec3 right = glm::cross(-up, front);
 		//camera->orientation = glm::quatLookAt(-right, up); // close
 		//camera->orientation = glm::quatLookAt(up, right); // still not quite right
-		camera->orientation = glm::quatLookAt(front, -right);
+		camera->orientation = glm::inverse(glm::quatLookAt(-front, up));
 	}
 
 	camera->orientation = glm::normalize(camera->orientation);

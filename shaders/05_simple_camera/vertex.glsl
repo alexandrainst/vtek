@@ -17,5 +17,5 @@ layout (push_constant) uniform PushConstants
 void main()
 {
 	gl_Position = viewProjection * modelMatrix * vec4(aPosition, 1.0f);
-	color = vec3(1.0f, aPosition.y, aPosition.z);
+	color = vec3(aPosition.x, aPosition.y, 0.75f);
 }

@@ -19,7 +19,7 @@ using namespace boost::ut;
 
 bool vec3_eq(const glm::vec3& v1, const glm::vec3& v2)
 {
-	constexpr float eps = glm::epsilon<float>();
+	constexpr float eps = 0.00001f;
 	auto feq = [=](float f1, float f2){ return glm::abs(f1-f2) < eps; };
 	return feq(v1.x, v2.x) && feq(v1.y, v2.y) && feq(v1.z, v2.z);
 }
@@ -85,8 +85,8 @@ int main()
 
 		"custom_lookat"_test = [=] {
 			test_camera_custom_lookat({-1.0f, 0.0f, 0.0f},{0.0f, 0.0f, 1.0f});
-		// 	test_camera_custom_lookat({0.0f, 1.0f, 0.0f},{0.0f, 0.0f, 1.0f});
-		// 	test_camera_custom_lookat({0.0f, -1.0f, 0.0f},{0.0f, 0.0f, 1.0f});
+			test_camera_custom_lookat({0.0f, 1.0f, 0.0f},{0.0f, 0.0f, 1.0f});
+			test_camera_custom_lookat({0.0f, -1.0f, 0.0f},{0.0f, 0.0f, 1.0f});
 		};
 
 		// Randomized parameters
