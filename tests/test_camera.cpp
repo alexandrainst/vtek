@@ -44,7 +44,7 @@ void test_camera_default_lookat()
 	vtek::CameraInfo info{};
 	info.position = pos;
 	vtek::Camera* cam = vtek::camera_create(&info);
-	vtek::camera_set_lookat(cam, pos, front, up);
+	vtek::camera_set_mode_freeform(cam, up, front);
 
 	"default_lookat"_test = [&pos, &front, &up, &cam]{
 		glm::vec3 cpos = vtek::camera_get_position(cam);
@@ -64,7 +64,7 @@ void test_camera_custom_lookat(glm::vec3 front, glm::vec3 up)
 	vtek::CameraInfo info{};
 	info.position = pos;
 	vtek::Camera* cam = vtek::camera_create(&info);
-	vtek::camera_set_lookat(cam, pos, front, up);
+	vtek::camera_set_mode_freeform(cam, up, front);
 
 	glm::vec3 cpos = vtek::camera_get_position(cam);
 	expect(vec3_eq(pos, cpos)) << "invalid position: " << pos << " != " << cpos;

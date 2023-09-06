@@ -493,7 +493,6 @@ int main()
 	float camFov = 45.0f; // NOTE: Experiment.
 	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
 
-
 	// Uniform buffer
 	vtek::BufferInfo uniformBufferInfo{};
 	uniformBufferInfo.size = uniform.size();

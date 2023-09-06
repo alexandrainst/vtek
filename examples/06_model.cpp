@@ -341,8 +341,10 @@ int main()
 	}
 
 	// Window size, for swapchain, camera, and other things.
-	vtek::window_get_framebuffer_size(
-		gWindow, &gFramebufferWidth, &gFramebufferHeight);
+	glm::uvec2 windowSize;
+	vtek::window_get_framebuffer_size(gWindow, &windowSize.x, &windowSize.y);
+	gFramebufferWidth = windowSize.x;
+	gFramebufferHeight = windowSize.y;
 
 	// Swapchain
 	vtek::SwapchainInfo swapchainInfo{};
@@ -388,14 +390,19 @@ int main()
 	}
 
 	// Camera
-	gCamera = vtek::camera_create();
-	glm::vec3 camPos {8.0f, 0.0f, 0.0f};
+	vtek::CameraInfo cameraInfo{};
+	cameraInfo.position = glm::vec3(8.0f, 0.0f, 0.0f);
+	gCamera = vtek::camera_create(&cameraInfo);
+	if (gCamera == nullptr)
+	{
+		log_error("Failed to create camera!");
+		return -1;
+	}
 	glm::vec3 camFront {-1.0f, 0.0f, 0.0f};
 	glm::vec3 camUp {0.0f, 0.0f, 1.0f};
-	vtek::camera_set_lookat(gCamera, camPos, camFront, camUp);
-	vtek::camera_set_window_size(gCamera, gFramebufferWidth, gFramebufferHeight);
-	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
-	vtek::camera_update(gCamera);
+	vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
+	float camFov = 45.0f; // NOTE: Experiment.
+	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
 	// TODO: Maybe for this application, use FPS-game style camera instead?
 	// TODO: It's also a good opportunity to test if the camera supports it properly
 

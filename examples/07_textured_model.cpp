@@ -325,8 +325,10 @@ int main()
 	}
 
 	// Window size, for swapchain, camera, and other things.
-	vtek::window_get_framebuffer_size(
-		gWindow, &gFramebufferWidth, &gFramebufferHeight);
+	glm::uvec2 windowSize;
+	vtek::window_get_framebuffer_size(gWindow, &windowSize.x, &windowSize.y);
+	gFramebufferWidth = windowSize.x;
+	gFramebufferHeight = windowSize.y;
 
 	// Swapchain
 	vtek::SwapchainInfo swapchainInfo{};
@@ -372,18 +374,19 @@ int main()
 	}
 
 	// Camera
-	gCamera = vtek::camera_create();
-	// TODO: Bug in camera!
-	glm::vec3 camPos {-2.0968692f, -2.5813563f, -1.4253441f}; // {8.0f, 0.0f, 0.0f};
-	glm::vec3 camFront {0.5990349f, 0.7475561f, 0.28690946f}; // {-1.0f, 0.0f, 0.0f};
-	glm::vec3 camUp {-0.18743359f, -0.21744627f, 0.95790696f}; // {0.0f, 0.0f, 1.0f};
-	// glm::vec3 camPos {8.0f, 0.0f, 0.0f};
-	// glm::vec3 camFront {-1.0f, 0.0f, 0.0f};
-	// glm::vec3 camUp {0.0f, 0.0f, 1.0f};
-	vtek::camera_set_lookat(gCamera, camPos, camFront, camUp);
-	vtek::camera_set_window_size(gCamera, gFramebufferWidth, gFramebufferHeight);
-	vtek::camera_set_perspective_frustrum(gCamera, 45.0f, 0.1f, 100.0f);
-	vtek::camera_update(gCamera);
+	vtek::CameraInfo cameraInfo{};
+	cameraInfo.position = glm::vec3(-2.0968692f, -2.5813563f, -1.4253441f);
+	gCamera = vtek::camera_create(&cameraInfo);
+	if (gCamera == nullptr)
+	{
+		log_error("Failed to create camera!");
+		return -1;
+	}
+	glm::vec3 camFront {0.5990349f, 0.7475561f, 0.28690946f};
+	glm::vec3 camUp {-0.18743359f, -0.21744627f, 0.95790696f};
+	vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
+	float camFov = 45.0f; // NOTE: Experiment.
+	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
 	// TODO: Maybe for this application, use FPS-game style camera instead?
 	// TODO: It's also a good opportunity to test if the camera supports it properly
 

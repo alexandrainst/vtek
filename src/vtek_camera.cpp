@@ -300,6 +300,8 @@ void vtek::camera_set_mode_freeform(
 	camera->fRoll = roll_freeform;
 	camera->fUpdate = update_freeform;
 
+	camera->mode = vtek::CameraMode::freeform;
+
 	set_default_lookat(camera, up, front);
 	camera->fUpdate(camera);
 }
@@ -311,6 +313,8 @@ void vtek::camera_set_mode_fps(
 		? on_mouse_move_initial : on_mouse_move_fps;
 	camera->fRoll = roll_undefined;
 	camera->fUpdate = update_fps;
+
+	camera->mode = vtek::CameraMode::fps;
 
 	set_fps_lookat(camera, upAxis, front);
 	camera->fUpdate(camera);
@@ -324,6 +328,8 @@ void vtek::camera_set_mode_fps_grounded(
 	camera->fRoll = roll_undefined;
 	camera->fUpdate = update_fps_grounded;
 
+	camera->mode = vtek::CameraMode::fps_grounded;
+
 	vtek_log_error("vtek::camera_set_mode_fps_grounded(): Not implemented!");
 }
 
@@ -335,6 +341,8 @@ void vtek::camera_set_mode_orbit_free(
 	camera->fRoll = roll_orbit_free;
 	camera->fUpdate = update_orbit_free;
 
+	camera->mode = vtek::CameraMode::orbit_free;
+
 	vtek_log_error("vtek::camera_set_mode_orbit_free(): Not implemented!");
 }
 
@@ -345,6 +353,8 @@ void vtek::camera_set_mode_orbit_fps(
 		? on_mouse_move_initial : on_mouse_move_orbit_fps;
 	camera->fRoll = roll_undefined;
 	camera->fUpdate = update_orbit_fps;
+
+	camera->mode = vtek::CameraMode::orbit_fps;
 
 	vtek_log_error("vtek::camera_set_mode_orbit_fps(): Not implemented!");
 }
