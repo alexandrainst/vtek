@@ -8,12 +8,6 @@
 
 namespace vtek
 {
-	DescriptorSet* descriptor_set_create(
-		DescriptorPool* pool, DescriptorSetLayout* layout, Device* device);
-
-	// TODO: Has pool been created with destroy individual flag?
-	void descriptor_set_destroy(DescriptorSet* set);
-
 	VkDescriptorSet descriptor_set_get_handle(const DescriptorSet* set);
 
 	// Apply the descriptors added/modified with the functions declared below.
@@ -25,7 +19,6 @@ namespace vtek
 	// ========================== //
 	// === Update descriptors === //
 	// ========================== //
-
 	bool descriptor_set_bind_sampler();
 
 	bool descriptor_set_bind_combined_image2d_sampler(

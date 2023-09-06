@@ -461,9 +461,7 @@ int main()
 	}
 
 	// Descriptor set
-	// TODO: descriptor_pool_alloc_set(pool, layout, device) - ??
-	// TODO: This is similar to the improved command buffer interface!
-	vtek::DescriptorSet* descriptorSet = vtek::descriptor_set_create(
+	vtek::DescriptorSet* descriptorSet = vtek::descriptor_pool_alloc_set(
 		descriptorPool, descriptorSetLayout, device);
 	if (descriptorSet == nullptr)
 	{
@@ -682,7 +680,6 @@ int main()
 	vtek::buffer_destroy(uniformBuffer);
 	vtek::camera_destroy(gCamera);
 	vtek::buffer_destroy(vertexBuffer);
-	vtek::descriptor_set_destroy(descriptorSet);
 	vtek::descriptor_set_layout_destroy(descriptorSetLayout, device);
 	vtek::descriptor_pool_destroy(descriptorPool, device);
 	vtek::graphics_shader_destroy(shader, device);

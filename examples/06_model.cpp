@@ -490,9 +490,7 @@ int main()
 	}
 
 	// Descriptor set (Camera transform)
-	// TODO: descriptor_pool_alloc_set(pool, layout, device) - ??
-	// TODO: This is similar to the improved command buffer interface!
-	vtek::DescriptorSet* descriptorSetCamera = vtek::descriptor_set_create(
+	vtek::DescriptorSet* descriptorSetCamera = vtek::descriptor_pool_alloc_set(
 		descriptorPool, descriptorSetLayoutCamera, device);
 	if (descriptorSetCamera == nullptr)
 	{
@@ -501,9 +499,7 @@ int main()
 	}
 
 	// Descriptor set (Point light)
-	// TODO: descriptor_pool_alloc_set(pool, layout, device) - ??
-	// TODO: This is similar to the improved command buffer interface!
-	vtek::DescriptorSet* descriptorSetLight = vtek::descriptor_set_create(
+	vtek::DescriptorSet* descriptorSetLight = vtek::descriptor_pool_alloc_set(
 		descriptorPool, descriptorSetLayoutLight, device);
 	if (descriptorSetLight == nullptr)
 	{
@@ -753,9 +749,6 @@ int main()
 	vtek::graphics_pipeline_destroy(pipeline, device);
 	vtek::buffer_destroy(uniformBufferCamera);
 	vtek::buffer_destroy(uniformBufferLight);
-	// TODO: descriptor_pool_free_set(pool, set, device) - ??
-	vtek::descriptor_set_destroy(descriptorSetCamera);
-	vtek::descriptor_set_destroy(descriptorSetLight);
 	vtek::descriptor_set_layout_destroy(descriptorSetLayoutCamera, device);
 	vtek::descriptor_set_layout_destroy(descriptorSetLayoutLight, device);
 	vtek::descriptor_pool_destroy(descriptorPool, device);

@@ -685,20 +685,14 @@ bool vtek::find_supported_image_format(
 		if (tiling == VK_IMAGE_TILING_LINEAR &&
 		    (properties.linearTilingFeatures & features) == features)
 		{
-			vtek_log_debug("LINEAR and features");
 			*outFormat = format;
 			return true;
 		}
 		else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
 		         (properties.optimalTilingFeatures & features) == features)
 		{
-			vtek_log_debug("OPTIMAL and features");
 			*outFormat = format;
 			return true;
-		}
-		else
-		{
-			vtek_log_debug("else");
 		}
 	}
 
