@@ -30,6 +30,7 @@
 
 #include "vtek_glm_includes.hpp"
 #include "vtek_object_handles.hpp"
+#include "vtek_types.hpp"
 
 #include <cstdint>
 
@@ -112,25 +113,34 @@ namespace vtek
 
 	CameraMode camera_get_mode(Camera* camera);
 
-	// ========================== //
-	// === Camera perspective === //
-	// ========================== //
+	// ========================= //
+	// === Camera projection === //
+	// ========================= //
 
 	// The closest allowed distance between the camera location and its near
 	// clipping plane. Any lower (or negative) values will be clamped.
 	constexpr float kNearClippingPlaneMin = 0.1f;
 
+	// For clamping camera field-of-view (fov) to a sensible value [40,70].
+	using FovClamp = FloatClamp<40.0f, 70.0f>;
+
 	// With fov unspecified, windowSize.y/windowSize.x will be used.
 	void camera_set_perspective(
-		Camera* camera, glm::uvec2 windowSize, float near, float far);
-
-	void camera_set_perspective(
 		Camera* camera, glm::uvec2 windowSize, float near, float far,
-		float fovDegrees);
+		FovClamp fovDegrees = 45.0f);
 
 	// TODO: Implement
 	void camera_set_orthographic(
-		Camera* camera, float near, float far, float fovDegrees);
+		Camera* camera, glm::uvec2 windowSize, float near, float far);
+
+	// ===================== //
+	// === Camera update === //
+	// ===================== //
+
+	// Call this function every frame so that processed user input
+	// may reorient the camera.
+	void camera_update(Camera* camera);
+
 
 
 
@@ -145,25 +155,6 @@ namespace vtek
 	// ======================== //
 	// === Camera behaviour === //
 	// ======================== //
-	void camera_set_window_size(Camera* camera, uint32_t width, uint32_t height);
-
-	void camera_set_perspective_frustrum(
-		Camera* camera, float fov_degrees, float near, float far);
-
-	// Default behaviour: No restriction on pitch, and roll is enabled.
-	void camera_set_lookat(
-		Camera* camera, glm::vec3 pos, glm::vec3 front, glm::vec3 up);
-
-	// The camera will perform in orbiting mode, instead of maintaining a particular
-	// view direction.
-	// TODO: This should probably disable movement and translation.
-	void camera_set_lookat_orbit(
-		Camera* camera, glm::vec3 orbitPoint, glm::vec3 eulerAngles);
-
-	// Alternative behaviour: Restrict pitch, disable roll, and specify up vector
-	// for an FPS-game style camera.
-	void camera_set_lookat_fps(
-		Camera* camera, glm::vec3 pos, glm::vec3 front, glm::vec3 up);
 
 	void camera_set_constrain_pitch(
 		Camera* camera, bool restrict, float angleUpDegrees, float angleDownDegrees);
@@ -184,11 +175,6 @@ namespace vtek
 	// ================== //
 	// === User input === //
 	// ================== //
-
-	// Call this function every frame so that processed user input
-	// may reorient the camera.
-	void camera_update(Camera* camera);
-
 	void camera_move_left(Camera* camera, float distance);
 	void camera_move_right(Camera* camera, float distance);
 	void camera_move_up(Camera* camera, float distance);
