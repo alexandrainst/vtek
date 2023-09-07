@@ -3,9 +3,9 @@
 
 namespace vtek
 {
-	// ============================= //
-	// === Opaque vulkan handles === //
-	// ============================= //
+	// ====================== //
+	// === Vulkan handles === //
+	// ====================== //
 	struct Allocator;
 	struct ApplicationWindow;
 	struct Buffer;
@@ -18,10 +18,20 @@ namespace vtek
 	struct Device;
 	struct GraphicsPipeline;
 	struct GraphicsShader;
+	struct Image2D;
 	struct Instance;
 	struct PhysicalDevice;
 	struct Queue;
 	struct RenderPass;
+	struct Sampler;
 	struct Swapchain;
 	// TODO: struct SwapchainFramebuffers;
+
+	// ======================= //
+	// === Utility Handles === //
+	// ======================= //
+	struct Camera;
+	struct Directory;
+	struct File;
+	struct Model;
 }

@@ -6,11 +6,12 @@
 #include <vulkan/vulkan.h>
 
 #include "vtek_descriptor_set_layout.hpp"
+#include "vtek_object_handles.hpp"
 #include "vtek_push_constants.hpp"
 #include "vtek_shaders.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
-#include "vtek_vulkan_handles.hpp"
+#include "vtek_vulkan_types.hpp" // MultisampleType, CullMode
 
 
 namespace vtek
@@ -33,22 +34,9 @@ namespace vtek
 		fill, line, point
 	};
 
-	enum class CullMode
-	{
-		none, front, back, front_and_back
-	};
-
 	enum class FrontFace
 	{
 		clockwise, counter_clockwise
-	};
-
-	// Multisampling is one way to perform anti-aliasing, by sampling multiple
-	// fragments per-pixel, and then resolving those fragments. This smooths out
-	// polygon edges. Multisampling is not recommended for deferred rendering.
-	enum class MultisampleType
-	{
-		none, msaa_x2, msaa_x4, msaa_x8, msaa_x16, msaa_x32, msaa_x64
 	};
 
 	enum class DepthCompareOp
@@ -177,7 +165,7 @@ namespace vtek
 	{
 		VulkanBool depthTestEnable {false};
 		VulkanBool depthWriteEnable {false};
-		DepthCompareOp depthCompareOp {DepthCompareOp::less};
+		DepthCompareOp depthCompareOp {DepthCompareOp::less_equal};
 		VulkanBool depthBoundsTestEnable {false};
 		FloatRange depthBounds {0.0f, 1.0f};
 		VulkanBool stencilTestEnable {false};
@@ -272,7 +260,7 @@ namespace vtek
 
 	// NOTE: All fields must be filled out properly so the behaviour of the
 	// pipeline is well-defined.
-	struct GraphicsPipelineCreateInfo
+	struct GraphicsPipelineInfo
 	{
 		// NOTE: If renderPassType == `RenderPassType::dynamic`, then
 		//  `renderPass` _should_ be NULL, and `pipelineRendering` *must*
@@ -322,7 +310,7 @@ namespace vtek
 
 
 	GraphicsPipeline* graphics_pipeline_create(
-		const GraphicsPipelineCreateInfo* info, Device* device);
+		const GraphicsPipelineInfo* info, Device* device);
 	void graphics_pipeline_destroy(GraphicsPipeline* pipeline, Device* device);
 
 	VkPipeline graphics_pipeline_get_handle(GraphicsPipeline* pipeline);

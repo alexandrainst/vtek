@@ -4,7 +4,8 @@
 #include "vtek_vulkan.pch"
 
 #include "vtek_buffer.hpp"
-#include "vtek_vulkan_handles.hpp"
+#include "vtek_image.hpp"
+#include "vtek_object_handles.hpp"
 
 
 namespace vtek
@@ -21,6 +22,11 @@ namespace vtek
 		// TODO: Enforce this?
 		memory_protected = 0x0020U
 	};
+
+
+	// ========================= //
+	// === Buffer management === //
+	// ========================= //
 
 	struct Buffer
 	{
@@ -40,10 +46,6 @@ namespace vtek
 		vtek::Allocator* allocator {nullptr};
 	};
 
-	// ========================= //
-	// === Buffer management === //
-	// ========================= //
-
 	bool allocator_buffer_create(
 		Allocator* allocator, const BufferInfo* info, Buffer* outBuffer);
 	void allocator_buffer_destroy(Buffer* buffer);
@@ -51,4 +53,30 @@ namespace vtek
 	void* allocator_buffer_map(Buffer* buffer);
 	void allocator_buffer_unmap(Buffer* buffer);
 	void allocator_buffer_flush(Buffer* buffer, const BufferRegion* region);
+
+
+	// ======================== //
+	// === Image management === //
+	// ======================== //
+
+	struct Image2D
+	{
+		VkImage vulkanHandle {VK_NULL_HANDLE};
+		VkImageView viewHandle {VK_NULL_HANDLE};
+		VmaAllocation vmaHandle {VK_NULL_HANDLE};
+
+		VkExtent2D extent {0U, 0U};
+		VkFormat format {VK_FORMAT_UNDEFINED};
+
+		// The image knows who created it. Same as for buffer.
+		vtek::Allocator* allocator {nullptr};
+	};
+
+	bool allocator_image2d_create(
+		Allocator* allocator, const Image2DInfo* info, Image2D* outImage);
+	void allocator_image2d_destroy(Image2D* image);
+
+	// TODO: Image map and layout transition into optimal tiling !!!
+
+	// TODO: Mipmap generation. Two strategies: blit and compute - try both?
 }

@@ -1,6 +1,8 @@
 #include "vtek_vulkan.pch"
 #include "vtek_descriptor_pool.hpp"
 
+#include "impl/vtek_descriptor_set_struct.hpp"
+#include "vtek_descriptor_set_layout.hpp"
 #include "vtek_descriptor_type.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
@@ -127,4 +129,54 @@ void vtek::descriptor_pool_reset(vtek::DescriptorPool* pool, vtek::Device* devic
 	constexpr VkDescriptorPoolResetFlags flags = 0; // reserved for future use
 
 	vkResetDescriptorPool(dev, pool->vulkanHandle, flags);
+}
+
+vtek::DescriptorSet* vtek::descriptor_pool_alloc_set(
+	vtek::DescriptorPool* pool, vtek::DescriptorSetLayout* layout,
+	vtek::Device* device)
+{
+	VkDevice dev = vtek::device_get_handle(device);
+
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = pool->vulkanHandle;
+	allocInfo.descriptorSetCount = 1;
+	VkDescriptorSetLayout layouts[1] = {
+		vtek::descriptor_set_layout_get_handle(layout)
+	};
+	allocInfo.pSetLayouts = layouts;
+
+	VkDescriptorSet descSet = VK_NULL_HANDLE;
+	VkResult result =
+		vkAllocateDescriptorSets(dev, &allocInfo, &descSet);
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to allocate descriptor set from pool!");
+		return nullptr;
+	}
+
+	auto set = new vtek::DescriptorSet;
+	set->vulkanHandle = descSet;
+
+	return set;
+}
+
+void vtek::descriptor_pool_free_set(
+	vtek::DescriptorPool* pool, vtek::DescriptorSet* set, vtek::Device* device)
+{
+	if (pool == nullptr || set == nullptr) { return; }
+	if (!pool->individualFree)
+	{
+		vtek_log_error(
+			"Descriptor pool was not created with `allowIndividualfree` flag {}",
+			"-- cannot free descriptor set!");
+		return;
+	}
+
+	VkDevice dev = vtek::device_get_handle(device);
+	VkDescriptorSet sets[] = { set->vulkanHandle };
+
+	vkFreeDescriptorSets(dev, pool->vulkanHandle, 1, sets);
+	set->vulkanHandle = VK_NULL_HANDLE;
+	delete set;
 }

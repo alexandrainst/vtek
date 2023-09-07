@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
+#include "vtek_object_handles.hpp"
 #include "vtek_submit_info.hpp"
-#include "vtek_vulkan_handles.hpp"
 
 
 namespace vtek
@@ -23,6 +23,25 @@ namespace vtek
 	// reduce rendering latency and increase memory usage.
 	static constexpr uint32_t kMaxFramesInFlight = 2;
 
+	enum class SwapchainDepthBuffer
+	{
+		// The swapchain creates and maintains no depth images. This is the
+		// default, and ideal if all rendering goes to an external framebuffer
+		// (e.g. deferred rendering OR render pass + swapchain framebuffers),
+		// or if no depth buffering is needed.
+		none,
+
+		// All swapchain images will share the same single depth buffer. This
+		// saves some memory but forces in some extra synchronization which may
+		// slow down rendering times slightly.
+		// TODO: This is not currently implemented!
+		single_shared,
+
+		// The swapchain maintains one depth buffer per swapchain image. This
+		// results in the most optimized rendering but incurs extra memory usage.
+		one_per_image
+	};
+
 	struct SwapchainInfo
 	{
 		bool vsync {false};
@@ -35,6 +54,13 @@ namespace vtek
 
 		uint32_t framebufferWidth {0};
 		uint32_t framebufferHeight {0};
+
+		// If no deferred technique is used, default depth buffers may be
+		// created with and managed by the swapchain. This should be disabled
+		// if render passes together with swapchain framebuffers are used, and
+		// might be enabled if dynamic rendering is used.
+		// TODO: `single_shared` is not implemented!
+		SwapchainDepthBuffer depthBuffer {SwapchainDepthBuffer::none};
 	};
 
 
@@ -44,7 +70,7 @@ namespace vtek
 	bool swapchain_recreate(
 		Swapchain* swapchain, Device* device, VkSurfaceKHR surface,
 		uint32_t framebufferWidth, uint32_t framebufferHeight);
-	void swapchain_destroy(Swapchain* swapchain, const Device* device);
+	void swapchain_destroy(Swapchain* swapchain, Device* device);
 
 	uint32_t swapchain_get_length(Swapchain* swapchain);
 
@@ -52,6 +78,9 @@ namespace vtek
 	VkImageView swapchain_get_image_view(Swapchain* swapchain, uint32_t index);
 	VkFormat swapchain_get_image_format(Swapchain* swapchain);
 	VkExtent2D swapchain_get_image_extent(const Swapchain* swapchain);
+
+	bool swapchain_has_depth_buffer(Swapchain* swapchain);
+	VkFormat swapchain_get_depth_image_format(Swapchain* swapchain);
 
 
 	// A status enum, returned by the frame functions below, to keep a client
@@ -96,4 +125,17 @@ namespace vtek
 	// queue, to which the swapchain internally stores a handle, to wait for the
 	// rendering queue to finishe execution before presenting the frame.
 	SwapchainStatus swapchain_present_frame(Swapchain* swapchain, uint32_t frameIndex);
+
+
+	// Explicit image barriers for using the swapchain images in command buffers.
+	// NOTE: Only use these functions wherever dynamic rendering is applied, and
+	// use them as the first and last step, respectively, in the recording sequence.
+	// NOTE: For rendering setups with render passes and swapchain framebuffers,
+	// this step should be handled with subpass dependencies instead.
+	void swapchain_dynamic_rendering_begin(
+		Swapchain* swapchain, uint32_t imageIndex, CommandBuffer* commandBuffer,
+		glm::vec3 clearColor);
+
+	void swapchain_dynamic_rendering_end(
+		Swapchain* swapchain, uint32_t imageIndex, CommandBuffer* commandBuffer);
 }

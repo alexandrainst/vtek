@@ -4,8 +4,8 @@
 #include <optional>
 #include <vector>
 
-#include "vtek_vulkan_handles.hpp"
 #include "vtek_descriptor_type.hpp"
+#include "vtek_object_handles.hpp"
 
 
 namespace vtek
@@ -46,11 +46,20 @@ namespace vtek
 	// from this pool are still in use.
 	void descriptor_pool_reset(DescriptorPool* pool, Device* device);
 
-	// TODO: This is the same problem as with command pools and command buffers:
-	// Descriptor sets are ALLOCATED, not created, from a descriptor pool.
-	// It does not really make sense to "destroy" a descriptor set, and it is
-	// CERTAINLY NOT a descriptor set's responsibility to free itself!
 
-	// NEXT: Figure out the naming and placement of this as well.
-	void descriptor_pool_free_set(DescriptorPool* pool);
+	// ======================= //
+	// === Descriptor sets === //
+	// ======================= //
+	DescriptorSet* descriptor_pool_alloc_set(
+		DescriptorPool* pool, DescriptorSetLayout* layout, Device* device);
+
+	std::vector<DescriptorSet*> descriptor_pool_alloc_sets(
+		DescriptorPool* pool, DescriptorSetLayout* layout,
+		uint32_t numSets, Device* device);
+
+	void descriptor_pool_free_set(
+		DescriptorPool* pool, DescriptorSet* set, Device* device);
+
+	void descriptor_pool_free_sets(
+		DescriptorPool* pool, std::vector<DescriptorSet*>& sets);
 }

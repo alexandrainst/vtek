@@ -1,9 +1,11 @@
+#include "vtek_vulkan.pch"
 #include "vtek_allocator.hpp"
 
-#include "impl/vtek_vma_helpers.hpp"
+#include "impl/vtek_vma_helpers.hpp" // Provides VMA include
 #include "vtek_device.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_queue.hpp"
 #include "vtek_vulkan_version.hpp"
 
 
@@ -68,6 +70,8 @@ vtek::Allocator* vtek::allocator_create_default(
 
 /* helper functions */
 using BUFlag = vtek::BufferUsageFlag;
+using IUFlag = vtek::ImageUsageFlag;
+using ILayout = vtek::ImageLayout;
 
 static VkBufferUsageFlags get_buffer_usage_flags(vtek::EnumBitmask<BUFlag> mask)
 {
@@ -107,6 +111,43 @@ static VkBufferUsageFlags get_buffer_usage_flags(vtek::EnumBitmask<BUFlag> mask)
 	return flags;
 }
 
+static VkImageUsageFlags get_image_usage_flags(vtek::EnumBitmask<IUFlag> mask)
+{
+
+	VkImageUsageFlags flags {0};
+
+	if (mask.has_flag(IUFlag::transfer_src)) {
+		flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	}
+	if (mask.has_flag(IUFlag::transfer_dst)) {
+		flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	}
+	if (mask.has_flag(IUFlag::sampled)) {
+		flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+	}
+	if (mask.has_flag(IUFlag::storage)) {
+		flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+	}
+	if (mask.has_flag(IUFlag::color_attachment)) {
+		flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	}
+	if (mask.has_flag(IUFlag::depth_stencil_attachment)) {
+		flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	}
+	if (mask.has_flag(IUFlag::transient_attachment)) {
+		flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+	}
+	if (mask.has_flag(IUFlag::input_attachment)) {
+		flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+	}
+
+	return flags;
+}
+
+// A staging buffer that will be filled via mapped pointer and then used as a source
+// of transfer to the buffer can be created like this. It will likely end up in a
+// memory type that is HOST_VISIBLE and HOST_COHERENT, but not HOST_CACHED (meaning
+// uncached, write-combined), and not DEVICE_LOCAL (meaning system RAM).
 static void createinfo_stagingbuffer(VmaAllocationCreateInfo* info)
 {
 	// When using VMA_MEMORY_USAGE_AUTO* while wanting to map the allocated
@@ -158,7 +199,6 @@ bool vtek::allocator_buffer_create(
 		&allocation, nullptr);
 	if (buffer == VK_NULL_HANDLE || allocation == VK_NULL_HANDLE)
 	{
-		// TODO: Leaks ?
 		vtek_log_error("Failed to create buffer with vma!");
 		return false;
 	}
@@ -237,156 +277,102 @@ void vtek::allocator_buffer_flush(
 	}
 }
 
-
-
-
-/*
-void specify_memory_requirements()
+bool vtek::allocator_image2d_create(
+	vtek::Allocator* allocator, const vtek::Image2DInfo* info,
+	vtek::Image2D* outImage)
 {
-	// Fill usage
-	VmaAllocationCreateInfo allocInfo{};
-	allocInfo.usage = ... ; // use values of enum VmaMemoryUsage
-	// Since version 3 of vma library, it's recommended to use VM_MEMORY_USAGE_AUTO
-	// to let it select best memory type for the resource automatically.
-}
+	// 1) Fill `VkImageCreateInfo` struct
+	VkImageCreateInfo imageInfo{};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.pNext = nullptr;
+	imageInfo.flags = 0; // TODO: Optional `VkImageCreateFlagBits`
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.extent = { info->extent.width, info->extent.height, 1 };
+	imageInfo.arrayLayers = 1;
+	imageInfo.samples = vtek::get_multisample_count(info->multisampling);
+	imageInfo.usage = get_image_usage_flags(info->usageFlags);
 
-// If you want to create a uniform buffer that will be filled using transfer only
-// once or infrequently, and then used for rendering every frame as a uniform buffer,
-// you can do it using the following code. The buffer will _most likely_ end up in
-// a memory type with VK_MEMORY_PROPERTIES_DEVICE_LOCAL_BIT to be fast to access by
-// the GPU device.
-void create_uniform_buffer_static_draw(vtek::Allocator* a)
-{
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = 65536;
-	bufferInfo.usage
-		= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
-		| VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-	VmaAllocationCreateInfo allocInfo{};
-	allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-	// Other potential usages:
-	// VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE
-	// VMA_MEMORY_USAGE_AUTO_PREFER_HOST
-	// This can be used for memory systems with discrete graphics card.
-
-	// When using VMA_MEMORY_USAGE_AUTO* while wanting to map the allocated memory,
-	// then specify on of the following host access flags:
-	// VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-	// VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
-	// This will help vma decide about preferred memory type to _ensure_ it has
-	// VM_MEMORY_PROPERTY_HOST_VISIBLE_BIT, so it can be mapped.
-
-	VkBuffer buffer;
-	VmaAllocation allocation;
-	vmaCreateBuffer(a->vmaHandle, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
-	if (buffer == VK_NULL_HANDLE)
-	{
-
+	if (info->format != VK_FORMAT_UNDEFINED) {
+		imageInfo.format = info->format;
 	}
-	if (allocation == nullptr)
-	{
-
+	else {
+		vtek_log_debug(
+			"vtek_allocator.cpp: allocator_image2d_create(): {}",
+			"vkFormat not specified, SupportedFormat might not be implemented!");
+		imageInfo.format = info->supportedFormat.get();
 	}
 
-	// OKAY: Success, now return a uniform buffer handle!
-}
-
-// A staging buffer that will be filled via mapped pointer and then used as a source
-// of transfer to the buffer can be created like this. It will likely end up in a
-// memory type that is HOST_VISIBLE and HOST_COHERENT, but not HOST_CACHED (meaning
-// uncached, write-combined), and not DEVICE_LOCAL (meaning system RAM).
-void create_host_visible_staging_buffer(vtek::Allocator* a)
-{
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = 65536;
-	bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-	VmaAllocationCreateInfo allocInfo{};
-	allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-	allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-
-	VkBuffer buffer;
-	VmaAllocation allocation;
-	vmaCreateBuffer(a->vmaHandle, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
-}
-
-// Create a buffer with required flag mapped on host (HOST_VISIBLE), but then also
-// _preferred_ to be HOST_COHERENT and HOST_CACHED:
-void create_host_visible_and_more(vtek::Allocator* a)
-{
-	VmaAllocationCreateInfo allocInfo{};
-	allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-	allocInfo.preferredFlags
-		= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-		| VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-	allocInfo.flags
-		= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
-		| VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-	VkBuffer buffer;
-	VmaAllocation allocation;
-	vmaCreateBuffer(a->vmaHandle, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
-}
-
-
-vtek::Allocator* allocator_create(vtek::Device* device, vtek::Instance* instance)
-{
-	vtek_log_error("vtek::allocator_create: Not implemented!");
-	return nullptr;
-}
-
-
-vtek::Buffer* create_buffer(const vtek::BufferInfo* info, vtek::Allocator* allocator)
-{
-	VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-	bufferInfo.size = 65536;
-	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-	VmaAllocationCreateInfo allocInfo = {};
-	allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-
-	VkBuffer buffer;
-	VmaAllocation allocation;
-
-	// This function will create a buffer, allocate memory for it, and bind them together.
-	// This is the recommended way to use vma library.
-	vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
-}
-
-void destroy_allocator(vtek::Allocator* allocator)
-{
-	vmaDestroyAllocator(allocator->vmaHandle);
-}
-
-void destroy_buffer(vtek::Buffer* buffer, vtek::Allocator* allocator)
-{
-	vmaDestroyBuffer(allocator->vmaHandle, buffer->vulkanHandle, buffer->allocation);
-}
-
-bool vtek::buffer_write_data(Buffer* buffer, void* data, uint64_t size, Device* device)
-{
-
-}
-
-bool vtek::buffer_read_data(Buffer* buffer, std::vector<char>& dest, Device* device)
-{
-	if (buffer->memoryProperties.has_flag(MemoryProperty::host_visible))
-	{
-		// map/unmap
-		void* mappedData;
-		vmaMapMemory(allocator, buffer->allocation, &mappedData);
-		const size_t bufferSize = buffer->size; // TODO: Maybe vma knows?
-
-		dest.resize(bufferSize);
-		memcpy(dest.data(), mappedData, bufferSize);
-
-		vmaUnmapMemory(buffer->allocator, buffer->allocation);
-
-		// potentially flush if not HOST_COHERENT
-
+	if (info->useMipmaps) {
+		imageInfo.mipLevels = 4; // TODO: Perform proper calculation!
 	}
+	else {
+		imageInfo.mipLevels = 1;
+	}
+
+	if (info->initialLayout == vtek::ImageInitialLayout::preinitialized &&
+	    info->usageFlags.has_flag(vtek::ImageUsageFlag::transfer_dst))
+	{
+		imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+	}
+	else
+	{
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+
+	// Sharing mode, if the image is accessed by multiple queue families
+	std::vector<uint32_t> queueIndices;
+	if (info->sharingMode == vtek::ImageSharingMode::exclusive)
+	{
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageInfo.queueFamilyIndexCount = 0;
+		imageInfo.pQueueFamilyIndices = nullptr;
+	}
+	else
+	{
+		imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+		for (const auto* q : info->sharingQueues)
+		{
+			queueIndices.push_back(vtek::queue_get_family_index(q));
+		}
+		imageInfo.queueFamilyIndexCount = queueIndices.size();
+		imageInfo.pQueueFamilyIndices = queueIndices.data();
+	}
+
+	// 2) Fill `VmaAllocationCreateinfo` struct
+	VmaAllocationCreateInfo createInfo{};
+	createinfo_devicelocal(&createInfo); // NOTE: Device-local preference assumed!
+	if (info->requireDedicatedAllocation)
+	{
+		createInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+	}
+
+	// 3) Create allocation and image
+	VkImage image;
+	VmaAllocation allocation;
+	vmaCreateImage(allocator->vmaHandle, &imageInfo, &createInfo, &image,
+		&allocation, nullptr);
+	if (image == VK_NULL_HANDLE || allocation == VK_NULL_HANDLE)
+	{
+		vtek_log_error("Failed to create 2D image with vma!");
+		return false;
+	}
+
+	outImage->vulkanHandle = image;
+	outImage->vmaHandle = allocation;
+	outImage->extent = info->extent;
+	outImage->format = imageInfo.format;
+	outImage->allocator = allocator;
+
+	return true;
 }
-*/
+
+void vtek::allocator_image2d_destroy(vtek::Image2D* image)
+{
+	VmaAllocator alloc = image->allocator->vmaHandle;
+
+	vmaDestroyImage(alloc, image->vulkanHandle, image->vmaHandle);
+}
+
+// TODO: Image map and layout transition into optimal tiling !!!

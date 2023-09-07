@@ -1,63 +1,21 @@
 #include "vtek_vulkan.pch"
 #include "vtek_descriptor_set.hpp"
 
+#include "impl/vtek_descriptor_set_struct.hpp"
 #include "vtek_buffer.hpp"
 #include "vtek_descriptor_pool.hpp"
 #include "vtek_descriptor_set_layout.hpp"
 #include "vtek_device.hpp"
+#include "vtek_image.hpp"
 #include "vtek_logging.hpp"
+#include "vtek_sampler.hpp"
 
 #include <deque>
 #include <vector>
 
 
-/* struct implementation */
-struct vtek::DescriptorSet
-{
-	VkDescriptorSet vulkanHandle {VK_NULL_HANDLE};
-
-	std::deque<VkDescriptorBufferInfo> bufferInfos;
-	std::vector<VkWriteDescriptorSet> writeDescriptors;
-};
-
-
-
 /* interface */
-vtek::DescriptorSet* vtek::descriptor_set_create(
-	vtek::DescriptorPool* pool, vtek::DescriptorSetLayout* layout,
-	vtek::Device* device)
-{
-	VkDevice dev = vtek::device_get_handle(device);
-
-	auto set = new vtek::DescriptorSet;
-
-	VkDescriptorSetAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = vtek::descriptor_pool_get_handle(pool);
-	allocInfo.descriptorSetCount = 1;
-	VkDescriptorSetLayout layouts[1] = {
-		vtek::descriptor_set_layout_get_handle(layout)
-	};
-	allocInfo.pSetLayouts = layouts;
-
-	VkResult result =
-		vkAllocateDescriptorSets(dev, &allocInfo, &set->vulkanHandle);
-	if (result != VK_SUCCESS)
-	{
-		vtek_log_error("Failed to allocate descriptor set from pool!");
-		delete set;
-		return nullptr;
-	}
-
-	return set;
-}
-
-void vtek::descriptor_set_destroy(vtek::DescriptorSet* set)
-{
-	vtek_log_error("vtek::descriptor_set_destroy(): Not implemented!");
-}
-
-VkDescriptorSet vtek::descriptor_set_get_handle(vtek::DescriptorSet* set)
+VkDescriptorSet vtek::descriptor_set_get_handle(const vtek::DescriptorSet* set)
 {
 	return set->vulkanHandle;
 }
@@ -85,11 +43,32 @@ bool vtek::descriptor_set_bind_sampler()
 	return false;
 }
 
-bool vtek::descriptor_set_bind_combined_image_sampler()
+bool vtek::descriptor_set_bind_combined_image2d_sampler(
+	vtek::DescriptorSet* set, uint32_t binding,
+	vtek::Sampler* sampler, vtek::Image2D* image, vtek::ImageLayout imageLayout)
 {
-	vtek_log_error("vtek::descriptor_set_bind_combined_image_sampler(): {}",
-	               "Not implemented!");
-	return false;
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = vtek::get_image_layout(imageLayout);
+	imageInfo.imageView = vtek::image2d_get_view_handle(image);
+	imageInfo.sampler = vtek::sampler_get_handle(sampler);
+	set->imageInfos.emplace_back(imageInfo);
+
+	VkWriteDescriptorSet writeSet{};
+	writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeSet.pNext = nullptr;
+	writeSet.dstSet = set->vulkanHandle;
+	writeSet.dstBinding = binding; // TODO: Is this binding valid?
+
+	writeSet.dstArrayElement = 0;
+	writeSet.descriptorCount = 1; // Number of elements in `pImageInfo`.
+	writeSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeSet.pImageInfo = &(set->imageInfos.back());
+	writeSet.pBufferInfo = nullptr;
+	writeSet.pTexelBufferView = nullptr;
+
+	set->writeDescriptors.emplace_back(writeSet);
+
+	return true;
 }
 
 bool vtek::descriptor_set_bind_sampled_image()

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vtek_vulkan_handles.hpp"
+#include "vtek_object_handles.hpp"
 
 
 namespace vtek
@@ -44,5 +44,9 @@ namespace vtek
 		CommandScheduler* scheduler, Device* device);
 
 	bool command_scheduler_submit_transfer(
-		CommandScheduler* scheduler, CommandBuffer* commandBuffer);
+		CommandScheduler* scheduler, CommandBuffer* commandBuffer, Device* device);
+
+	// Obtain a handle to the transfer queue used by the command scheduler
+	// for issuing transfer operations.
+	Queue* command_scheduler_get_transfer_queue(CommandScheduler* scheduler);
 }

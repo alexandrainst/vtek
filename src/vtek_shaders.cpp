@@ -1,3 +1,4 @@
+#include "vtek_vulkan.pch"
 #include "vtek_shaders.hpp"
 
 #include "glsl/vtek_glsl_shader_utils.hpp"
@@ -144,12 +145,14 @@ static bool spirv_reflect_test(const void* spirv_code, size_t spirv_nbytes)
 	//assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
 	SpvReflectInterfaceVariable** input_vars =
-		(SpvReflectInterfaceVariable**)malloc(var_count * sizeof(SpvReflectInterfaceVariable*));
+		(SpvReflectInterfaceVariable**)malloc(
+			var_count * sizeof(SpvReflectInterfaceVariable*));
 	result = spvReflectEnumerateInputVariables(&module, &var_count, input_vars);
 	if (result != SPV_REFLECT_RESULT_SUCCESS)
 	{
 		vtek_log_error("Failed to enumerate shader input variables!");
 		spvReflectDestroyShaderModule(&module);
+		free(input_vars);
 		return false;
 	}
 	//assert(result == SPV_REFLECT_RESULT_SUCCESS);
@@ -159,6 +162,7 @@ static bool spirv_reflect_test(const void* spirv_code, size_t spirv_nbytes)
 
 	// Destroy the reflection data when no longer required.
 	spvReflectDestroyShaderModule(&module);
+	free(input_vars);
 
 	return true;
 }
@@ -200,7 +204,11 @@ static VkShaderModule load_spirv_shader(
 	}
 
 	// NEXT: Reflection queries...
-	if (!spirv_reflect_test(buffer.data(), buffer.size()))
+	// TODO: Undecided on how to continue.
+	// REVIEW: Implementation could compare all shaders in a program, or
+	// REVIEW: extract descriptor binding info and compare during pipeline creation.
+	constexpr bool doSpirvReflectTest = false;
+	if (doSpirvReflectTest && !spirv_reflect_test(buffer.data(), buffer.size()))
 	{
 		vtek_log_error(
 			"Failed SPIR-V reflection query -- cannot create graphics shader!");
@@ -528,7 +536,7 @@ vtek::GraphicsShader* vtek::graphics_shader_load_glsl(
 	// VkDescriptorSetAllocateInfo
 	// TODO: Create descriptor pool!
 
-	vtek_log_info("Loaded SPIR-V shader(s) from directory \"{}\".",
+	vtek_log_info("Loaded GLSL shader(s) from directory \"{}\".",
 	              vtek::directory_get_path(shaderdir));
 
 	return shader;
@@ -659,6 +667,8 @@ void vtek::graphics_shader_destroy(vtek::GraphicsShader* shader, vtek::Device* d
 		vkDestroyShaderModule(dev, module.module, nullptr);
 	}
 	shader->modules.clear();
+
+	delete shader;
 }
 
 const std::vector<vtek::GraphicsShaderModule>& vtek::graphics_shader_get_modules(

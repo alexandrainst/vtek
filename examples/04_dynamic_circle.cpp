@@ -287,9 +287,11 @@ int main()
 	}
 
 	// Create window
-	vtek::WindowCreateInfo windowInfo{};
+	vtek::WindowInfo windowInfo{};
 	windowInfo.title = "vtek example 04: Dynamic Circle";
 	windowInfo.resizeable = false;
+	windowInfo.width = 1200;
+	windowInfo.height = 1200;
 	window = vtek::window_create(&windowInfo);
 	if (window == nullptr)
 	{
@@ -299,7 +301,7 @@ int main()
 	vtek::window_set_key_handler(window, key_callback);
 
 	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
+	vtek::InstanceInfo instanceInfo{};
 	instanceInfo.applicationName = "dynamic_circle";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
 	instanceInfo.enableValidationLayers = true;
@@ -335,10 +337,10 @@ int main()
 	}
 
 	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
-	deviceCreateInfo.asyncCommandScheduler = true; // true is default.
+	vtek::DeviceInfo deviceInfo{};
+	deviceInfo.asyncCommandScheduler = true; // true is default.
 	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
+		&deviceInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");
@@ -444,7 +446,7 @@ int main()
 	}
 
 	// Descriptor set
-	vtek::DescriptorSet* descriptorSet = vtek::descriptor_set_create(
+	vtek::DescriptorSet* descriptorSet = vtek::descriptor_pool_alloc_set(
 		descriptorPool, descriptorSetLayout, device);
 	if (descriptorSet == nullptr)
 	{
@@ -455,9 +457,6 @@ int main()
 	// Vertex buffer
 	vtek::BufferInfo bufferInfo{};
 	bufferInfo.size = 2* sizeof(glm::vec2) * kVertMax;
-	//bufferInfo.requireHostVisibleStorage = true;
-	//bufferInfo.disallowInternalStagingBuffer = true;
-	//bufferInfo.requireDedicatedAllocation = true;
 	bufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
 	bufferInfo.usageFlags
 		= vtek::BufferUsageFlag::transfer_dst
@@ -477,7 +476,7 @@ int main()
 	// Uniform buffer
 	vtek::BufferInfo uniformBufferInfo{};
 	uniformBufferInfo.size = uniform.size();
-	uniformBufferInfo.requireHostVisibleStorage = true; // TODO: Test without!
+	uniformBufferInfo.requireHostVisibleStorage = true;
 	uniformBufferInfo.disallowInternalStagingBuffer = true;
 	uniformBufferInfo.writePolicy = vtek::BufferWritePolicy::overwrite_often;
 	uniformBufferInfo.usageFlags
@@ -517,7 +516,7 @@ int main()
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
 
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	vtek::GraphicsPipelineInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
 	graphicsPipelineInfo.renderPass = nullptr; // Nice!
 	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;
@@ -675,7 +674,6 @@ int main()
 	vtek::graphics_pipeline_destroy(graphicsPipeline, device);
 	vtek::buffer_destroy(uniformBuffer);
 	vtek::buffer_destroy(vertexBuffer);
-	vtek::descriptor_set_destroy(descriptorSet);
 	vtek::descriptor_set_layout_destroy(descriptorSetLayout, device);
 	vtek::descriptor_pool_destroy(descriptorPool, device);
 	vtek::graphics_shader_destroy(shader, device);

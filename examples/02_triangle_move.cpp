@@ -241,7 +241,7 @@ int main()
 	gKeyboardMap.reset();
 
 	// Create window
-	vtek::WindowCreateInfo windowInfo{};
+	vtek::WindowInfo windowInfo{};
 	windowInfo.title = "02triangle_plain";
 	windowInfo.width = 500;
 	windowInfo.height = 500;
@@ -260,7 +260,7 @@ int main()
 	vtek::window_set_key_handler(gWindow, keyCallback);
 
 	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
+	vtek::InstanceInfo instanceInfo{};
 	instanceInfo.applicationName = "triangle_move";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
 	instanceInfo.enableValidationLayers = true;
@@ -294,9 +294,9 @@ int main()
 	}
 
 	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
+	vtek::DeviceInfo deviceInfo{};
 	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
+		&deviceInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");
@@ -371,7 +371,7 @@ int main()
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
 
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	vtek::GraphicsPipelineInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
 	graphicsPipelineInfo.renderPass = nullptr; // Nice!
 	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;

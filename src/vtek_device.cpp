@@ -27,6 +27,7 @@ struct vtek::Device
 	VkPhysicalDevice physicalHandle {VK_NULL_HANDLE};
 	vtek::VulkanVersion vulkanVersion {1, 0, 0};
 
+	VkPhysicalDeviceProperties physicalProperties {};
 	VkPhysicalDeviceFeatures enabledFeatures {};
 	vtek::DeviceExtensions enabledExtensions {};
 
@@ -93,7 +94,7 @@ struct QueueFamilySelections
 
 
 static bool create_queue_infos(
-	const vtek::DeviceCreateInfo* info,
+	const vtek::DeviceInfo* info,
 	const vtek::PhysicalDevice* physicalDevice,
 	std::vector<VkDeviceQueueCreateInfo>& createInfos,
 	QueueFamilySelections* queueSelections)
@@ -325,7 +326,7 @@ static bool create_queue_infos(
 
 // Call this function _after_ device creation to create the queues
 static void create_device_queues(
-	vtek::Device* device, const vtek::DeviceCreateInfo* info,
+	vtek::Device* device, const vtek::DeviceInfo* info,
 	const QueueFamilySelections* selections)
 {
 	VkDevice handle = device->vulkanHandle;
@@ -646,7 +647,7 @@ static bool use_descriptor_indexing_features(
 
 /* device interface */
 vtek::Device* vtek::device_create(
-	const vtek::DeviceCreateInfo* info, const vtek::Instance* instance,
+	const vtek::DeviceInfo* info, const vtek::Instance* instance,
 	const vtek::PhysicalDevice* physicalDevice)
 {
 	VkPhysicalDevice physDev = vtek::physical_device_get_handle(physicalDevice);
@@ -775,6 +776,9 @@ vtek::Device* vtek::device_create(
 	// Store physical device handle (might be needed later for various purposes)
 	device->physicalHandle = physDev;
 
+	// Store physical device properties, might be needed later
+	device->physicalProperties = *physDevProps;
+
 	// Create device allocator for buffers and images
 	device->allocator = vtek::allocator_create_default(device, instance);
 	if (device->allocator == nullptr)
@@ -797,6 +801,12 @@ vtek::Device* vtek::device_create(
 		vtek::device_destroy(device);
 		return nullptr;
 	}
+
+	// Initial query for texture format support
+	//vtek::setup_format_support(physicalDevice);
+	// TODO: Consider instead creating a format cache!
+	// REVIEW: But oh, the combinatorial nightmare!
+	// NEXT: How about we just query format support BEFORE loading an image!!?!
 
 	// Log creation success and Vulkan version
 	auto vs = device->vulkanVersion;
@@ -866,6 +876,12 @@ const VkPhysicalDeviceFeatures* vtek::device_get_enabled_features(
 	const vtek::Device* device)
 {
 	return &device->enabledFeatures;
+}
+
+const VkPhysicalDeviceProperties* vtek::device_get_physical_properties(
+	const vtek::Device* device)
+{
+	return &device->physicalProperties;
 }
 
 vtek::Allocator* vtek::device_get_allocator(const vtek::Device* device)

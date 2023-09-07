@@ -152,7 +152,8 @@ vtek::CommandBuffer* vtek::command_scheduler_begin_transfer(
 }
 
 bool vtek::command_scheduler_submit_transfer(
-	vtek::CommandScheduler* scheduler, vtek::CommandBuffer* buffer)
+	vtek::CommandScheduler* scheduler, vtek::CommandBuffer* buffer,
+	vtek::Device* device)
 {
 	if (!vtek::command_buffer_end(buffer))
 	{
@@ -174,5 +175,16 @@ bool vtek::command_scheduler_submit_transfer(
 	// TODO: Right now, wait fence is not implemented, nor await or async, so we wait!
 	vtek::queue_wait_idle(scheduler->transferQueue);
 
+	// NOTE: After done, we free the buffer from the pool.
+	// NOTE: If we don't do `queue_wait_idle` then we must wait in some other way
+	// to avoid leaks!
+	vtek::command_pool_free_buffer(scheduler->transferPool, buffer, device);
+
 	return true;
+}
+
+vtek::Queue* vtek::command_scheduler_get_transfer_queue(
+	vtek::CommandScheduler* scheduler)
+{
+	return scheduler->transferQueue;
 }

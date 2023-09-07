@@ -1,6 +1,6 @@
+#include "vtek_vulkan.pch"
 #include "vtek_graphics_pipeline.hpp"
 
-#include "impl/vtek_vulkan_helpers.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_render_pass.hpp"
@@ -21,7 +21,7 @@ struct vtek::GraphicsPipeline
 
 /* helper functions */
 static void get_enabled_dynamic_states(
-	const vtek::GraphicsPipelineCreateInfo* info, vtek::Device* device,
+	const vtek::GraphicsPipelineInfo* info, vtek::Device* device,
 	std::vector<VkDynamicState>& states)
 {
 	using PDState = vtek::PipelineDynamicState;
@@ -127,20 +127,6 @@ static VkPolygonMode get_polygon_mode(vtek::PolygonMode mode)
 	}
 }
 
-static VkCullModeFlags get_cull_mode_flags(vtek::CullMode mode)
-{
-	switch (mode)
-	{
-	case vtek::CullMode::none:           return VK_CULL_MODE_NONE;
-	case vtek::CullMode::front:          return VK_CULL_MODE_FRONT_BIT;
-	case vtek::CullMode::back:           return VK_CULL_MODE_BACK_BIT;
-	case vtek::CullMode::front_and_back: return VK_CULL_MODE_FRONT_AND_BACK;
-	default:
-		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid cull mode!");
-		return VK_CULL_MODE_NONE;
-	}
-}
-
 static VkFrontFace get_front_face(vtek::FrontFace face)
 {
 	switch (face)
@@ -150,23 +136,6 @@ static VkFrontFace get_front_face(vtek::FrontFace face)
 	default:
 		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid front face!");
 		return VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	}
-}
-
-static VkSampleCountFlagBits get_multisample_count(vtek::MultisampleType sample)
-{
-	switch (sample)
-	{
-	case vtek::MultisampleType::none:     return VK_SAMPLE_COUNT_1_BIT;
-	case vtek::MultisampleType::msaa_x2:  return VK_SAMPLE_COUNT_2_BIT;
-	case vtek::MultisampleType::msaa_x4:  return VK_SAMPLE_COUNT_4_BIT;
-	case vtek::MultisampleType::msaa_x8:  return VK_SAMPLE_COUNT_8_BIT;
-	case vtek::MultisampleType::msaa_x16: return VK_SAMPLE_COUNT_16_BIT;
-	case vtek::MultisampleType::msaa_x32: return VK_SAMPLE_COUNT_32_BIT;
-	case vtek::MultisampleType::msaa_x64: return VK_SAMPLE_COUNT_64_BIT;
-	default:
-		vtek_log_error("vtek_graphics_pipeline.cpp: Invalid multisample count!");
-		return VK_SAMPLE_COUNT_1_BIT;
 	}
 }
 
@@ -217,7 +186,7 @@ static VkLogicOp get_logic_op(vtek::LogicOp op)
 
 /* interface */
 vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
-	const vtek::GraphicsPipelineCreateInfo* info, vtek::Device* device)
+	const vtek::GraphicsPipelineInfo* info, vtek::Device* device)
 {
 	VkDevice dev = vtek::device_get_handle(device);
 	auto devEnabledFeatures = vtek::device_get_enabled_features(device);
@@ -333,7 +302,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	rasterizer.depthClampEnable = rasterizationState.depthClampEnable.get();
 	rasterizer.rasterizerDiscardEnable = rasterizationState.rasterizerDiscardEnable.get();
 	rasterizer.polygonMode = get_polygon_mode(rasterizationState.polygonMode);
-	rasterizer.cullMode = get_cull_mode_flags(rasterizationState.cullMode);
+	rasterizer.cullMode = get_cull_mode(rasterizationState.cullMode);
 	rasterizer.frontFace = get_front_face(rasterizationState.frontFace);
 	rasterizer.depthBiasEnable = rasterizationState.depthBiasEnable.get();
 	rasterizer.depthBiasConstantFactor = rasterizationState.depthBiasConstantFactor;
@@ -388,7 +357,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisample.pNext = nullptr;
 	multisample.flags = 0U;
-	multisample.rasterizationSamples = get_multisample_count(multisampleState.numSamples);
+	multisample.rasterizationSamples =
+		vtek::get_multisample_count(multisampleState.numSamples);
 	multisample.sampleShadingEnable = multisampleState.enableSampleRateShading.get();
 	multisample.pSampleMask = nullptr;
 	multisample.alphaToCoverageEnable = multisampleState.enableAlphaToCoverage.get();
@@ -544,8 +514,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
-		// NOTE: Only 1 push constant is supported, and not multiple ranges!
-		// This could be changed, if the need arises.
+		// NOTE: vtek supports only 1 push constant, and not multiple ranges!
+		// This could be changed if the need arises.
 		pushConstantRange.stageFlags =
 			vtek::get_shader_stage_flags_graphics(info->pushConstantShaderStages);
 		pushConstantRange.offset = 0;

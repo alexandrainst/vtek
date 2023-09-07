@@ -37,7 +37,7 @@ int main()
 	}
 
 	// Create window
-	vtek::WindowCreateInfo windowInfo{};
+	vtek::WindowInfo windowInfo{};
 	windowInfo.title = "vtek example 03: Vertex buffer";
 	window = vtek::window_create(&windowInfo);
 	if (window == nullptr)
@@ -48,7 +48,7 @@ int main()
 	vtek::window_set_key_handler(window, keyCallback);
 
 	// Vulkan instance
-	vtek::InstanceCreateInfo instanceInfo{};
+	vtek::InstanceInfo instanceInfo{};
 	instanceInfo.applicationName = "vertex_buffer";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0);
 	instanceInfo.enableValidationLayers = true;
@@ -82,11 +82,11 @@ int main()
 	}
 
 	// Device
-	vtek::DeviceCreateInfo deviceCreateInfo{};
+	vtek::DeviceInfo deviceInfo{};
 	// TODO: Require independent transfer queue, because we can!
 	// TODO: -- also to test the vertex buffer transfer!
 	vtek::Device* device = vtek::device_create(
-		&deviceCreateInfo, instance, physicalDevice);
+		&deviceInfo, instance, physicalDevice);
 	if (device == nullptr)
 	{
 		log_error("Failed to create device!");
@@ -199,7 +199,7 @@ int main()
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
 
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	vtek::GraphicsPipelineInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
 	graphicsPipelineInfo.renderPass = nullptr; // Nice!
 	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;

@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "vtek_vulkan_handles.hpp"
+#include "vtek_object_handles.hpp"
 #include "vtek_vulkan_version.hpp"
 
 
@@ -22,7 +22,7 @@ namespace vtek
 		bool debugTypePerformance {true};
 	};
 
-	struct InstanceCreateInfo
+	struct InstanceInfo
 	{
 		// General settings
 		const char* applicationName {""};
@@ -38,7 +38,7 @@ namespace vtek
 	};
 
 
-	Instance* instance_create(InstanceCreateInfo* info);
+	Instance* instance_create(InstanceInfo* info);
 	void instance_destroy(Instance* instance);
 
 	VkInstance instance_get_handle(const Instance* instance);

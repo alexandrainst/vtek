@@ -3,7 +3,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vtek_vulkan_handles.hpp"
+#include "vtek_object_handles.hpp"
 
 
 namespace vtek
@@ -12,6 +12,4 @@ namespace vtek
 
 	bool command_buffer_begin(CommandBuffer* commandBuffer);
 	bool command_buffer_end(CommandBuffer* commandBuffer);
-
-	// TODO: Command wrappers here?
 }

@@ -7,12 +7,12 @@
 #include <vector>
 
 #include "vtek_input.hpp"
-#include "vtek_vulkan_handles.hpp"
+#include "vtek_object_handles.hpp"
 
 
 namespace vtek
 {
-	struct WindowCreateInfo
+	struct WindowInfo
 	{
 		const char* title {"sample-app"};
 		uint32_t width {512};
@@ -27,7 +27,7 @@ namespace vtek
 
 
 	// Create/destroy window
-	ApplicationWindow* window_create(const WindowCreateInfo* info);
+	ApplicationWindow* window_create(const WindowInfo* info);
 	void window_destroy(ApplicationWindow* window);
 
 	// surface for the application window, needed for Vulkan

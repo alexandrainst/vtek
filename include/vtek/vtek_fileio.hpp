@@ -15,7 +15,7 @@ namespace vtek
 	// ========================= //
 	// === Utility functions === //
 	// ========================= //
-	std::string_view get_filename_suffix(std::string_view filename);
+	std::string_view filename_get_extension(std::string_view filename);
 	char get_path_separator();
 
 

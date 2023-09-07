@@ -60,6 +60,25 @@ bool vtek::glfw_backend_initialize()
 	uint32_t extensionCount = 0;
 	const char** extensions;
 	extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
+	if (extensions == nullptr)
+	{
+		if (!glfwVulkanSupported())
+		{
+			vtek_log_error("Vulkan is not supported on this machine, {}"
+			               "or GLFW backend could find a loader and an ICD.");
+		}
+		else
+		{
+			vtek_log_error(
+				"Creating a Vulkan-compatible surface is not supported {}"
+				"by GLFW on this machine!");
+			vtek_log_error(
+				"However, Vulkan may still be used for off-screen rendering {}",
+				"and compute work. You may disable GLFW backend and try again.");
+		}
+		return false;
+	}
+
 	for (uint32_t i = 0; i < extensionCount; i++)
 	{
 		sRequiredInstanceExtensions.push_back(extensions[i]);
@@ -80,6 +99,8 @@ void vtek::glfw_backend_terminate()
 	}
 	delete spEventMapper;
 	spEventMapper = nullptr;
+
+	sRequiredInstanceExtensions.clear();
 
 	glfwTerminate();
 }
@@ -328,7 +349,7 @@ static void window_minimize_callback(GLFWwindow* window, int iconified)
 	}
 }
 
-static void set_window_hints(const vtek::WindowCreateInfo* info)
+static void set_window_hints(const vtek::WindowInfo* info)
 {
 	// Always disable GL API with Vulkan
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -366,7 +387,7 @@ static void set_window_hints(const vtek::WindowCreateInfo* info)
 	}
 }
 
-static void configure_window(GLFWwindow* window, const vtek::WindowCreateInfo* info)
+static void configure_window(GLFWwindow* window, const vtek::WindowInfo* info)
 {
 	// Raw mouse motion is not affected by the scaling and acceleration applied
 	// to the motion of the desktop cursor, hence more suitable for controlling
@@ -376,7 +397,6 @@ static void configure_window(GLFWwindow* window, const vtek::WindowCreateInfo* i
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		if (glfwRawMouseMotionSupported())
 		{
-			vtek_log_debug("Enabling raw mouse motion.");
 			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 		}
 	}
@@ -392,7 +412,7 @@ static void configure_window(GLFWwindow* window, const vtek::WindowCreateInfo* i
 	}
 }
 
-static GLFWwindow* create_fullscreen_window(const vtek::WindowCreateInfo* info)
+static GLFWwindow* create_fullscreen_window(const vtek::WindowInfo* info)
 {
 	// Quoting GLFW docs:
 	// "Unless you have a way for the user to choose a specific monitor, it is
@@ -420,7 +440,7 @@ static GLFWwindow* create_fullscreen_window(const vtek::WindowCreateInfo* info)
 
 
 /* interface */
-vtek::ApplicationWindow* vtek::window_create(const vtek::WindowCreateInfo* info)
+vtek::ApplicationWindow* vtek::window_create(const vtek::WindowInfo* info)
 {
 	auto appWindow = new vtek::ApplicationWindow;
 
