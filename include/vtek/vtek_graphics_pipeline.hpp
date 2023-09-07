@@ -260,7 +260,7 @@ namespace vtek
 
 	// NOTE: All fields must be filled out properly so the behaviour of the
 	// pipeline is well-defined.
-	struct GraphicsPipelineCreateInfo
+	struct GraphicsPipelineInfo
 	{
 		// NOTE: If renderPassType == `RenderPassType::dynamic`, then
 		//  `renderPass` _should_ be NULL, and `pipelineRendering` *must*
@@ -310,7 +310,7 @@ namespace vtek
 
 
 	GraphicsPipeline* graphics_pipeline_create(
-		const GraphicsPipelineCreateInfo* info, Device* device);
+		const GraphicsPipelineInfo* info, Device* device);
 	void graphics_pipeline_destroy(GraphicsPipeline* pipeline, Device* device);
 
 	VkPipeline graphics_pipeline_get_handle(GraphicsPipeline* pipeline);

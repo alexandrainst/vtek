@@ -542,7 +542,7 @@ int main()
 			vtek::swapchain_get_depth_image_format(swapchain);
 	}
 
-	vtek::GraphicsPipelineCreateInfo graphicsPipelineInfo{};
+	vtek::GraphicsPipelineInfo graphicsPipelineInfo{};
 	graphicsPipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
 	graphicsPipelineInfo.renderPass = nullptr; // Nice!
 	graphicsPipelineInfo.pipelineRendering = &pipelineRendering;

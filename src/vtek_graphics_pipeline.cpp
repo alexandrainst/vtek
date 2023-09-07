@@ -21,7 +21,7 @@ struct vtek::GraphicsPipeline
 
 /* helper functions */
 static void get_enabled_dynamic_states(
-	const vtek::GraphicsPipelineCreateInfo* info, vtek::Device* device,
+	const vtek::GraphicsPipelineInfo* info, vtek::Device* device,
 	std::vector<VkDynamicState>& states)
 {
 	using PDState = vtek::PipelineDynamicState;
@@ -186,7 +186,7 @@ static VkLogicOp get_logic_op(vtek::LogicOp op)
 
 /* interface */
 vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
-	const vtek::GraphicsPipelineCreateInfo* info, vtek::Device* device)
+	const vtek::GraphicsPipelineInfo* info, vtek::Device* device)
 {
 	VkDevice dev = vtek::device_get_handle(device);
 	auto devEnabledFeatures = vtek::device_get_enabled_features(device);

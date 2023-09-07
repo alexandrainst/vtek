@@ -580,7 +580,7 @@ int main()
 	pipelineRendering.depthAttachmentFormat =
 		vtek::swapchain_get_depth_image_format(swapchain);
 
-	vtek::GraphicsPipelineCreateInfo pipelineInfo{};
+	vtek::GraphicsPipelineInfo pipelineInfo{};
 	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
 	pipelineInfo.renderPass = nullptr; // Nice!
 	pipelineInfo.pipelineRendering = &pipelineRendering;

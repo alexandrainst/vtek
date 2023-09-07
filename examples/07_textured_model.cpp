@@ -553,6 +553,7 @@ int main()
 	vtek::RasterizationState rasterizer{};
 	rasterizer.cullMode = vtek::CullMode::none; // enable back-face culling
 	rasterizer.polygonMode = vtek::PolygonMode::fill;
+	rasterizer.frontFace = vtek::FrontFace::clockwise;
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{};
 	depthStencil.depthTestEnable = true;
@@ -566,7 +567,7 @@ int main()
 	pipelineRendering.depthAttachmentFormat =
 		vtek::swapchain_get_depth_image_format(swapchain);
 
-	vtek::GraphicsPipelineCreateInfo pipelineInfo{};
+	vtek::GraphicsPipelineInfo pipelineInfo{};
 	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
 	pipelineInfo.renderPass = nullptr; // Nice!
 	pipelineInfo.pipelineRendering = &pipelineRendering;
