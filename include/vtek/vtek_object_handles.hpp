@@ -22,6 +22,7 @@ namespace vtek
 	struct Instance;
 	struct PhysicalDevice;
 	struct Queue;
+	struct RaytracingShader;
 	struct RenderPass;
 	struct Sampler;
 	struct Swapchain;

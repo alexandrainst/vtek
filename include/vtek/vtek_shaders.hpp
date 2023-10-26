@@ -51,13 +51,28 @@ namespace vtek
 		fragment             = 0x10U
 	};
 
+	// TODO: Comments may be deleted arbitrarily at will
 	enum class ShaderStageRayTracing : uint32_t
 	{
+		// Entry-point from where rays are generated (may also generate in
+		// fragment/compute shaders).
 		raygen       = 0x01U,
+
+		// Executed after an intersection shader is triggered. Its main use is
+		// to determine whether the hit should be processed further or ignored.
 		any_hit      = 0x02U,
+
+		// Triggered the first time a ray hits a primitive
 		closest_hit  = 0x04U,
+
+		// Triggered if the ray doesn't hit any primitive
 		miss         = 0x08U,
+
+		// Allows the application to implement custom geometry primitives.
+		// In Vulkan, we can only define triangles and axis-aligned bounding boxes.
 		intersection = 0x10U,
+
+		// Shaders that can be called from within an existing shader
 		callable     = 0x20U
 	};
 
@@ -106,4 +121,20 @@ namespace vtek
 
 	// TODO: ?
 	VkDescriptorSetLayout graphics_shader_get_descriptor_layout(GraphicsShader* shader);
+
+
+	// ========================== //
+	// === Raytracing shaders === //
+	// ========================== //
+	struct RaytracingShaderInfo
+	{
+
+	};
+
+	RaytracingShader raytracing_shader_load_glsl(
+		const RaytracingShaderInfo* info, const Directory* shaderdir, Device* device);
+	RaytracingShader raytracing_shader_load_spirv(
+		const RaytracingShaderInfo* info, const Directory* shaderdir, Device* device);
+
+	void raytracing_shader_destroy(RaytracingShader* shader, Device* device);
 }
