@@ -1503,7 +1503,7 @@ static void get_format_details(vtek::Format format, FormatDetails* details)
 
 
 /* format queries */
-	bool vtek::has_format_support(
+bool vtek::has_format_support(
 	const vtek::FormatQuery* query, const vtek::Device* device,
 	vtek::SupportedFormat* outSupport)
 {

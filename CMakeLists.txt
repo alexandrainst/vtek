@@ -144,6 +144,7 @@ set (src
     include/vtek/vtek_descriptor_type.hpp
     include/vtek/vtek_device.hpp
     include/vtek/vtek_fileio.hpp
+    include/vtek/vtek_framebuffer.hpp
     include/vtek/vtek_format_support.hpp
     include/vtek/vtek_glm_includes.hpp
     include/vtek/vtek_graphics_pipeline.hpp
@@ -195,6 +196,7 @@ set (src
     src/vtek_descriptor_type.cpp
     src/vtek_device.cpp
     src/vtek_fileio.cpp
+    src/vtek_framebuffer.cpp
     src/vtek_format_support.cpp
     src/vtek_graphics_pipeline.cpp
     src/vtek_image.cpp

@@ -12,7 +12,8 @@ namespace vtek
 	// ==================== //
 	enum class UniformBufferType
 	{
-		vec3,
+		vec2,
+		vec3, // TODO: This should probably be removed as it mayb not be portable!
 		mat4,
 		mat4_vec4,
 
@@ -27,6 +28,18 @@ namespace vtek
 	// ===================== //
 	// === Uniform types === //
 	// ===================== //
+	struct Uniform_v2
+	{
+		alignas(16) glm::vec2 v2;
+
+		constexpr uint64_t size();
+		static constexpr uint64_t static_size();
+		inline constexpr UniformBufferType type()
+		{
+			return UniformBufferType::vec2;
+		}
+	};
+
 	struct Uniform_v3
 	{
 		alignas(16) glm::vec3 v3;
@@ -82,6 +95,7 @@ namespace vtek
 	// ========================== //
 	// === Member definitions === //
 	// ========================== //
+	constexpr uint64_t Uniform_v2::static_size() { return sizeof(Uniform_v2); }
 	constexpr uint64_t Uniform_v3::static_size() { return sizeof(Uniform_v3); }
 	constexpr uint64_t Uniform_m4::static_size() { return sizeof(Uniform_m4); }
 	constexpr uint64_t Uniform_m4_v4::static_size() { return sizeof(Uniform_m4_v4); }
@@ -89,6 +103,7 @@ namespace vtek
 		return sizeof(Uniform_PointLight);
 	}
 
+	constexpr uint64_t vtek::Uniform_v2::size() { return static_size(); }
 	constexpr uint64_t vtek::Uniform_v3::size() { return static_size(); }
 	constexpr uint64_t vtek::Uniform_m4::size() { return static_size(); }
 	constexpr uint64_t vtek::Uniform_m4_v4::size() { return static_size(); }

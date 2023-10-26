@@ -378,6 +378,7 @@ namespace vtek
 	// Check if the device supports a given image format, specified by overloads:
 	// - ImageFormatInfo: Specific number of channels, sRGB, compression, etc.
 	// - FormatQuery
+	// TODO: This is not implemented (check functionality in impl/vtek_image_formats).
 	bool has_format_support(
 		const FormatInfo* info, const FormatQuery* query,
 		const Device* device, SupportedFormat* outSupport);

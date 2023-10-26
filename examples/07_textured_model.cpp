@@ -111,8 +111,7 @@ void update_movement()
 }
 
 /* helper functions */
-bool update_camera_uniform(
-	vtek::Buffer* buffer, vtek::Device* device)
+bool update_camera_uniform(vtek::Buffer* buffer, vtek::Device* device)
 {
 	// Wait until the device is finished with all operations
 	vtek::device_wait_idle(device);
