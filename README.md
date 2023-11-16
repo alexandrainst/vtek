@@ -76,6 +76,28 @@ TODO: How to include this?
 - **SPIRV-Reflect:** Light-weight Spir-V reflection library for shader
 verification. TODO: Is this used?
 
+The Vulkan Sdk can be found on LunarG's website (https://vulkan.lunarg.com).
+Assuming Ubuntu 22.04 (instructions found on LunarG's website) and Vulkan 1.3.268:
+```
+wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.268-jammy.list https://packages.lunarg.com/vulkan/1.3.268/lunarg-vulkan-1.3.268-jammy.list
+sudo apt update
+sudo apt install vulkan-sdk
+```
+Other Vulkan dependencies:
+```
+sudo apt install libvulkan-dev vulkan-validationlayers-dev spirv-headers spirv-tools glslang-tools glslang-dev
+```
+Other 3rd-party libraries:
+```
+sudo apt install libglm-dev libglfw3-dev
+```
+There are other dependencies which are contained as part of the source, but some of them are git submodules:
+```
+git submodule update --init --recursive
+```
+
+This should ensure that all dependencies required to build and run vtek applications are present.
 
 ### How to compile shaders ###
 
