@@ -269,6 +269,7 @@ if(VTEK_CREATE_EXAMPLES)
         examples/05_camera.cpp
         examples/06_model.cpp
         examples/07_textured_model.cpp
+        examples/08_framebuffer.cpp
         )
 
     foreach(expath ${examples})

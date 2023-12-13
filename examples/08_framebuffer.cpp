@@ -184,9 +184,24 @@ int main()
 		vtek::format::r8g8b8a8_unorm
 	};
 	vtek::SupportedFormat colorFormat;
+	vtek::FormatQuery framebufferFormatQuery{};
+	framebufferFormatQuery.linearTiling = false;
+	framebufferFormatQuery.features
+		= vtek::FormatFeature::sampled_image
+		| vtek::FormatFeature::color_attachment;
 	for (auto fmt : prioritizedColorFormats)
 	{
-		if (vtek::)
+		framebufferFormatQuery.format = fmt;
+		if (vtek::has_format_support(
+			    &framebufferFormatQuery, device, &colorFormat))
+		{
+			break;
+		}
+	}
+	if (!colorFormat.is_valid())
+	{
+		log_error("Failed to find a supported framebuffer color format!");
+		return -1;
 	}
 
 	// Framebuffer

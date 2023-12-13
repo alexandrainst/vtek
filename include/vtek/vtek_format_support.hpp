@@ -394,6 +394,9 @@ namespace vtek
 		inline SupportedFormat() {}
 		bool operator==(Format _format) const;
 
+		// Check validity
+		inline bool is_valid() { return format != Format::undefined; }
+
 		// Get the underlying Vulkan format
 		VkFormat get() const;
 
