@@ -34,8 +34,8 @@ uint64_t vtek::get_uniform_buffer_size(vtek::UniformBufferType type)
 // ===================== //
 // === Memory checks === //
 // ===================== //
-static_assert(sizeof(vtek::Uniform_v2) == 8);
-static_assert(alignof(vtek::Uniform_v2) == 8);
+static_assert(sizeof(vtek::Uniform_v2) == 16);
+static_assert(alignof(vtek::Uniform_v2) == 16);
 static_assert(offsetof(vtek::Uniform_v2, v2) == 0);
 
 static_assert(sizeof(vtek::Uniform_v3) == 16);

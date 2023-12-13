@@ -121,13 +121,21 @@ namespace vtek
 	// clipping plane. Any lower (or negative) values will be clamped.
 	constexpr float kNearClippingPlaneMin = 0.1f;
 
-	// For clamping camera field-of-view (fov) to a sensible value [40,70].
-	using FovClamp = FloatClamp<40.0f, 70.0f>;
+	// For clamping camera field-of-view (fov) to a sensible value [10,180].
+	using FovClamp = FloatClamp<10.0f, 180.0f>;
 
 	// With fov unspecified, windowSize.y/windowSize.x will be used.
 	void camera_set_perspective(
 		Camera* camera, glm::uvec2 windowSize, float near, float far,
 		FovClamp fovDegrees = 45.0f);
+
+	// Calculate camera projection matrix from physical camera parameters:
+	// Sensor width and lens focal length, both in mm. Numbers provided as
+	// default will yield an FOV of ~45 degrees, from this formula:
+	// fov = 2 * atan(sensor_width / (2*focal_length)).
+	void camera_set_perspective_focal(
+		Camera* camera, glm::uvec2 windowSize, float near, float far,
+		float sensorWidthMm = 10.0f, float lensFocalLengthMm = 12.071067823);
 
 	// TODO: Implement
 	void camera_set_orthographic(

@@ -1,5 +1,5 @@
-#include "vtek_frambuffer.hpp"
-#include "pchs/vtek_vulkan.pch"
+#include "vtek_vulkan.pch"
+#include "vtek_framebuffer.hpp"
 
 #include "impl/vtek_queue_struct.hpp"
 #include "vtek_device.hpp"
@@ -41,7 +41,7 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	imageInfo.initialLayout = vtek::ImageInitialLayout::undefined; // default
 	imageInfo.useMipmaps = false; // default
 	imageInfo.multisampling = info->multisampling; // TODO: Does device support it?
-	imageInfo.usageFlags = vtek::ImageUsageFlag::sampled // TODO: Do we need more flags?
+	imageInfo.usageFlags = vtek::ImageUsageFlag::sampled; // TODO: Do we need more flags?
 	imageInfo.sharingMode = vtek::ImageSharingMode::exclusive;
 	// Check if any of the queues that need to access the framebuffer are from
 	// different queues families.
@@ -88,8 +88,7 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	// Alloc
 	auto framebuffer = new vtek::Framebuffer;
 
-
-	vkFramebufferCreateInfo createInfo{};
+	VkFramebufferCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	createInfo.renderPass = VK_NULL_HANDLE; // ?
 	createInfo.attachmentCount = info->attachments.size();

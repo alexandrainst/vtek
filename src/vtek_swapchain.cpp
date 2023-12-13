@@ -365,7 +365,7 @@ static void destroy_swapchain_handle(vtek::Swapchain* swapchain, VkDevice dev)
 
 static bool create_depth_images(
 	vtek::Swapchain* swapchain, vtek::Device* device, uint32_t count,
-	std::vector<vtek::Queue*>&& queues)
+	std::vector<const vtek::Queue*>&& queues)
 {
 	vtek::Image2DInfo imageInfo{};
 	imageInfo.requireDedicatedAllocation = true;
@@ -990,7 +990,7 @@ vtek::Swapchain* vtek::swapchain_create(
 		return nullptr;
 	}
 
-	std::vector<vtek::Queue*> queues;
+	std::vector<const vtek::Queue*> queues;
 	const uint32_t qf_indices[2] = {
 		vtek::queue_get_family_index(graphicsQueue),
 		vtek::queue_get_family_index(presentQueue)

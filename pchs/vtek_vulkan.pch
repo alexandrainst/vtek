@@ -1,0 +1,15 @@
+#pragma once
+   
+// Test
+#include "pch_test_include.h"
+
+// Vulkan
+#include <vulkan/vulkan.h>
+
+// VMA
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#include "vk_mem_alloc.h"
+
+// GLM
+#include "vtek_glm_includes.hpp"

@@ -394,6 +394,39 @@ void vtek::camera_set_perspective(
 	camera->projectionMatrix = correction * camera->projectionMatrix;
 }
 
+void vtek::camera_set_perspective_focal(
+	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far,
+	float lensFocalLengthMm, float sensorWidthMm)
+{
+	float w = (float)windowSize.x;
+	float h = (float)windowSize.y;
+	float fov = 2.0f * glm::atan(sensorWidthMm / (2.0f * lensFocalLengthMm));
+	vtek::FovClamp fov_clamp = fov;
+	near = glm::max(vtek::kNearClippingPlaneMin, near);
+	if (!(far > near))
+	{
+		vtek_log_warn(
+			"Camera's far-clipping plane has a lower value than near -- {}",
+			"far will be set to 'near + 100'!");
+		far = near + 100.0f;
+	}
+
+	camera->projectionMatrix =
+		glm::perspectiveFov(fov_clamp.get(), w, h, near, far);
+
+	// Vulkan-trick because GLM was written for OpenGL, and Vulkan uses
+	// a right-handed coordinate system instead. Without this correction,
+	// geometry will be y-inverted in screen space, and the coordinate space
+	// will be left-handed. Described at:
+	// https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
+	glm::mat4 correction(
+		glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
+		glm::vec4(0.0f, -1.0f, 0.0f, 0.0f),
+		glm::vec4(0.0f,  0.0f, 0.5f, 0.0f),
+		glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
+	camera->projectionMatrix = correction * camera->projectionMatrix;
+}
+
 void vtek::camera_set_orthographic(
 	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far)
 {

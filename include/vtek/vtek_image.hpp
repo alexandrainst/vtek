@@ -151,7 +151,7 @@ namespace vtek
 		// queue families, in which case sharing mode should be `concurrent`.
 		// NOTE: When sharing mode is `exclusive`, the sharing queues are ignored.
 		ImageSharingMode sharingMode {ImageSharingMode::exclusive};
-		std::vector<Queue*> sharingQueues;
+		std::vector<const Queue*> sharingQueues;
 
 		// If an image view should be created automatically (avoid creating it
 		// later manually). This should be preferred for most cases, why its
