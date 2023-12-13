@@ -135,7 +135,7 @@ namespace vtek
 	// fov = 2 * atan(sensor_width / (2*focal_length)).
 	void camera_set_perspective_focal(
 		Camera* camera, glm::uvec2 windowSize, float near, float far,
-		float sensorWidthMm = 10.0f, float lensFocalLengthMm = 12.071067823);
+		float lensFocalLengthMm = 12.071067823f, float sensorWidthMm = 10.0f);
 
 	// TODO: Implement
 	void camera_set_orthographic(

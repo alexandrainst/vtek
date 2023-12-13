@@ -254,8 +254,8 @@ int main()
 	windowInfo.title = "vtek example 07: Drawing a textured model";
 	windowInfo.resizeable = false;
 	windowInfo.cursorDisabled = true;
-	windowInfo.width = 1024;
-	windowInfo.height = 1024;
+	windowInfo.width = 1920;
+	windowInfo.height = 1080;
 	windowInfo.fullscreen = false;
 	gWindow = vtek::window_create(&windowInfo);
 	if (gWindow == nullptr)
@@ -386,7 +386,8 @@ int main()
 	vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
 	float camFov = 45.0f; // NOTE: Experiment.
 	//vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
-	vtek::camera_set_perspective_focal(gCamera, windowSize, 0.1f, 100.0f);
+	//	vtek::camera_set_perspective_focal(gCamera, windowSize, 0.1f, 100.0f);
+	vtek::camera_set_orthographic(gCamera, windowSize, 0.1f, 100.0f);
 	// TODO: Maybe for this application, use FPS-game style camera instead?
 	// TODO: It's also a good opportunity to test if the camera supports it properly
 

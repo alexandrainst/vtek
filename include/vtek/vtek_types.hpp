@@ -54,6 +54,9 @@ namespace vtek
 		inline const Type& operator()() const { return val; }
 		inline constexpr const Type& get() const { return val; }
 
+		inline static constexpr Type min() { return Min; }
+		inline static constexpr Type max() { return Max; }
+
 	private:
 		constexpr void Assign(Type _val) {
 			val = (_val < Min) ? Min : (_val > Max) ? Max : _val;
