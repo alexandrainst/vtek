@@ -15,8 +15,11 @@ using tUpdate = std::function<void(vtek::Camera*)>;
 class CameraProjectionBehaviour
 {
 public:
+	virtual ~CameraProjectionBehaviour() {}
 	virtual void CreateProjectionMatrix(vtek::Camera* camera) = 0;
 	virtual void OnMouseScroll(vtek::Camera* camera, double x, double y) = 0;
+	virtual void CameraMoveForward(vtek::Camera* camera, float dist) = 0;
+	virtual void CameraMoveBackward(vtek::Camera* camera, float dist) = 0;
 };
 
 
@@ -27,7 +30,7 @@ struct vtek::Camera
 	// mouse settings
 	bool initialMove {true};
 	float mouseSensitivity {0.001f};
-	float mouseScrollSpeed {2.0f};
+	float mouseScrollSpeed {0.1f};
 	float lastX {0.0f};
 	float lastY {0.0f};
 
@@ -50,7 +53,7 @@ struct vtek::Camera
 	glm::mat4 projectionMatrix {1.0f};
 
 	// camera lens parameters
-	vtek::FovClamp fov_degrees {45.0f};
+	vtek::FovClampRadians fov {glm::radians(45.0f)};
 
 	// camera mode
 	vtek::CameraMode mode {vtek::CameraMode::undefined};
@@ -69,28 +72,91 @@ struct vtek::Camera
 
 
 /* Implementation of camera sub-logic */
-class OrthographicBehaviour : public CameraProjectionBehaviour
+class NullProjectionBehaviour :  public CameraProjectionBehaviour
 {
-	void CreateProjectionMatrix(vtek::Camera* camera) override
-	{
-
-	}
-	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
-	{
-
-	}
+	void CreateProjectionMatrix(vtek::Camera* camera) override {}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override {}
+	void CameraMoveForward(vtek::Camera* camera, float dist) override {}
+	void CameraMoveBackward(vtek::Camera* camera, float dist) override {}
 };
 
 class PerspectiveBehaviour :  public CameraProjectionBehaviour
 {
 	void CreateProjectionMatrix(vtek::Camera* camera) override
 	{
+		float fov = camera->fov.get();
+		float w = static_cast<float>(camera->windowSize.x);
+		float h = static_cast<float>(camera->windowSize.y);
+		float near = camera->clippingPlanes.x;
+		float far = camera->clippingPlanes.y;
+		camera->projectionMatrix = glm::perspectiveFov(fov, w, h, near, far);
 
+		// Vulkan-trick because GLM was written for OpenGL, and Vulkan uses
+		// a right-handed coordinate system instead. Without this correction,
+		// geometry will be y-inverted in screen space, and the coordinate space
+		// will be left-handed. Described at:
+		// https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
+		glm::mat4 correction(
+			glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
+			glm::vec4(0.0f, -1.0f, 0.0f, 0.0f),
+			glm::vec4(0.0f,  0.0f, 0.5f, 0.0f),
+			glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
+		camera->projectionMatrix = correction * camera->projectionMatrix;
 	}
 	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
 	{
-
+		camera->fov -= y * camera->mouseScrollSpeed;
+		CreateProjectionMatrix(camera);
 	}
+	void CameraMoveForward(vtek::Camera* camera, float dist) override
+	{
+		camera->position += camera->front * dist;
+	}
+	void CameraMoveBackward(vtek::Camera* camera, float dist) override
+	{
+		camera->position -= camera->front * dist;
+	}
+};
+
+class OrthographicBehaviour : public CameraProjectionBehaviour
+{
+	void CreateProjectionMatrix(vtek::Camera* camera) override
+	{
+		float fov = camera->fov.get() + zoomOffset;
+		float near = camera->clippingPlanes.x;
+		float far = camera->clippingPlanes.y;
+		float w = static_cast<float>(camera->windowSize.x);
+		float h = static_cast<float>(camera->windowSize.y);
+		float aspect = h / w;
+		float width = 2.0f * (fov / glm::radians(45.0f));
+		float height = 2.0f * aspect * (fov / glm::radians(45.0f));
+		camera->projectionMatrix =
+			glm::ortho(-width, width, -height, height, near, far);
+
+		glm::mat4 correction(
+			glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
+			glm::vec4(0.0f, -1.0f, 0.0f, 0.0f),
+			glm::vec4(0.0f,  0.0f, 0.5f, 0.0f),
+			glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
+		camera->projectionMatrix = correction * camera->projectionMatrix;
+	}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
+	{
+		camera->fov -= y * camera->mouseScrollSpeed;
+		CreateProjectionMatrix(camera);
+	}
+	void CameraMoveForward(vtek::Camera* camera, float dist) override
+	{
+		zoomOffset -= dist * camera->mouseScrollSpeed * 2.0f;
+		CreateProjectionMatrix(camera);
+	}
+	void CameraMoveBackward(vtek::Camera* camera, float dist) override
+	{
+		zoomOffset += dist * camera->mouseScrollSpeed * 2.0f;
+		CreateProjectionMatrix(camera);
+	}
+private:
+	float zoomOffset {0.0f};
 };
 
 
@@ -325,6 +391,7 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 	camera->fUpdate = update_undefined;
 	camera->mode = vtek::CameraMode::undefined;
 	camera->position = info->position;
+	camera->projectionBehaviour = new NullProjectionBehaviour();
 
 	return camera;
 }
@@ -415,9 +482,6 @@ void vtek::camera_set_perspective(
 	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far,
 	vtek::FovClamp fovDegrees)
 {
-	float w = (float)windowSize.x;
-	float h = (float)windowSize.y;
-	float fov = glm::radians(fovDegrees.get());
 	near = glm::max(vtek::kNearClippingPlaneMin, near);
 	if (!(far > near))
 	{
@@ -427,63 +491,30 @@ void vtek::camera_set_perspective(
 		far = near + 100.0f;
 	}
 
-	camera->projectionMatrix = glm::perspectiveFov(fov, w, h, near, far);
-	camera->fov_degrees = fovDegrees;
+	camera->fov = glm::radians(fovDegrees.get());
 	camera->windowSize = windowSize;
 	camera->clippingPlanes = { near, far };
 
-	// Vulkan-trick because GLM was written for OpenGL, and Vulkan uses
-	// a right-handed coordinate system instead. Without this correction,
-	// geometry will be y-inverted in screen space, and the coordinate space
-	// will be left-handed. Described at:
-	// https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
-	glm::mat4 correction(
-		glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
-		glm::vec4(0.0f, -1.0f, 0.0f, 0.0f),
-		glm::vec4(0.0f,  0.0f, 0.5f, 0.0f),
-		glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
-	camera->projectionMatrix = correction * camera->projectionMatrix;
+	if (camera->projectionBehaviour != nullptr)
+	{
+		delete camera->projectionBehaviour;
+	}
+	camera->projectionBehaviour = new PerspectiveBehaviour();
+	camera->projectionBehaviour->CreateProjectionMatrix(camera);
 }
 
 void vtek::camera_set_perspective_focal(
 	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far,
 	float lensFocalLengthMm, float sensorWidthMm)
 {
-	float w = (float)windowSize.x;
-	float h = (float)windowSize.y;
 	float fov = 2.0f * glm::atan(sensorWidthMm / (2.0f * lensFocalLengthMm));
-	vtek::FloatClamp<
-		glm::radians(vtek::FovClamp::min()),
-		glm::radians(vtek::FovClamp::max())> fov_clamp = fov;
-	near = glm::max(vtek::kNearClippingPlaneMin, near);
-	if (!(far > near))
-	{
-		vtek_log_warn(
-			"Camera's far-clipping plane has a lower value than near -- {}",
-			"far will be set to 'near + 100'!");
-		far = near + 100.0f;
-	}
-
-	camera->projectionMatrix =
-		glm::perspectiveFov(fov_clamp.get(), w, h, near, far);
-	camera->fov_degrees = glm::degrees(fov_clamp.get());
-	camera->windowSize = windowSize;
-	camera->clippingPlanes = { near, far };
-
-	glm::mat4 correction(
-		glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
-		glm::vec4(0.0f, -1.0f, 0.0f, 0.0f),
-		glm::vec4(0.0f,  0.0f, 0.5f, 0.0f),
-		glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
-	camera->projectionMatrix = correction * camera->projectionMatrix;
+	vtek::camera_set_perspective(
+		camera, windowSize, near, far, glm::degrees(fov));
 }
 
 void vtek::camera_set_orthographic(
 	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far)
 {
-	float w = (float)windowSize.x;
-	float h = (float)windowSize.y;
-	float aspect = h / w;
 	near = glm::max(vtek::kNearClippingPlaneMin, near);
 	if (!(far > near))
 	{
@@ -492,15 +523,17 @@ void vtek::camera_set_orthographic(
 			"far will be set to 'near + 100'!");
 		far = near + 100.0f;
 	}
-	camera->projectionMatrix =
-		glm::ortho(-2.0f, 2.0f, -2.0f*aspect, 2.0f*aspect, near, far);
 
-	glm::mat4 correction(
-		glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
-		glm::vec4(0.0f, -1.0f, 0.0f, 0.0f),
-		glm::vec4(0.0f,  0.0f, 0.5f, 0.0f),
-		glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
-	camera->projectionMatrix = correction * camera->projectionMatrix;
+	camera->fov = glm::radians(45.0f);
+	camera->windowSize = windowSize;
+	camera->clippingPlanes = { near, far };
+
+	if (camera->projectionBehaviour != nullptr)
+	{
+		delete camera->projectionBehaviour;
+	}
+	camera->projectionBehaviour = new OrthographicBehaviour();
+	camera->projectionBehaviour->CreateProjectionMatrix(camera);
 }
 
 // ===================== //
@@ -587,12 +620,12 @@ void vtek::camera_move_down(vtek::Camera* camera, float distance)
 
 void vtek::camera_move_forward(vtek::Camera* camera, float distance)
 {
-	camera->position += camera->front * distance;
+	camera->projectionBehaviour->CameraMoveForward(camera, distance);
 }
 
 void vtek::camera_move_backward(vtek::Camera* camera, float distance)
 {
-	camera->position -= camera->front * distance;
+	camera->projectionBehaviour->CameraMoveBackward(camera, distance);
 }
 
 void vtek::camera_translate(vtek::Camera* camera, glm::vec3 offset)
@@ -607,12 +640,6 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 
 void vtek::camera_on_mouse_scroll(Camera* camera, double x, double y)
 {
-	camera->fov_degrees -= y * camera->mouseScrollSpeed;
-	// TODO: This is neither pretty nor efficient.
-	vtek::camera_set_perspective(
-		camera, camera->windowSize, camera->clippingPlanes.x,
-		camera->clippingPlanes.y, camera->fov_degrees);
-
 	camera->projectionBehaviour->OnMouseScroll(camera, x, y);
 }
 

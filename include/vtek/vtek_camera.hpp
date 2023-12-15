@@ -123,6 +123,7 @@ namespace vtek
 
 	// For clamping camera field-of-view (fov) to a sensible value [10,180].
 	using FovClamp = FloatClamp<10.0f, 180.0f>;
+	using FovClampRadians = FloatClamp<glm::radians(10.0f), glm::radians(180.0f)>;
 
 	// With fov unspecified, windowSize.y/windowSize.x will be used.
 	void camera_set_perspective(
