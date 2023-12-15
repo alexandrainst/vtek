@@ -137,7 +137,7 @@ namespace vtek
 		Camera* camera, glm::uvec2 windowSize, float near, float far,
 		float lensFocalLengthMm = 12.071067823f, float sensorWidthMm = 10.0f);
 
-	// TODO: Implement
+	// Camera will use orthographic projection.
 	void camera_set_orthographic(
 		Camera* camera, glm::uvec2 windowSize, float near, float far);
 
@@ -193,6 +193,7 @@ namespace vtek
 	void camera_translate(Camera* camera, glm::vec3 offset);
 
 	void camera_on_mouse_move(Camera* camera, double x, double y);
+	void camera_on_mouse_scroll(Camera* camera, double x, double y);
 
 	// ======================= //
 	// === Angular offsets === //

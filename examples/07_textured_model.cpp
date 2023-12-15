@@ -61,6 +61,11 @@ void mouse_move_callback(double x, double y)
 	vtek::camera_on_mouse_move(gCamera, x, y);
 }
 
+void mouse_scroll_callback(double x, double y)
+{
+	vtek::camera_on_mouse_scroll(gCamera, x, y);
+}
+
 void update_movement()
 {
 	using vtek::KeyboardKey;
@@ -265,6 +270,7 @@ int main()
 	}
 	vtek::window_set_key_handler(gWindow, key_callback);
 	vtek::window_set_mouse_move_handler(gWindow, mouse_move_callback);
+	vtek::window_set_mouse_scroll_handler(gWindow, mouse_scroll_callback);
 
 	// Vulkan instance
 	vtek::InstanceInfo instanceInfo{};
@@ -385,9 +391,9 @@ int main()
 	glm::vec3 camUp {-0.18743359f, -0.21744627f, 0.95790696f};
 	vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
 	float camFov = 45.0f; // NOTE: Experiment.
-	//vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
-	//	vtek::camera_set_perspective_focal(gCamera, windowSize, 0.1f, 100.0f);
-	vtek::camera_set_orthographic(gCamera, windowSize, 0.1f, 100.0f);
+	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
+	//vtek::camera_set_perspective_focal(gCamera, windowSize, 0.1f, 100.0f);
+	//vtek::camera_set_orthographic(gCamera, windowSize, 0.1f, 100.0f);
 	// TODO: Maybe for this application, use FPS-game style camera instead?
 	// TODO: It's also a good opportunity to test if the camera supports it properly
 

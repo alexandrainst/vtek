@@ -11,12 +11,23 @@ using tRoll = std::function<void(vtek::Camera*,float)>;
 using tUpdate = std::function<void(vtek::Camera*)>;
 
 
+/* classes which control camera sub-logic */
+class CameraProjectionBehaviour
+{
+public:
+	virtual void CreateProjectionMatrix(vtek::Camera* camera) = 0;
+	virtual void OnMouseScroll(vtek::Camera* camera, double x, double y) = 0;
+};
+
+
+
 /* struct implementation */
 struct vtek::Camera
 {
 	// mouse settings
 	bool initialMove {true};
 	float mouseSensitivity {0.001f};
+	float mouseScrollSpeed {2.0f};
 	float lastX {0.0f};
 	float lastY {0.0f};
 
@@ -38,11 +49,48 @@ struct vtek::Camera
 	glm::mat4 viewMatrix {1.0f};
 	glm::mat4 projectionMatrix {1.0f};
 
+	// camera lens parameters
+	vtek::FovClamp fov_degrees {45.0f};
+
 	// camera mode
 	vtek::CameraMode mode {vtek::CameraMode::undefined};
 	tMouseMove fMouseMove {};
 	tRoll fRoll {};
 	tUpdate fUpdate {};
+
+	// external parameters
+	glm::uvec2 windowSize {1U, 1U};
+	glm::vec2 clippingPlanes {0.1f, 100.0f}; // { front, back }
+
+	// Camera sub-logic behaviour
+	CameraProjectionBehaviour* projectionBehaviour {nullptr};
+};
+
+
+
+/* Implementation of camera sub-logic */
+class OrthographicBehaviour : public CameraProjectionBehaviour
+{
+	void CreateProjectionMatrix(vtek::Camera* camera) override
+	{
+
+	}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
+	{
+
+	}
+};
+
+class PerspectiveBehaviour :  public CameraProjectionBehaviour
+{
+	void CreateProjectionMatrix(vtek::Camera* camera) override
+	{
+
+	}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
+	{
+
+	}
 };
 
 
@@ -380,6 +428,9 @@ void vtek::camera_set_perspective(
 	}
 
 	camera->projectionMatrix = glm::perspectiveFov(fov, w, h, near, far);
+	camera->fov_degrees = fovDegrees;
+	camera->windowSize = windowSize;
+	camera->clippingPlanes = { near, far };
 
 	// Vulkan-trick because GLM was written for OpenGL, and Vulkan uses
 	// a right-handed coordinate system instead. Without this correction,
@@ -415,6 +466,9 @@ void vtek::camera_set_perspective_focal(
 
 	camera->projectionMatrix =
 		glm::perspectiveFov(fov_clamp.get(), w, h, near, far);
+	camera->fov_degrees = glm::degrees(fov_clamp.get());
+	camera->windowSize = windowSize;
+	camera->clippingPlanes = { near, far };
 
 	glm::mat4 correction(
 		glm::vec4(1.0f,  0.0f, 0.0f, 0.0f),
@@ -549,6 +603,17 @@ void vtek::camera_translate(vtek::Camera* camera, glm::vec3 offset)
 void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 {
 	camera->fMouseMove(camera, x, y);
+}
+
+void vtek::camera_on_mouse_scroll(Camera* camera, double x, double y)
+{
+	camera->fov_degrees -= y * camera->mouseScrollSpeed;
+	// TODO: This is neither pretty nor efficient.
+	vtek::camera_set_perspective(
+		camera, camera->windowSize, camera->clippingPlanes.x,
+		camera->clippingPlanes.y, camera->fov_degrees);
+
+	camera->projectionBehaviour->OnMouseScroll(camera, x, y);
 }
 
 

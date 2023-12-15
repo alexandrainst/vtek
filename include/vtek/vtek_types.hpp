@@ -38,7 +38,12 @@ namespace vtek
 	public:
 		inline ValueClamp() { Assign(Default); }
 		inline ValueClamp(Type _val) { Assign(_val); }
-		inline ValueClamp& operator= (Type _val) { Assign(_val); return *this; }
+		inline ValueClamp(const ValueClamp& _vc) { Assign(_vc.val); }
+
+		inline ValueClamp& operator= (Type _val) {
+			Assign(_val);
+			return *this;
+		}
 		inline ValueClamp& operator= (const ValueClamp& _vc) {
 			Assign(_vc.val);
 			return *this;
