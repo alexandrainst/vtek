@@ -22,6 +22,15 @@ public:
 	virtual void CameraMoveBackward(vtek::Camera* camera, float dist) = 0;
 };
 
+class CameraModeBehaviour
+{
+public:
+	virtual ~CameraModeBehaviour() {}
+	virtual void OnMouseMove(vtek::Camera* camera, double x, double y) = 0;
+	virtual void CameraRoll(vtek::Camera* camera, float angle) = 0;
+	virtual void Update(vtek::Camera* camera) = 0;
+};
+
 
 
 /* struct implementation */
@@ -57,9 +66,6 @@ struct vtek::Camera
 
 	// camera mode
 	vtek::CameraMode mode {vtek::CameraMode::undefined};
-	tMouseMove fMouseMove {};
-	tRoll fRoll {};
-	tUpdate fUpdate {};
 
 	// external parameters
 	glm::uvec2 windowSize {1U, 1U};
@@ -67,11 +73,12 @@ struct vtek::Camera
 
 	// Camera sub-logic behaviour
 	CameraProjectionBehaviour* projectionBehaviour {nullptr};
+	CameraModeBehaviour* modeBehaviour {nullptr};
 };
 
 
 
-/* Implementation of camera sub-logic */
+/* Implementation of camera projection behaviour */
 class NullProjectionBehaviour :  public CameraProjectionBehaviour
 {
 	void CreateProjectionMatrix(vtek::Camera* camera) override {}
@@ -161,77 +168,199 @@ private:
 
 
 
-/* camera modes */
-static void on_mouse_move_undefined(vtek::Camera* camera, double x, double y) {}
-static void roll_undefined(vtek::Camera*, float) {}
-static void update_undefined(vtek::Camera*) {}
-
-static void on_mouse_move_freeform(vtek::Camera* camera, double x, double y)
+/* Implementation of camera modes */
+class NullCameraModeBehaviour : public CameraModeBehaviour
 {
-	float xOffset = x - camera->lastX;
-	float yOffset = y - camera->lastY;
-	camera->lastX = x;
-	camera->lastY = y;
+	void OnMouseMove(vtek::Camera* camera, double x, double y) override {}
+	void CameraRoll(vtek::Camera* camera, float angle) override {};
+	void Update(vtek::Camera* camera) override {}
+};
 
-	xOffset *= camera->mouseSensitivity;
-	yOffset *= camera->mouseSensitivity;
-
-	float xCos = glm::cos(xOffset);
-	float xSin = glm::sin(xOffset);
-	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
-	camera->orientation = glm::normalize(xRotor * camera->orientation);
-
-	float yCos = glm::cos(yOffset);
-	float ySin = glm::sin(yOffset);
-	glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
-	camera->orientation = glm::normalize(yRotor * camera->orientation);
-}
-
-static void on_mouse_move_fps(vtek::Camera* camera, double x, double y)
+class FreeformModeBehaviour : public CameraModeBehaviour
 {
-	float xOffset = x - camera->lastX;
-	float yOffset = y - camera->lastY;
-	camera->lastX = x;
-	camera->lastY = y;
+	void OnMouseMove(vtek::Camera* camera, double x, double y) override
+	{
+		float xOffset = x - camera->lastX;
+		float yOffset = y - camera->lastY;
+		camera->lastX = x;
+		camera->lastY = y;
 
-	xOffset *= camera->mouseSensitivity;
-	yOffset *= camera->mouseSensitivity;
+		xOffset *= camera->mouseSensitivity;
+		yOffset *= camera->mouseSensitivity;
 
-	// TODO: Constrain pitch here
-	if (camera->constrainPitch)
+		float xCos = glm::cos(xOffset);
+		float xSin = glm::sin(xOffset);
+		glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
+		camera->orientation = glm::normalize(xRotor * camera->orientation);
+
+		float yCos = glm::cos(yOffset);
+		float ySin = glm::sin(yOffset);
+		glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
+		camera->orientation = glm::normalize(yRotor * camera->orientation);
+	}
+	void CameraRoll(vtek::Camera* camera, float angle) override
+	{
+		angle *= 0.5f;
+		float cos = glm::cos(angle);
+		float sin = glm::sin(angle);
+		glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
+
+		camera->orientation = glm::normalize(rotor * camera->orientation);
+	};
+	void Update(vtek::Camera* camera) override
+	{
+		const glm::quat& q = camera->orientation;
+		camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
+
+		camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, 1.0f));
+		camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 1.0f, 0.0f));
+		camera->right = glm::normalize(glm::cross(-camera->up, camera->front));
+	}
+};
+
+class FpsModeBehaviour : public CameraModeBehaviour
+{
+	void OnMouseMove(vtek::Camera* camera, double x, double y) override
+	{
+		float xOffset = x - camera->lastX;
+		float yOffset = y - camera->lastY;
+		camera->lastX = x;
+		camera->lastY = y;
+
+		xOffset *= camera->mouseSensitivity;
+		yOffset *= camera->mouseSensitivity;
+
+		// TODO: Constrain pitch here
+		if (camera->constrainPitch)
+		{
+
+		}
+
+		// TODO: Perhaps also check if roll is disabled?
+		// if(camera->disableRoll) { }
+
+		float xCos = glm::cos(xOffset);
+		float xSin = glm::sin(xOffset);
+		glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
+		camera->orientation = glm::normalize(xRotor * camera->orientation);
+
+		float yCos = glm::cos(yOffset);
+		float ySin = glm::sin(yOffset);
+		glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
+		camera->orientation = glm::normalize(yRotor * camera->orientation);
+	}
+	void CameraRoll(vtek::Camera* camera, float angle) override {};
+	void Update(vtek::Camera* camera) override
+	{
+		// float angle = glm::pi<float>();
+		// auto newQuat = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f)); // ?
+	}
+};
+
+class FpsGroundedModeBehaviour : public CameraModeBehaviour
+{
+	void OnMouseMove(vtek::Camera* camera, double x, double y) override
 	{
 
 	}
+	void CameraRoll(vtek::Camera* camera, float angle) override {};
+	void Update(vtek::Camera* camera) override
+	{
 
-	// TODO: Perhaps also check if roll is disabled?
-	// if(camera->disableRoll) { }
+	}
+};
 
-	float xCos = glm::cos(xOffset);
-	float xSin = glm::sin(xOffset);
-	glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
-	camera->orientation = glm::normalize(xRotor * camera->orientation);
-
-	float yCos = glm::cos(yOffset);
-	float ySin = glm::sin(yOffset);
-	glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
-	camera->orientation = glm::normalize(yRotor * camera->orientation);
-}
-
-static void on_mouse_move_fps_grounded(vtek::Camera* camera, double x, double y)
+class OrbitFreeModeBehaviour : public CameraModeBehaviour
 {
+	void OnMouseMove(vtek::Camera* camera, double x, double y) override
+	{
+		float xOffset = x - camera->lastX;
+		float yOffset = y - camera->lastY;
+		camera->lastX = x;
+		camera->lastY = y;
 
-}
+		xOffset *= camera->mouseSensitivity;
+		yOffset *= camera->mouseSensitivity;
 
-static void on_mouse_move_orbit_free(vtek::Camera* camera, double x, double y)
+		float xCos = glm::cos(xOffset);
+		float xSin = glm::sin(xOffset);
+		glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
+		camera->orientation = glm::normalize(xRotor * camera->orientation);
+
+		float yCos = glm::cos(yOffset);
+		float ySin = glm::sin(yOffset);
+		glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
+		camera->orientation = glm::normalize(yRotor * camera->orientation);
+	}
+	void CameraRoll(vtek::Camera* camera, float angle) override {};
+	void Update(vtek::Camera* camera) override
+	{
+
+	}
+};
+
+class OrbitFpsModeBehaviour : public CameraModeBehaviour
 {
+	void OnMouseMove(vtek::Camera* camera, double x, double y) override
+	{
 
-}
+	}
+	void CameraRoll(vtek::Camera* camera, float angle) override {};
+	void Update(vtek::Camera* camera) override
+	{
 
-static void on_mouse_move_orbit_fps(vtek::Camera* camera, double x, double y)
+	}
+};
+
+class InitialModeBehaviour : public CameraModeBehaviour
 {
+	void OnMouseMove(vtek::Camera* camera, double x, double y) override
+	{
+		camera->lastX = x;
+		camera->lastY = y;
 
-}
+		switch (camera->mode)
+		{
+		case vtek::CameraMode::undefined:
+			vtek_log_warn(
+				"No mode has been specified for camera -- {}",
+				"a default freeform orientation will be applied!");
+			return;
+		case vtek::CameraMode::freeform:
+			camera->fMouseMove = on_mouse_move_freeform;
+			on_mouse_move_freeform(camera, x, y);
+			return;
+		case vtek::CameraMode::fps:
+			camera->fMouseMove = on_mouse_move_fps;
+			on_mouse_move_fps(camera, x, y);
+			return;
+		case vtek::CameraMode::fps_grounded:
+			camera->fMouseMove = on_mouse_move_fps_grounded;
+			on_mouse_move_fps_grounded(camera, x, y);
+			return;
+		case vtek::CameraMode::orbit_free:
+			camera->fMouseMove = on_mouse_move_orbit_free;
+			on_mouse_move_orbit_free(camera, x, y);
+			return;
+		case vtek::CameraMode::orbit_fps:
+			camera->fMouseMove = on_mouse_move_orbit_fps;
+			on_mouse_move_orbit_fps(camera, x, y);
+			return;
 
+		default:
+			vtek_log_error(
+				"vtek_camera.cpp: on_mouse_move_initial: Invalid mode enum!");
+			camera->fMouseMove = on_mouse_move_undefined;
+			return;
+		}
+	}
+private:
+	CameraModeBehaviour* nextMode {nullptr};
+};
+
+
+
+/* camera modes */
 static void on_mouse_move_initial(vtek::Camera* camera, double x, double y)
 {
 	camera->initialMove = false;
@@ -272,52 +401,6 @@ static void on_mouse_move_initial(vtek::Camera* camera, double x, double y)
 		camera->fMouseMove = on_mouse_move_undefined;
 		return;
 	}
-}
-
-static void roll_freeform(vtek::Camera* camera, float angle)
-{
-	angle *= 0.5f;
-	float cos = glm::cos(angle);
-	float sin = glm::sin(angle);
-	glm::quat rotor = glm::quat(cos, sin*glm::vec3(0, 0, -1));
-
-	camera->orientation = glm::normalize(rotor * camera->orientation);
-}
-
-static void roll_orbit_free(vtek::Camera* camera, float angle)
-{
-
-}
-
-static void update_freeform(vtek::Camera* camera)
-{
-	const glm::quat& q = camera->orientation;
-	camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
-
-	camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, 1.0f));
-	camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 1.0f, 0.0f));
-	camera->right = glm::normalize(glm::cross(-camera->up, camera->front));
-}
-
-static void update_fps(vtek::Camera* camera)
-{
-	// float angle = glm::pi<float>();
-	// auto newQuat = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f)); // ?
-}
-
-static void update_fps_grounded(vtek::Camera* camera)
-{
-
-}
-
-static void update_orbit_free(vtek::Camera* camera)
-{
-
-}
-
-static void update_orbit_fps(vtek::Camera* camera)
-{
-
 }
 
 
@@ -385,13 +468,9 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 {
 	auto camera = new vtek::Camera;
 
-	// camera mode is not defined yet at this point
-	camera->fMouseMove = on_mouse_move_undefined;
-	camera->fRoll = roll_undefined;
-	camera->fUpdate = update_undefined;
-	camera->mode = vtek::CameraMode::undefined;
 	camera->position = info->position;
 	camera->projectionBehaviour = new NullProjectionBehaviour();
+	camera->modeBehaviour = new NullCameraModeBehaviour();
 
 	return camera;
 }
