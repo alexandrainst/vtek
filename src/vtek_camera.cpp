@@ -26,6 +26,7 @@ class CameraModeBehaviour
 {
 public:
 	virtual ~CameraModeBehaviour() {}
+	virtual void Init(vtek::Camera* camera) = 0;
 	virtual void OnMouseMove(vtek::Camera* camera, double x, double y) = 0;
 	virtual void CameraRoll(vtek::Camera* camera, float angle) = 0;
 	virtual void Update(vtek::Camera* camera) = 0;
@@ -65,7 +66,7 @@ struct vtek::Camera
 	vtek::FovClampRadians fov {glm::radians(45.0f)};
 
 	// camera mode
-	vtek::CameraMode mode {vtek::CameraMode::undefined};
+	vtek::CameraMode mode {vtek::CameraMode::freeform};
 
 	// external parameters
 	glm::uvec2 windowSize {1U, 1U};
@@ -171,6 +172,7 @@ private:
 /* Implementation of camera modes */
 class NullCameraModeBehaviour : public CameraModeBehaviour
 {
+	void Init(vtek::Camera* camera) override {}
 	void OnMouseMove(vtek::Camera* camera, double x, double y) override {}
 	void CameraRoll(vtek::Camera* camera, float angle) override {};
 	void Update(vtek::Camera* camera) override {}
@@ -178,6 +180,10 @@ class NullCameraModeBehaviour : public CameraModeBehaviour
 
 class FreeformModeBehaviour : public CameraModeBehaviour
 {
+	void Init(vtek::Camera* camera) override
+	{
+
+	}
 	void OnMouseMove(vtek::Camera* camera, double x, double y) override
 	{
 		float xOffset = x - camera->lastX;
@@ -220,6 +226,10 @@ class FreeformModeBehaviour : public CameraModeBehaviour
 
 class FpsModeBehaviour : public CameraModeBehaviour
 {
+	void Init(vtek::Camera* camera) override
+	{
+
+	}
 	void OnMouseMove(vtek::Camera* camera, double x, double y) override
 	{
 		float xOffset = x - camera->lastX;
@@ -259,6 +269,10 @@ class FpsModeBehaviour : public CameraModeBehaviour
 
 class FpsGroundedModeBehaviour : public CameraModeBehaviour
 {
+	void Init(vtek::Camera* camera) override
+	{
+
+	}
 	void OnMouseMove(vtek::Camera* camera, double x, double y) override
 	{
 
@@ -272,6 +286,10 @@ class FpsGroundedModeBehaviour : public CameraModeBehaviour
 
 class OrbitFreeModeBehaviour : public CameraModeBehaviour
 {
+	void Init(vtek::Camera* camera) override
+	{
+
+	}
 	void OnMouseMove(vtek::Camera* camera, double x, double y) override
 	{
 		float xOffset = x - camera->lastX;
@@ -295,12 +313,25 @@ class OrbitFreeModeBehaviour : public CameraModeBehaviour
 	void CameraRoll(vtek::Camera* camera, float angle) override {};
 	void Update(vtek::Camera* camera) override
 	{
+		const glm::quat& q = camera->orientation;
 
+		camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, 1.0f));
+		camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 1.0f, 0.0f));
+		camera->right = glm::normalize(glm::cross(-camera->up, camera->front));
+
+		camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
 	}
+
+private:
+	glm::vec3 orbitPoint;
 };
 
 class OrbitFpsModeBehaviour : public CameraModeBehaviour
 {
+	void Init(vtek::Camera* camera) override
+	{
+
+	}
 	void OnMouseMove(vtek::Camera* camera, double x, double y) override
 	{
 
@@ -311,97 +342,6 @@ class OrbitFpsModeBehaviour : public CameraModeBehaviour
 
 	}
 };
-
-class InitialModeBehaviour : public CameraModeBehaviour
-{
-	void OnMouseMove(vtek::Camera* camera, double x, double y) override
-	{
-		camera->lastX = x;
-		camera->lastY = y;
-
-		switch (camera->mode)
-		{
-		case vtek::CameraMode::undefined:
-			vtek_log_warn(
-				"No mode has been specified for camera -- {}",
-				"a default freeform orientation will be applied!");
-			return;
-		case vtek::CameraMode::freeform:
-			camera->fMouseMove = on_mouse_move_freeform;
-			on_mouse_move_freeform(camera, x, y);
-			return;
-		case vtek::CameraMode::fps:
-			camera->fMouseMove = on_mouse_move_fps;
-			on_mouse_move_fps(camera, x, y);
-			return;
-		case vtek::CameraMode::fps_grounded:
-			camera->fMouseMove = on_mouse_move_fps_grounded;
-			on_mouse_move_fps_grounded(camera, x, y);
-			return;
-		case vtek::CameraMode::orbit_free:
-			camera->fMouseMove = on_mouse_move_orbit_free;
-			on_mouse_move_orbit_free(camera, x, y);
-			return;
-		case vtek::CameraMode::orbit_fps:
-			camera->fMouseMove = on_mouse_move_orbit_fps;
-			on_mouse_move_orbit_fps(camera, x, y);
-			return;
-
-		default:
-			vtek_log_error(
-				"vtek_camera.cpp: on_mouse_move_initial: Invalid mode enum!");
-			camera->fMouseMove = on_mouse_move_undefined;
-			return;
-		}
-	}
-private:
-	CameraModeBehaviour* nextMode {nullptr};
-};
-
-
-
-/* camera modes */
-static void on_mouse_move_initial(vtek::Camera* camera, double x, double y)
-{
-	camera->initialMove = false;
-	camera->lastX = x;
-	camera->lastY = y;
-
-	switch (camera->mode)
-	{
-	case vtek::CameraMode::undefined:
-		vtek_log_warn(
-			"No mode has been specified for camera -- {}",
-			"a default freeform orientation will be applied!");
-		return;
-	case vtek::CameraMode::freeform:
-		camera->fMouseMove = on_mouse_move_freeform;
-		on_mouse_move_freeform(camera, x, y);
-		return;
-	case vtek::CameraMode::fps:
-		camera->fMouseMove = on_mouse_move_fps;
-		on_mouse_move_fps(camera, x, y);
-		return;
-	case vtek::CameraMode::fps_grounded:
-		camera->fMouseMove = on_mouse_move_fps_grounded;
-		on_mouse_move_fps_grounded(camera, x, y);
-		return;
-	case vtek::CameraMode::orbit_free:
-		camera->fMouseMove = on_mouse_move_orbit_free;
-		on_mouse_move_orbit_free(camera, x, y);
-		return;
-	case vtek::CameraMode::orbit_fps:
-		camera->fMouseMove = on_mouse_move_orbit_fps;
-		on_mouse_move_orbit_fps(camera, x, y);
-		return;
-
-	default:
-		vtek_log_error(
-			"vtek_camera.cpp: on_mouse_move_initial: Invalid mode enum!");
-		camera->fMouseMove = on_mouse_move_undefined;
-		return;
-	}
-}
 
 
 
@@ -489,40 +429,45 @@ void vtek::camera_destroy(vtek::Camera* camera)
 void vtek::camera_set_mode_freeform(
 	vtek::Camera* camera, glm::vec3 up, glm::vec3 front)
 {
-	camera->fMouseMove = (camera->initialMove)
-		? on_mouse_move_initial : on_mouse_move_freeform;
-	camera->fRoll = roll_freeform;
-	camera->fUpdate = update_freeform;
-
 	camera->mode = vtek::CameraMode::freeform;
-
 	set_default_lookat(camera, up, front);
+
+	if (camera->modeBehaviour != nullptr)
+	{
+		delete camera->modeBehaviour;
+	}
+	camera->modeBehaviour = new FreeformModeBehaviour();
+	camera->modeBehaviour->Init(camera);
+
 	camera->fUpdate(camera);
 }
 
 void vtek::camera_set_mode_fps(
 	vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 front)
 {
-	camera->fMouseMove = (camera->initialMove)
-		? on_mouse_move_initial : on_mouse_move_fps;
-	camera->fRoll = roll_undefined;
-	camera->fUpdate = update_fps;
-
 	camera->mode = vtek::CameraMode::fps;
-
 	set_fps_lookat(camera, upAxis, front);
+
+	if (camera->modeBehaviour != nullptr)
+	{
+		delete camera->modeBehaviour;
+	}
+	camera->modeBehaviour = new FpsModeBehaviour();
+	camera->modeBehaviour->Init(camera);
+
 	camera->fUpdate(camera);
 }
 
 void vtek::camera_set_mode_fps_grounded(
 	vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 front)
 {
-	camera->fMouseMove = (camera->initialMove)
-		? on_mouse_move_initial : on_mouse_move_fps_grounded;
-	camera->fRoll = roll_undefined;
-	camera->fUpdate = update_fps_grounded;
-
 	camera->mode = vtek::CameraMode::fps_grounded;
+
+	if (camera->modeBehaviour != nullptr)
+	{
+		delete camera->modeBehaviour;
+	}
+	camera->modeBehaviour = new FpsGroundedModeBehaviour();
 
 	vtek_log_error("vtek::camera_set_mode_fps_grounded(): Not implemented!");
 }
@@ -530,25 +475,25 @@ void vtek::camera_set_mode_fps_grounded(
 void vtek::camera_set_mode_orbit_free(
 	vtek::Camera* camera, glm::vec3 front, glm::vec3 up, float distance)
 {
-	camera->fMouseMove = (camera->initialMove)
-		? on_mouse_move_initial : on_mouse_move_orbit_free;
-	camera->fRoll = roll_orbit_free;
-	camera->fUpdate = update_orbit_free;
-
 	camera->mode = vtek::CameraMode::orbit_free;
 
-	vtek_log_error("vtek::camera_set_mode_orbit_free(): Not implemented!");
+	if (camera->modeBehaviour != nullptr)
+	{
+		delete camera->modeBehaviour;
+	}
+	camera->modeBehaviour = new OrbitFreeModeBehaviour();
 }
 
 void vtek::camera_set_mode_orbit_fps(
 	vtek::Camera* camera, glm::vec3 front, glm::vec3 up, float distance)
 {
-	camera->fMouseMove = (camera->initialMove)
-		? on_mouse_move_initial : on_mouse_move_orbit_fps;
-	camera->fRoll = roll_undefined;
-	camera->fUpdate = update_orbit_fps;
-
 	camera->mode = vtek::CameraMode::orbit_fps;
+
+	if (camera->modeBehaviour != nullptr)
+	{
+		delete camera->modeBehaviour;
+	}
+	camera->modeBehaviour = new OrbitFpsModeBehaviour();
 
 	vtek_log_error("vtek::camera_set_mode_orbit_fps(): Not implemented!");
 }
@@ -714,6 +659,13 @@ void vtek::camera_translate(vtek::Camera* camera, glm::vec3 offset)
 
 void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 {
+	// TODO: Can we optimize this?
+	if (camera->initialMove)
+	{
+		camera->initialMove = false;
+		camera->lastX = x;
+		camera->lastY = y;
+	}
 	camera->fMouseMove(camera, x, y);
 }
 

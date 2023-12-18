@@ -42,12 +42,13 @@ namespace vtek
 		left_handed, right_handed
 	};
 
+	enum class CameraProjection
+	{
+		perspective, orthographic
+	};
+
 	enum class CameraMode
 	{
-		// Represents the initial (invalid) state of a camera. A specific mode
-		// must be set before a camera can be used.
-		undefined,
-
 		// A freeform camera has no restrictions on pitch/roll, and can rotate
 		// freely with 3 degrees of freedom.
 		freeform,
@@ -84,6 +85,31 @@ namespace vtek
 		// the point-of-interest being looked at, instead of the actual camera
 		// location which is computed automatically.
 		glm::vec3 position {0.0f, 0.0f, 0.0f};
+
+		// NEXT: Can we implement this better without breaking with API consistency?
+		// TODO: Customize all behaviour here
+		// TODO: When camera is created (ie. not null), it is valid!
+		CameraMode mode {CameraMode::freeform};
+
+		CameraProjection projection {CameraProjection::perspective};
+
+		// Size of the viewport, in pixels.
+		glm::uvec2 viewportSize {1.0f, 1.0f};
+
+		// Camera's near and far clip planes.
+		glm::vec2 clipPlanes {0.1f, 100.0f};
+
+		// Camera's field of view (FOV). Applies only to perspective projection.
+		float fovDegrees {45.0f};
+
+		// As an alternative to explicitly providing a field of view, a sensor
+		// width and a lens focal length may be provided instead, both in mm.
+		// This will internally convert to FOV using this formula:
+		// fov = 2 * atan(sensor_width / (2*focal_length)).
+		// NOTE: Default parameters provided will result in an FOV of 45 degrees.
+		bool useFocalLength {false};
+		float focalLengthMm {12.071067823f};
+		float sensorWidthMm {10.0f};
 	};
 
 	// NOTE: The created camera is not valid until one of the `camera_set_mode_*`
@@ -124,6 +150,10 @@ namespace vtek
 	// For clamping camera field-of-view (fov) to a sensible value [10,180].
 	using FovClamp = FloatClamp<10.0f, 180.0f>;
 	using FovClampRadians = FloatClamp<glm::radians(10.0f), glm::radians(180.0f)>;
+
+
+	// TODO: Provide functions here for altering the camera's projection matrix!
+
 
 	// With fov unspecified, windowSize.y/windowSize.x will be used.
 	void camera_set_perspective(
