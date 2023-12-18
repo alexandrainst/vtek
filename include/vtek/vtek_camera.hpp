@@ -23,7 +23,7 @@
 // Similarly, the quaternion rotor can be written in the form:
 // q = cos(t) + sin(t) * (xi + yj + zk)
 // The axis of rotation is defined by x,y,z; the angle of rotation by t.
-// To rotate a point p t degrees in this axis:
+// To rotate a point p t degrees around this axis:
 // f(p) = q * p * q^{-1}
 
 #pragma once
@@ -31,8 +31,6 @@
 #include "vtek_glm_includes.hpp"
 #include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
-
-#include <cstdint>
 
 
 namespace vtek
@@ -73,6 +71,16 @@ namespace vtek
 		orbit_fps
 	};
 
+
+	// The closest allowed distance between the camera location and its near
+	// clipping plane. Any lower (or negative) values will be clamped.
+	constexpr float kNearClippingPlaneMin = 0.1f;
+
+	// For clamping camera field-of-view (fov) to a sensible value [10,180].
+	using FovClamp = FloatClamp<10.0f, 180.0f>;
+	using FovClampRadians = FloatClamp<glm::radians(10.0f), glm::radians(180.0f)>;
+
+
 	struct CameraInfo
 	{
 		// In order to suit the needs of various rendering platforms, we may
@@ -86,21 +94,41 @@ namespace vtek
 		// location which is computed automatically.
 		glm::vec3 position {0.0f, 0.0f, 0.0f};
 
-		// NEXT: Can we implement this better without breaking with API consistency?
-		// TODO: Customize all behaviour here
-		// TODO: When camera is created (ie. not null), it is valid!
+		/*
+		 * Camera orientation, ie. external matrix.
+		 */
 		CameraMode mode {CameraMode::freeform};
 
+		// Front-facing direction of the camera.
+		glm::vec3 front {1.0f, 0.0f, 0.0f};
+
+		// Up-vector for the camera rotation. For fps-style cameras, this vector
+		// is used as the "up"-axis (need not be axis-aligned).
+		glm::vec3 up {0.0f, 0.0f, 1.0f};
+
+		// If camera mode is set to orbiting, these fields specify the initial
+		// oribiting distance as well as the permitted orbiting range.
+		float orbitDistance {1.0f};
+		glm::vec2 orbitDistanceClamp {0.1f, 100.0f};
+
+		/*
+		 * Camera projection, ie. internal matrix.
+		 */
 		CameraProjection projection {CameraProjection::perspective};
 
 		// Size of the viewport, in pixels.
-		glm::uvec2 viewportSize {1.0f, 1.0f};
+		glm::uvec2 viewportSize {0, 0};
 
 		// Camera's near and far clip planes.
 		glm::vec2 clipPlanes {0.1f, 100.0f};
 
 		// Camera's field of view (FOV). Applies only to perspective projection.
-		float fovDegrees {45.0f};
+		FovClamp fovDegrees {45.0f};
+
+		// Instead of explicit FOV, calculate it from the viewport aspect ratio.
+		// This will result in the scene getting stretched according to viewport
+		// dimensions, and is for most purposes not recommended.
+		bool fovFromAspectRatio {false};
 
 		// As an alternative to explicitly providing a field of view, a sensor
 		// width and a lens focal length may be provided instead, both in mm.
@@ -112,8 +140,6 @@ namespace vtek
 		float sensorWidthMm {10.0f};
 	};
 
-	// NOTE: The created camera is not valid until one of the `camera_set_mode_*`
-	// functions has been called.
 	Camera* camera_create(const CameraInfo* info);
 	void camera_destroy(Camera* camera);
 
@@ -137,19 +163,13 @@ namespace vtek
 		Camera* camera, glm::vec3 upAxis, glm::vec3 front,
 		glm::vec2 pitchClampDegrees);
 
-	CameraMode camera_get_mode(Camera* camera);
+	
 
 	// ========================= //
 	// === Camera projection === //
 	// ========================= //
 
-	// The closest allowed distance between the camera location and its near
-	// clipping plane. Any lower (or negative) values will be clamped.
-	constexpr float kNearClippingPlaneMin = 0.1f;
-
-	// For clamping camera field-of-view (fov) to a sensible value [10,180].
-	using FovClamp = FloatClamp<10.0f, 180.0f>;
-	using FovClampRadians = FloatClamp<glm::radians(10.0f), glm::radians(180.0f)>;
+	
 
 
 	// TODO: Provide functions here for altering the camera's projection matrix!
@@ -250,4 +270,6 @@ namespace vtek
 	glm::vec3 camera_get_position(Camera* camera);
 	glm::vec3 camera_get_front(Camera* camera);
 	glm::vec3 camera_get_up(Camera* camera);
+
+	CameraMode camera_get_mode(Camera* camera);
 }

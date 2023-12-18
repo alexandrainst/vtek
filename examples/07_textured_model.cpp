@@ -380,21 +380,26 @@ int main()
 
 	// Camera
 	vtek::CameraInfo cameraInfo{};
+	// NOTE: Experiment freely with these settings!
+	cameraInfo.worldSpaceHandedness = vtek::CameraHandedness::right_handed;
 	cameraInfo.position = glm::vec3(-2.0968692f, -2.5813563f, -1.4253441f);
+	cameraInfo.mode = vtek::CameraMode::freeform;
+	cameraInfo.front = {0.5990349f, 0.7475561f, 0.28690946f};
+	cameraInfo.up = {-0.18743359f, -0.21744627f, 0.95790696f};
+	cameraInfo.orbitDistance = 1.0f;
+	cameraInfo.orbitDistanceClamp = {0.2f, 10.0f};
+	cameraInfo.projection = vtek::CameraProjection::perspective;
+	cameraInfo.viewportSize = windowSize;
+	cameraInfo.clipPlanes = { 0.1f, 100.0f };
+	cameraInfo.fovDegrees = 45.0f;
+	cameraInfo.fovFromAspectRatio = false;
+	cameraInfo.useFocalLength = false;
 	gCamera = vtek::camera_create(&cameraInfo);
 	if (gCamera == nullptr)
 	{
 		log_error("Failed to create camera!");
 		return -1;
 	}
-	glm::vec3 camFront {0.5990349f, 0.7475561f, 0.28690946f};
-	glm::vec3 camUp {-0.18743359f, -0.21744627f, 0.95790696f};
-	//vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
-	vtek::camera_set_mode_orbit_free(gCamera, camFront, camUp, 5.0f);
-	float camFov = 45.0f; // NOTE: Experiment.
-	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
-	//vtek::camera_set_perspective_focal(gCamera, windowSize, 0.1f, 100.0f);
-	//vtek::camera_set_orthographic(gCamera, windowSize, 0.1f, 100.0f);
 	// TODO: Maybe for this application, use FPS-game style camera instead?
 	// TODO: It's also a good opportunity to test if the camera supports it properly
 

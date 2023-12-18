@@ -3,13 +3,6 @@
 
 #include "vtek_logging.hpp"
 
-#include <functional>
-
-// Function declarations for implementing the camera modes
-using tMouseMove = std::function<void(vtek::Camera*,double,double)>;
-using tRoll = std::function<void(vtek::Camera*,float)>;
-using tUpdate = std::function<void(vtek::Camera*)>;
-
 
 /* classes which control camera sub-logic */
 class CameraProjectionBehaviour
@@ -69,7 +62,7 @@ struct vtek::Camera
 	vtek::CameraMode mode {vtek::CameraMode::freeform};
 
 	// external parameters
-	glm::uvec2 windowSize {1U, 1U};
+	glm::vec2 viewportSize {0.0f, 0.0f};
 	glm::vec2 clippingPlanes {0.1f, 100.0f}; // { front, back }
 
 	// Camera sub-logic behaviour
@@ -87,6 +80,10 @@ class NullProjectionBehaviour :  public CameraProjectionBehaviour
 	void CameraMoveForward(vtek::Camera* camera, float dist) override {}
 	void CameraMoveBackward(vtek::Camera* camera, float dist) override {}
 };
+
+// TODO: Might do something like this to solve the handedness problem:
+// class PerspectiveBehaviourLH : public CameraProjectionBehaviour {};
+// class PerspectiveBehaviourRH : public CameraProjectionBehaviour {};
 
 class PerspectiveBehaviour :  public CameraProjectionBehaviour
 {
@@ -406,11 +403,67 @@ static void set_fps_lookat(vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 fro
 /* interface */
 vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 {
+	if (info->viewportSize.x * info->viewportSize.y == 0)
+	{
+		vtek_log_error("vtek::camera_create(): Viewport size must be set!");
+		return nullptr;
+	}
 	auto camera = new vtek::Camera;
 
+	// TODO: Accommodate for camera handedness.
+
 	camera->position = info->position;
-	camera->projectionBehaviour = new NullProjectionBehaviour();
-	camera->modeBehaviour = new NullCameraModeBehaviour();
+	camera->mode = info->mode;
+	camera->viewportSize.x = static_cast<float>(info->viewportSize.x);
+	camera->viewportSize.y = static_cast<float>(info->viewportSize.y);
+	camera->clippingPlanes = info->clipPlanes;
+
+	// Camera orientation, ie. external matrix
+	switch (info->mode)
+	{
+	case vtek::CameraMode::freeform:
+		camera->modeBehaviour = new FreeformModeBehaviour();
+		break;
+	case vtek::CameraMode::fps:
+		camera->modeBehaviour = new FpsModeBehaviour();
+		break;
+	case vtek::CameraMode::fps_grounded:
+		camera->modeBehaviour = new FpsGroundedModeBehaviour();
+		break;
+	case vtek::CameraMode::orbit_free:
+		camera->modeBehaviour = new OrbitFreeModeBehaviour();
+		break;
+	case vtek::CameraMode::orbit_fps:
+		camera->modeBehaviour = new OrbitFpsModeBehaviour();
+		break;
+	default:
+		vtek_log_error("vtek::camera_create(): Invalid camera mode!");
+		delete camera;
+		return nullptr;
+	}
+	set_default_lookat(camera, info->up, info->front);
+	camera->modeBehaviour->Init(camera);
+
+	// Camera projection, ie. internal matrix
+	if (info->useFocalLength)
+	{
+		float frac = info->sensorWidthMm / (2.0f * info->focalLengthMm);
+		camera->fov = 2.0f * glm::atan(frac);
+	}
+	else if (info->fovFromAspectRatio)
+	{
+		float aspect = camera->viewportSize.y / camera->viewportSize.x;
+		camera->fov = aspect * glm::half_pi<float>();
+	}
+	else
+	{
+		camera->fov = glm::radians(info->fovDegrees);
+	}
+	camera->projectionBehaviour =
+		(info->projection == vtek::CameraProjection::orthographic)
+		? new OrthographicBehaviour()
+		: new PerspectiveBehaviour();
+	camera->projectionBehaviour->CreateProjectionMatrix(camera);
 
 	return camera;
 }
@@ -419,6 +472,8 @@ void vtek::camera_destroy(vtek::Camera* camera)
 {
 	if (camera == nullptr) return;
 
+	delete camera->modeBehaviour;
+	delete camera->projectionBehaviour;
 	delete camera;
 }
 
