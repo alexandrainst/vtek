@@ -47,8 +47,8 @@ namespace vtek
 
 	enum class CameraMode
 	{
-		// A freeform camera has no restrictions on pitch/roll, and can rotate
-		// freely with 3 degrees of freedom.
+		// A freeform camera has no restrictions on pitch/roll, and may perform
+		// arbitrary rotations within 3 degrees of freedom.
 		freeform,
 
 		// A first-person shooter (FPS) camera has roll disabled, pitch clamped
@@ -81,22 +81,8 @@ namespace vtek
 	using FovClampRadians = FloatClamp<glm::radians(10.0f), glm::radians(180.0f)>;
 
 
-	struct CameraInfo
+	struct CameraModeInfo
 	{
-		// In order to suit the needs of various rendering platforms, we may
-		// specify the handedness of the world space coordinate system in which
-		// the camera is placed. This does not change the internal behaviour of
-		// Vulkan, and no change in shaders is necessary.
-		CameraHandedness worldSpaceHandedness {CameraHandedness::right_handed};
-
-		// Starting position of the camera. For orbiting cameras, this reflects
-		// the point-of-interest being looked at, instead of the actual camera
-		// location which is computed automatically.
-		glm::vec3 position {0.0f, 0.0f, 0.0f};
-
-		/*
-		 * Camera orientation, ie. external matrix.
-		 */
 		CameraMode mode {CameraMode::freeform};
 
 		// Front-facing direction of the camera.
@@ -110,10 +96,11 @@ namespace vtek
 		// oribiting distance as well as the permitted orbiting range.
 		float orbitDistance {1.0f};
 		glm::vec2 orbitDistanceClamp {0.1f, 100.0f};
+	};
 
-		/*
-		 * Camera projection, ie. internal matrix.
-		 */
+	struct CameraProjectionInfo
+	{
+		// Fields are documented in `CameraInfo`.
 		CameraProjection projection {CameraProjection::perspective};
 
 		// Size of the viewport, in pixels.
@@ -123,11 +110,14 @@ namespace vtek
 		glm::vec2 clipPlanes {0.1f, 100.0f};
 
 		// Camera's field of view (FOV). Applies only to perspective projection.
+		// 45 is considered the canonical value.
 		FovClamp fovDegrees {45.0f};
 
 		// Instead of explicit FOV, calculate it from the viewport aspect ratio.
 		// This will result in the scene getting stretched according to viewport
-		// dimensions, and is for most purposes not recommended.
+		// dimensions, so that objects will always take up the same amount of
+		// screen percentage.
+		// NOTE: For quadratic viewports, fov=45, for larger widths smaller.
 		bool fovFromAspectRatio {false};
 
 		// As an alternative to explicitly providing a field of view, a sensor
@@ -140,6 +130,26 @@ namespace vtek
 		float sensorWidthMm {10.0f};
 	};
 
+	struct CameraInfo
+	{
+		// In order to suit the needs of various rendering platforms, we may
+		// specify the handedness of the world space coordinate system in which
+		// the camera is placed. This does not change the internal behaviour of
+		// Vulkan, and no change in shaders is necessary.
+		CameraHandedness worldSpaceHandedness {CameraHandedness::right_handed};
+
+		// Starting position of the camera. For orbiting cameras, this reflects
+		// the point-of-interest being looked at, instead of the actual camera
+		// location which is computed automatically.
+		glm::vec3 position {0.0f, 0.0f, 0.0f};
+
+		// Camera orientation, ie. external matrix. Must be provided.
+		CameraModeInfo* modeInfo {nullptr};
+
+		// Camera projection, ie. internal matrix. Must be provided.
+		CameraProjectionInfo* projectionInfo {nullptr};
+	};
+
 	Camera* camera_create(const CameraInfo* info);
 	void camera_destroy(Camera* camera);
 
@@ -148,6 +158,9 @@ namespace vtek
 	// =================== //
 	// === Camera mode === //
 	// =================== //
+
+
+
 	void camera_set_mode_freeform(Camera* camera, glm::vec3 up, glm::vec3 front);
 	void camera_set_mode_fps(Camera* camera, glm::vec3 upAxis, glm::vec3 front);
 	void camera_set_mode_fps_grounded(
@@ -163,34 +176,18 @@ namespace vtek
 		Camera* camera, glm::vec3 upAxis, glm::vec3 front,
 		glm::vec2 pitchClampDegrees);
 
-	
 
-	// ========================= //
-	// === Camera projection === //
-	// ========================= //
+	// ===================== //
+	// === Camera matrix === //
+	// ===================== //
 
-	
+	// TODO: Not implemented!
+	void camera_change_projection(Camera* camera, const CameraProjectionInfo* info);
+
+	// TODO: Not implemented!
+	void camera_change_mode(Camera* camera, const CameraModeInfo* info);
 
 
-	// TODO: Provide functions here for altering the camera's projection matrix!
-
-
-	// With fov unspecified, windowSize.y/windowSize.x will be used.
-	void camera_set_perspective(
-		Camera* camera, glm::uvec2 windowSize, float near, float far,
-		FovClamp fovDegrees = 45.0f);
-
-	// Calculate camera projection matrix from physical camera parameters:
-	// Sensor width and lens focal length, both in mm. Numbers provided as
-	// default will yield an FOV of ~45 degrees, from this formula:
-	// fov = 2 * atan(sensor_width / (2*focal_length)).
-	void camera_set_perspective_focal(
-		Camera* camera, glm::uvec2 windowSize, float near, float far,
-		float lensFocalLengthMm = 12.071067823f, float sensorWidthMm = 10.0f);
-
-	// Camera will use orthographic projection.
-	void camera_set_orthographic(
-		Camera* camera, glm::uvec2 windowSize, float near, float far);
 
 	// ===================== //
 	// === Camera update === //

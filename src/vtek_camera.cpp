@@ -19,7 +19,7 @@ class CameraModeBehaviour
 {
 public:
 	virtual ~CameraModeBehaviour() {}
-	virtual void Init(vtek::Camera* camera) = 0;
+	virtual void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) = 0;
 	virtual void OnMouseMove(vtek::Camera* camera, double x, double y) = 0;
 	virtual void CameraRoll(vtek::Camera* camera, float angle) = 0;
 	virtual void Update(vtek::Camera* camera) = 0;
@@ -73,14 +73,6 @@ struct vtek::Camera
 
 
 /* Implementation of camera projection behaviour */
-class NullProjectionBehaviour :  public CameraProjectionBehaviour
-{
-	void CreateProjectionMatrix(vtek::Camera* camera) override {}
-	void OnMouseScroll(vtek::Camera* camera, double x, double y) override {}
-	void CameraMoveForward(vtek::Camera* camera, float dist) override {}
-	void CameraMoveBackward(vtek::Camera* camera, float dist) override {}
-};
-
 // TODO: Might do something like this to solve the handedness problem:
 // class PerspectiveBehaviourLH : public CameraProjectionBehaviour {};
 // class PerspectiveBehaviourRH : public CameraProjectionBehaviour {};
@@ -90,8 +82,8 @@ class PerspectiveBehaviour :  public CameraProjectionBehaviour
 	void CreateProjectionMatrix(vtek::Camera* camera) override
 	{
 		float fov = camera->fov.get();
-		float w = static_cast<float>(camera->windowSize.x);
-		float h = static_cast<float>(camera->windowSize.y);
+		float w = camera->viewportSize.x;
+		float h = camera->viewportSize.y;
 		float near = camera->clippingPlanes.x;
 		float far = camera->clippingPlanes.y;
 		camera->projectionMatrix = glm::perspectiveFov(fov, w, h, near, far);
@@ -130,8 +122,8 @@ class OrthographicBehaviour : public CameraProjectionBehaviour
 		float fov = camera->fov.get() + zoomOffset;
 		float near = camera->clippingPlanes.x;
 		float far = camera->clippingPlanes.y;
-		float w = static_cast<float>(camera->windowSize.x);
-		float h = static_cast<float>(camera->windowSize.y);
+		float w = camera->viewportSize.x;
+		float h = camera->viewportSize.y;
 		float aspect = h / w;
 		float width = 2.0f * (fov / glm::radians(45.0f));
 		float height = 2.0f * aspect * (fov / glm::radians(45.0f));
@@ -167,17 +159,9 @@ private:
 
 
 /* Implementation of camera modes */
-class NullCameraModeBehaviour : public CameraModeBehaviour
-{
-	void Init(vtek::Camera* camera) override {}
-	void OnMouseMove(vtek::Camera* camera, double x, double y) override {}
-	void CameraRoll(vtek::Camera* camera, float angle) override {};
-	void Update(vtek::Camera* camera) override {}
-};
-
 class FreeformModeBehaviour : public CameraModeBehaviour
 {
-	void Init(vtek::Camera* camera) override
+	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
 	{
 
 	}
@@ -223,7 +207,7 @@ class FreeformModeBehaviour : public CameraModeBehaviour
 
 class FpsModeBehaviour : public CameraModeBehaviour
 {
-	void Init(vtek::Camera* camera) override
+	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
 	{
 
 	}
@@ -266,7 +250,7 @@ class FpsModeBehaviour : public CameraModeBehaviour
 
 class FpsGroundedModeBehaviour : public CameraModeBehaviour
 {
-	void Init(vtek::Camera* camera) override
+	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
 	{
 
 	}
@@ -281,33 +265,15 @@ class FpsGroundedModeBehaviour : public CameraModeBehaviour
 	}
 };
 
-class OrbitFreeModeBehaviour : public CameraModeBehaviour
+class OrbitFreeModeBehaviour : public FreeformModeBehaviour
 {
-	void Init(vtek::Camera* camera) override
+	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
 	{
-
+		vtek_log_debug("OrbitFreeModeBehaviour::Init()");
+		orbitDistance = info->orbitDistance;
+		orbitDistanceClamp = info->orbitDistanceClamp;
+		orbitPoint = camera->position + (camera->front * orbitDistance);
 	}
-	void OnMouseMove(vtek::Camera* camera, double x, double y) override
-	{
-		float xOffset = x - camera->lastX;
-		float yOffset = y - camera->lastY;
-		camera->lastX = x;
-		camera->lastY = y;
-
-		xOffset *= camera->mouseSensitivity;
-		yOffset *= camera->mouseSensitivity;
-
-		float xCos = glm::cos(xOffset);
-		float xSin = glm::sin(xOffset);
-		glm::quat xRotor = glm::quat(xCos, xSin*glm::vec3(0, 1, 0));
-		camera->orientation = glm::normalize(xRotor * camera->orientation);
-
-		float yCos = glm::cos(yOffset);
-		float ySin = glm::sin(yOffset);
-		glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
-		camera->orientation = glm::normalize(yRotor * camera->orientation);
-	}
-	void CameraRoll(vtek::Camera* camera, float angle) override {};
 	void Update(vtek::Camera* camera) override
 	{
 		const glm::quat& q = camera->orientation;
@@ -316,16 +282,21 @@ class OrbitFreeModeBehaviour : public CameraModeBehaviour
 		camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 1.0f, 0.0f));
 		camera->right = glm::normalize(glm::cross(-camera->up, camera->front));
 
-		camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
+		orbitPoint = camera->position - (camera->front * orbitDistance);
+
+		camera->viewMatrix =
+			glm::translate(glm::mat4_cast(q), camera->position - orbitPoint);
 	}
 
 private:
+	float orbitDistance {1.0f};
+	glm::vec2 orbitDistanceClamp {0.1f, 100.0f};
 	glm::vec3 orbitPoint;
 };
 
 class OrbitFpsModeBehaviour : public CameraModeBehaviour
 {
-	void Init(vtek::Camera* camera) override
+	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
 	{
 
 	}
@@ -403,7 +374,17 @@ static void set_fps_lookat(vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 fro
 /* interface */
 vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 {
-	if (info->viewportSize.x * info->viewportSize.y == 0)
+	CameraModeInfo* modeInfo = info->modeInfo;
+	CameraProjectionInfo* projInfo = info->projectionInfo;
+
+	if (modeInfo == nullptr || projInfo == nullptr)
+	{
+		vtek_log_error(
+			"vtek::camera_create(): {}",
+			"Both modeInfo and projectionInfo must be provided!");
+		return nullptr;
+	}
+	if (projInfo->viewportSize.x * projInfo->viewportSize.y == 0)
 	{
 		vtek_log_error("vtek::camera_create(): Viewport size must be set!");
 		return nullptr;
@@ -413,13 +394,23 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 	// TODO: Accommodate for camera handedness.
 
 	camera->position = info->position;
-	camera->mode = info->mode;
-	camera->viewportSize.x = static_cast<float>(info->viewportSize.x);
-	camera->viewportSize.y = static_cast<float>(info->viewportSize.y);
-	camera->clippingPlanes = info->clipPlanes;
+	camera->mode = modeInfo->mode;
+	camera->viewportSize.x = static_cast<float>(projInfo->viewportSize.x);
+	camera->viewportSize.y = static_cast<float>(projInfo->viewportSize.y);
+
+	float near = glm::max(vtek::kNearClippingPlaneMin, projInfo->clipPlanes.x);
+	float far = projInfo->clipPlanes.y;
+	if (!(far > near))
+	{
+		vtek_log_warn(
+			"Camera's far-clipping plane has a lower value than near -- {}",
+			"far will be set to 'near + 100'!");
+		far = near + 100.0f;
+	}
+	camera->clippingPlanes = { near, far };
 
 	// Camera orientation, ie. external matrix
-	switch (info->mode)
+	switch (modeInfo->mode)
 	{
 	case vtek::CameraMode::freeform:
 		camera->modeBehaviour = new FreeformModeBehaviour();
@@ -441,28 +432,29 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 		delete camera;
 		return nullptr;
 	}
-	set_default_lookat(camera, info->up, info->front);
-	camera->modeBehaviour->Init(camera);
+	set_default_lookat(camera, modeInfo->up, modeInfo->front); // TODO: Custom behaviour!
+	camera->modeBehaviour->Init(camera, modeInfo);
 
 	// Camera projection, ie. internal matrix
-	if (info->useFocalLength)
+	if (projInfo->useFocalLength)
 	{
-		float frac = info->sensorWidthMm / (2.0f * info->focalLengthMm);
+		float frac = projInfo->sensorWidthMm / (2.0f * projInfo->focalLengthMm);
 		camera->fov = 2.0f * glm::atan(frac);
 	}
-	else if (info->fovFromAspectRatio)
+	else if (projInfo->fovFromAspectRatio)
 	{
 		float aspect = camera->viewportSize.y / camera->viewportSize.x;
-		camera->fov = aspect * glm::half_pi<float>();
+		// TODO: Consider using `aspect * glm::radians(info->fovDegrees)` instead.
+		camera->fov = aspect * glm::quarter_pi<float>();
 	}
 	else
 	{
-		camera->fov = glm::radians(info->fovDegrees);
+		camera->fov = glm::radians(projInfo->fovDegrees.get());
 	}
 	camera->projectionBehaviour =
-		(info->projection == vtek::CameraProjection::orthographic)
-		? new OrthographicBehaviour()
-		: new PerspectiveBehaviour();
+		(projInfo->projection == vtek::CameraProjection::orthographic)
+		? (CameraProjectionBehaviour*) (new OrthographicBehaviour())
+		: (CameraProjectionBehaviour*) (new PerspectiveBehaviour());
 	camera->projectionBehaviour->CreateProjectionMatrix(camera);
 
 	return camera;
@@ -478,149 +470,31 @@ void vtek::camera_destroy(vtek::Camera* camera)
 }
 
 
-// =================== //
-// === Camera mode === //
-// =================== //
-void vtek::camera_set_mode_freeform(
-	vtek::Camera* camera, glm::vec3 up, glm::vec3 front)
+// ===================== //
+// === Camera matrix === //
+// ===================== //
+void vtek::camera_change_projection(
+	vtek::Camera* camera, const vtek::CameraProjectionInfo* info)
 {
-	camera->mode = vtek::CameraMode::freeform;
-	set_default_lookat(camera, up, front);
 
-	if (camera->modeBehaviour != nullptr)
-	{
-		delete camera->modeBehaviour;
-	}
-	camera->modeBehaviour = new FreeformModeBehaviour();
-	camera->modeBehaviour->Init(camera);
-
-	camera->fUpdate(camera);
 }
 
-void vtek::camera_set_mode_fps(
-	vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 front)
+void vtek::camera_change_mode(
+	vtek::Camera* camera, const vtek::CameraModeInfo* info)
 {
-	camera->mode = vtek::CameraMode::fps;
-	set_fps_lookat(camera, upAxis, front);
 
-	if (camera->modeBehaviour != nullptr)
-	{
-		delete camera->modeBehaviour;
-	}
-	camera->modeBehaviour = new FpsModeBehaviour();
-	camera->modeBehaviour->Init(camera);
-
-	camera->fUpdate(camera);
-}
-
-void vtek::camera_set_mode_fps_grounded(
-	vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 front)
-{
-	camera->mode = vtek::CameraMode::fps_grounded;
-
-	if (camera->modeBehaviour != nullptr)
-	{
-		delete camera->modeBehaviour;
-	}
-	camera->modeBehaviour = new FpsGroundedModeBehaviour();
-
-	vtek_log_error("vtek::camera_set_mode_fps_grounded(): Not implemented!");
-}
-
-void vtek::camera_set_mode_orbit_free(
-	vtek::Camera* camera, glm::vec3 front, glm::vec3 up, float distance)
-{
-	camera->mode = vtek::CameraMode::orbit_free;
-
-	if (camera->modeBehaviour != nullptr)
-	{
-		delete camera->modeBehaviour;
-	}
-	camera->modeBehaviour = new OrbitFreeModeBehaviour();
-}
-
-void vtek::camera_set_mode_orbit_fps(
-	vtek::Camera* camera, glm::vec3 front, glm::vec3 up, float distance)
-{
-	camera->mode = vtek::CameraMode::orbit_fps;
-
-	if (camera->modeBehaviour != nullptr)
-	{
-		delete camera->modeBehaviour;
-	}
-	camera->modeBehaviour = new OrbitFpsModeBehaviour();
-
-	vtek_log_error("vtek::camera_set_mode_orbit_fps(): Not implemented!");
 }
 
 
-// ========================= //
-// === Camera projection === //
-// ========================= //
-void vtek::camera_set_perspective(
-	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far,
-	vtek::FovClamp fovDegrees)
-{
-	near = glm::max(vtek::kNearClippingPlaneMin, near);
-	if (!(far > near))
-	{
-		vtek_log_warn(
-			"Camera's far-clipping plane has a lower value than near -- {}",
-			"far will be set to 'near + 100'!");
-		far = near + 100.0f;
-	}
 
-	camera->fov = glm::radians(fovDegrees.get());
-	camera->windowSize = windowSize;
-	camera->clippingPlanes = { near, far };
 
-	if (camera->projectionBehaviour != nullptr)
-	{
-		delete camera->projectionBehaviour;
-	}
-	camera->projectionBehaviour = new PerspectiveBehaviour();
-	camera->projectionBehaviour->CreateProjectionMatrix(camera);
-}
-
-void vtek::camera_set_perspective_focal(
-	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far,
-	float lensFocalLengthMm, float sensorWidthMm)
-{
-	float fov = 2.0f * glm::atan(sensorWidthMm / (2.0f * lensFocalLengthMm));
-	vtek::camera_set_perspective(
-		camera, windowSize, near, far, glm::degrees(fov));
-}
-
-void vtek::camera_set_orthographic(
-	vtek::Camera* camera, glm::uvec2 windowSize, float near, float far)
-{
-	near = glm::max(vtek::kNearClippingPlaneMin, near);
-	if (!(far > near))
-	{
-		vtek_log_warn(
-			"Camera's far-clipping plane has a lower value than near -- {}",
-			"far will be set to 'near + 100'!");
-		far = near + 100.0f;
-	}
-
-	camera->fov = glm::radians(45.0f);
-	camera->windowSize = windowSize;
-	camera->clippingPlanes = { near, far };
-
-	if (camera->projectionBehaviour != nullptr)
-	{
-		delete camera->projectionBehaviour;
-	}
-	camera->projectionBehaviour = new OrthographicBehaviour();
-	camera->projectionBehaviour->CreateProjectionMatrix(camera);
-}
 
 // ===================== //
 // === Camera update === //
 // ===================== //
 void vtek::camera_update(vtek::Camera* camera)
 {
-	camera->fUpdate(camera);
+	camera->modeBehaviour->Update(camera);
 }
 
 
@@ -721,7 +595,7 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 		camera->lastX = x;
 		camera->lastY = y;
 	}
-	camera->fMouseMove(camera, x, y);
+	camera->modeBehaviour->OnMouseMove(camera, x, y);
 }
 
 void vtek::camera_on_mouse_scroll(Camera* camera, double x, double y)
@@ -736,12 +610,12 @@ void vtek::camera_on_mouse_scroll(Camera* camera, double x, double y)
 // ======================= //
 void vtek::camera_roll_left_radians(vtek::Camera* camera, float angle)
 {
-	camera->fRoll(camera, angle);
+	camera->modeBehaviour->CameraRoll(camera, angle);
 }
 
 void vtek::camera_roll_right_radians(vtek::Camera* camera, float angle)
 {
-	camera->fRoll(camera, -angle);
+	camera->modeBehaviour->CameraRoll(camera, -angle);
 }
 
 void vtek::camera_pitch_up_radians(vtek::Camera* camera, float angle)

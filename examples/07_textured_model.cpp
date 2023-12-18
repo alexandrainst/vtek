@@ -259,7 +259,7 @@ int main()
 	windowInfo.title = "vtek example 07: Drawing a textured model";
 	windowInfo.resizeable = false;
 	windowInfo.cursorDisabled = true;
-	windowInfo.width = 1920;
+	windowInfo.width = 1980;
 	windowInfo.height = 1080;
 	windowInfo.fullscreen = false;
 	gWindow = vtek::window_create(&windowInfo);
@@ -379,21 +379,25 @@ int main()
 	}
 
 	// Camera
-	vtek::CameraInfo cameraInfo{};
 	// NOTE: Experiment freely with these settings!
+	vtek::CameraModeInfo cameraModeInfo{};
+	cameraModeInfo.mode = vtek::CameraMode::orbit_free;
+	cameraModeInfo.front = {0.5990349f, 0.7475561f, 0.28690946f};
+	cameraModeInfo.up = {-0.18743359f, -0.21744627f, 0.95790696f};
+	cameraModeInfo.orbitDistance = 1.0f;
+	cameraModeInfo.orbitDistanceClamp = {0.2f, 10.0f};
+	vtek::CameraProjectionInfo cameraProjInfo{};
+	cameraProjInfo.projection = vtek::CameraProjection::perspective;
+	cameraProjInfo.viewportSize = windowSize;
+	cameraProjInfo.clipPlanes = { 0.1f, 100.0f };
+	cameraProjInfo.fovDegrees = 45.0f;
+	cameraProjInfo.fovFromAspectRatio = false;
+	cameraProjInfo.useFocalLength = false;
+	vtek::CameraInfo cameraInfo{};
 	cameraInfo.worldSpaceHandedness = vtek::CameraHandedness::right_handed;
 	cameraInfo.position = glm::vec3(-2.0968692f, -2.5813563f, -1.4253441f);
-	cameraInfo.mode = vtek::CameraMode::freeform;
-	cameraInfo.front = {0.5990349f, 0.7475561f, 0.28690946f};
-	cameraInfo.up = {-0.18743359f, -0.21744627f, 0.95790696f};
-	cameraInfo.orbitDistance = 1.0f;
-	cameraInfo.orbitDistanceClamp = {0.2f, 10.0f};
-	cameraInfo.projection = vtek::CameraProjection::perspective;
-	cameraInfo.viewportSize = windowSize;
-	cameraInfo.clipPlanes = { 0.1f, 100.0f };
-	cameraInfo.fovDegrees = 45.0f;
-	cameraInfo.fovFromAspectRatio = false;
-	cameraInfo.useFocalLength = false;
+	cameraInfo.modeInfo = &cameraModeInfo;
+	cameraInfo.projectionInfo = &cameraProjInfo;
 	gCamera = vtek::camera_create(&cameraInfo);
 	if (gCamera == nullptr)
 	{
