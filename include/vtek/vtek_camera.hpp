@@ -77,9 +77,15 @@ namespace vtek
 	constexpr float kNearClippingPlaneMin = 0.1f;
 
 	// For clamping camera field-of-view (fov) to a sensible value [10,180].
-	using FovClamp = FloatClamp<10.0f, 180.0f>;
-	using FovClampRadians = FloatClamp<glm::radians(10.0f), glm::radians(180.0f)>;
+	using FovClamp = FloatClamp<10.0f, 135.0f>;
+	using FovClampRadians = FloatClamp<glm::radians(10.0f), glm::radians(135.0f)>;
 
+
+	struct CameraSensitivityInfo
+	{
+		float mouseMoveSensitivity {0.001f};
+		float mouseScrollSpeed {0.1f};
+	};
 
 	struct CameraModeInfo
 	{
@@ -113,6 +119,10 @@ namespace vtek
 		// 45 is considered the canonical value.
 		FovClamp fovDegrees {45.0f};
 
+		// TODO: Could alternatively provide float fov and an explicit clamp range!
+		// float fovDegrees {45.0f};
+		// glm::vec2 fovClampDegrees {10.0f, 135.0f};
+
 		// Instead of explicit FOV, calculate it from the viewport aspect ratio.
 		// This will result in the scene getting stretched according to viewport
 		// dimensions, so that objects will always take up the same amount of
@@ -142,6 +152,9 @@ namespace vtek
 		// the point-of-interest being looked at, instead of the actual camera
 		// location which is computed automatically.
 		glm::vec3 position {0.0f, 0.0f, 0.0f};
+
+		// Sensitivity info for how camera reacts to input. Must be provided.
+		CameraSensitivityInfo* sensitivityInfo {nullptr};
 
 		// Camera orientation, ie. external matrix. Must be provided.
 		CameraModeInfo* modeInfo {nullptr};

@@ -380,6 +380,9 @@ int main()
 
 	// Camera
 	// NOTE: Experiment freely with these settings!
+	vtek::CameraSensitivityInfo cameraSensInfo{};
+	cameraSensInfo.mouseMoveSensitivity = 0.001f;
+	cameraSensInfo.mouseScrollSpeed = 0.1f;
 	vtek::CameraModeInfo cameraModeInfo{};
 	cameraModeInfo.mode = vtek::CameraMode::orbit_free;
 	cameraModeInfo.front = {0.5990349f, 0.7475561f, 0.28690946f};

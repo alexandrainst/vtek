@@ -36,6 +36,7 @@ struct vtek::Camera
 	float mouseScrollSpeed {0.1f};
 	float lastX {0.0f};
 	float lastY {0.0f};
+	glm::vec2 mouseScroll {0.0f, 0.0f};
 
 	// Euler-angle constraints
 	bool constrainPitch {false}; // TODO: This goes away.
@@ -79,6 +80,11 @@ struct vtek::Camera
 
 class PerspectiveBehaviour :  public CameraProjectionBehaviour
 {
+public:
+	PerspectiveBehaviour(bool fovScroll)
+	{
+		this.fovScroll = fovScroll;
+	}
 	void CreateProjectionMatrix(vtek::Camera* camera) override
 	{
 		float fov = camera->fov.get();
@@ -102,8 +108,12 @@ class PerspectiveBehaviour :  public CameraProjectionBehaviour
 	}
 	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
 	{
-		camera->fov -= y * camera->mouseScrollSpeed;
-		CreateProjectionMatrix(camera);
+		// NEXT: Convert this to static behaviour!
+		if (fovScroll)
+		{
+			camera->fov -= y * camera->mouseScrollSpeed;
+			CreateProjectionMatrix(camera);
+		}
 	}
 	void CameraMoveForward(vtek::Camera* camera, float dist) override
 	{
@@ -113,6 +123,8 @@ class PerspectiveBehaviour :  public CameraProjectionBehaviour
 	{
 		camera->position -= camera->front * dist;
 	}
+private:
+	bool fovScroll;
 };
 
 class OrthographicBehaviour : public CameraProjectionBehaviour
@@ -276,16 +288,17 @@ class OrbitFreeModeBehaviour : public FreeformModeBehaviour
 	}
 	void Update(vtek::Camera* camera) override
 	{
+		orbitPoint = camera->position + (camera->front * orbitDistance);
+
 		const glm::quat& q = camera->orientation;
 
 		camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, 1.0f));
 		camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 1.0f, 0.0f));
 		camera->right = glm::normalize(glm::cross(-camera->up, camera->front));
 
-		orbitPoint = camera->position - (camera->front * orbitDistance);
+		camera->position = orbitPoint - (camera->front * orbitDistance);
 
-		camera->viewMatrix =
-			glm::translate(glm::mat4_cast(q), camera->position - orbitPoint);
+		camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
 	}
 
 private:
@@ -409,6 +422,10 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 	}
 	camera->clippingPlanes = { near, far };
 
+	// If mouse scroll wheel will zoom in/out by modifying the camera's FOV.
+	// This behaviour is disabled for orbiting cameras.
+	bool fovScroll = true;
+
 	// Camera orientation, ie. external matrix
 	switch (modeInfo->mode)
 	{
@@ -423,9 +440,11 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 		break;
 	case vtek::CameraMode::orbit_free:
 		camera->modeBehaviour = new OrbitFreeModeBehaviour();
+		fovScroll = false;
 		break;
 	case vtek::CameraMode::orbit_fps:
 		camera->modeBehaviour = new OrbitFpsModeBehaviour();
+		fovScroll = false;
 		break;
 	default:
 		vtek_log_error("vtek::camera_create(): Invalid camera mode!");
@@ -454,7 +473,7 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 	camera->projectionBehaviour =
 		(projInfo->projection == vtek::CameraProjection::orthographic)
 		? (CameraProjectionBehaviour*) (new OrthographicBehaviour())
-		: (CameraProjectionBehaviour*) (new PerspectiveBehaviour());
+		: (CameraProjectionBehaviour*) (new PerspectiveBehaviour(fovScroll));
 	camera->projectionBehaviour->CreateProjectionMatrix(camera);
 
 	return camera;
@@ -600,6 +619,7 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 
 void vtek::camera_on_mouse_scroll(Camera* camera, double x, double y)
 {
+	camera->mouseScroll += glm::vec2(x, y) * camera->mouseScrollSpeed;
 	camera->projectionBehaviour->OnMouseScroll(camera, x, y);
 }
 
