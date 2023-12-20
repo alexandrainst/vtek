@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.h>
 #include <type_traits>
 
+#include "vtek_glm_includes.hpp"
+
 
 namespace vtek
 {
@@ -11,19 +13,40 @@ namespace vtek
 	// ========================= //
 	// This class can be used to capture a range, e.g. a depth range
 	// which is required for viewport state during pipeline creation.
-	class FloatRange
+	// The range may be specified at runtime.
+	template<class T>
+	requires std::is_arithmetic_v<T>
+	class ValueRange
 	{
 	public:
-		FloatRange() : fmin(0.0f), fmax(0.0f) {}
-		FloatRange(float f1, float f2) {
-			fmin = (f1 < f2) ? f1 : f2;
-			fmax = (f1 > f2) ? f1 : f2;
+		ValueRange() : mmin(T{0}), mmax(T{0}) {}
+		ValueRange(T _min, T _max)
+			: mmin(std::min(_min, _max)), mmax(std::max(_min, _max)) {}
+		ValueRange(const ValueRange<T>& _vr)
+			: mmin(_vr.mmin), mmax(_vr.mmax) {}
+
+		inline ValueRange<T>& operator= (const glm::tvec2<T>& vec) {
+			mmin = std::min(vec.x, vec.y);
+			mmax = std::max(vec.x, vec.y);
+			return *this;
 		}
-		float min() const { return fmin; }
-		float max() const { return fmax; }
+		inline ValueRange<T>& operator= (const ValueRange<T>& _vr) {
+			mmin = _vr.mmin;
+			mmax = _vr.mmax;
+			return *this;
+		}
+
+		T min() const { return mmin; }
+		T max() const { return mmax; }
+		inline T clamp(T _val) const { return glm::clamp(_val, mmin, mmax); }
+
 	private:
-		float fmin, fmax;
+		T mmin;
+		T mmax;
 	};
+
+	// ValueRange specializations
+	using FloatRange = ValueRange<float>;
 
 
 	// This class is used to clamp a value within a certain range. Templated

@@ -83,25 +83,9 @@ namespace vtek
 
 	struct CameraSensitivityInfo
 	{
-		float mouseMoveSensitivity {0.001f};
+		float mouseMoveSpeed {0.001f};
 		float mouseScrollSpeed {0.1f};
-	};
-
-	struct CameraModeInfo
-	{
-		CameraMode mode {CameraMode::freeform};
-
-		// Front-facing direction of the camera.
-		glm::vec3 front {1.0f, 0.0f, 0.0f};
-
-		// Up-vector for the camera rotation. For fps-style cameras, this vector
-		// is used as the "up"-axis (need not be axis-aligned).
-		glm::vec3 up {0.0f, 0.0f, 1.0f};
-
-		// If camera mode is set to orbiting, these fields specify the initial
-		// oribiting distance as well as the permitted orbiting range.
-		float orbitDistance {1.0f};
-		glm::vec2 orbitDistanceClamp {0.1f, 100.0f};
+		float cameraRollSpeed {0.025f};
 	};
 
 	struct CameraProjectionInfo
@@ -140,8 +124,28 @@ namespace vtek
 		float sensorWidthMm {10.0f};
 	};
 
+	struct CameraOrbitInfo
+	{
+		// Initial distance between the camera and the orbiting point.
+		float orbitDistance {1.0f};
+
+		// Permitted distance range between camera and orbiting point.
+		vtek::FloatRange orbitRange {vtek::FloatRange(0.1f, 100.0f)};
+	};
+
+	struct CameraFpsInfo
+	{
+		// Specifies range in which to clamp the camera pitch. No matter the
+		// provided values, min and max will always be the [-89,89] range,
+		// with min being the down angle and max being the up angle.
+		vtek::FloatRange pitchRange {vtek::FloatRange(-89.0f, 89.0f)};
+	};
+
 	struct CameraInfo
 	{
+		// The camera mode, ie. the type of camera to simulate.
+		CameraMode mode {CameraMode::freeform};
+
 		// In order to suit the needs of various rendering platforms, we may
 		// specify the handedness of the world space coordinate system in which
 		// the camera is placed. This does not change the internal behaviour of
@@ -153,14 +157,25 @@ namespace vtek
 		// location which is computed automatically.
 		glm::vec3 position {0.0f, 0.0f, 0.0f};
 
-		// Sensitivity info for how camera reacts to input. Must be provided.
+		// Front-facing direction of the camera.
+		glm::vec3 front {1.0f, 0.0f, 0.0f};
+
+		// Up-vector for the camera rotation. For fps-style cameras, this vector
+		// is used as the "up"-axis (need not be axis-aligned).
+		glm::vec3 up {0.0f, 0.0f, 1.0f};
+
+		// Sensitivity info for how camera reacts to input. When not provided,
+		// default values will be applied.
 		CameraSensitivityInfo* sensitivityInfo {nullptr};
 
-		// Camera orientation, ie. external matrix. Must be provided.
-		CameraModeInfo* modeInfo {nullptr};
-
-		// Camera projection, ie. internal matrix. Must be provided.
+		// Camera projection, ie. internal matrix. When not provided, default
+		// values will be applied.
 		CameraProjectionInfo* projectionInfo {nullptr};
+
+		// When camera mode is set to orbit, orbiting behaviour will be applied
+		// from this struct, unless not provided in which case defaults will be
+		// applied. Ignored for non-orbiting cameras.
+		CameraOrbitInfo* orbitInfo {nullptr};
 	};
 
 	Camera* camera_create(const CameraInfo* info);
@@ -198,7 +213,8 @@ namespace vtek
 	void camera_change_projection(Camera* camera, const CameraProjectionInfo* info);
 
 	// TODO: Not implemented!
-	void camera_change_mode(Camera* camera, const CameraModeInfo* info);
+	// TODO: Specify interface?
+	void camera_change_mode(Camera* camera, CameraMode mode);
 
 
 

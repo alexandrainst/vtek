@@ -10,7 +10,6 @@ class CameraProjectionBehaviour
 public:
 	virtual ~CameraProjectionBehaviour() {}
 	virtual void CreateProjectionMatrix(vtek::Camera* camera) = 0;
-	virtual void OnMouseScroll(vtek::Camera* camera, double x, double y) = 0;
 	virtual void CameraMoveForward(vtek::Camera* camera, float dist) = 0;
 	virtual void CameraMoveBackward(vtek::Camera* camera, float dist) = 0;
 };
@@ -19,8 +18,9 @@ class CameraModeBehaviour
 {
 public:
 	virtual ~CameraModeBehaviour() {}
-	virtual void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) = 0;
+	virtual void Init(vtek::Camera* camera, const vtek::CameraInfo* info) = 0;
 	virtual void OnMouseMove(vtek::Camera* camera, double x, double y) = 0;
+	virtual void OnMouseScroll(vtek::Camera* camera, double x, double y) = 0;
 	virtual void CameraRoll(vtek::Camera* camera, float angle) = 0;
 	virtual void Update(vtek::Camera* camera) = 0;
 };
@@ -81,10 +81,6 @@ struct vtek::Camera
 class PerspectiveBehaviour :  public CameraProjectionBehaviour
 {
 public:
-	PerspectiveBehaviour(bool fovScroll)
-	{
-		this.fovScroll = fovScroll;
-	}
 	void CreateProjectionMatrix(vtek::Camera* camera) override
 	{
 		float fov = camera->fov.get();
@@ -106,15 +102,6 @@ public:
 			glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
 		camera->projectionMatrix = correction * camera->projectionMatrix;
 	}
-	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
-	{
-		// NEXT: Convert this to static behaviour!
-		if (fovScroll)
-		{
-			camera->fov -= y * camera->mouseScrollSpeed;
-			CreateProjectionMatrix(camera);
-		}
-	}
 	void CameraMoveForward(vtek::Camera* camera, float dist) override
 	{
 		camera->position += camera->front * dist;
@@ -123,8 +110,6 @@ public:
 	{
 		camera->position -= camera->front * dist;
 	}
-private:
-	bool fovScroll;
 };
 
 class OrthographicBehaviour : public CameraProjectionBehaviour
@@ -149,11 +134,6 @@ class OrthographicBehaviour : public CameraProjectionBehaviour
 			glm::vec4(0.0f,  0.0f, 0.5f, 1.0f));
 		camera->projectionMatrix = correction * camera->projectionMatrix;
 	}
-	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
-	{
-		camera->fov -= y * camera->mouseScrollSpeed;
-		CreateProjectionMatrix(camera);
-	}
 	void CameraMoveForward(vtek::Camera* camera, float dist) override
 	{
 		zoomOffset -= dist * camera->mouseScrollSpeed * 2.0f;
@@ -173,7 +153,7 @@ private:
 /* Implementation of camera modes */
 class FreeformModeBehaviour : public CameraModeBehaviour
 {
-	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
+	void Init(vtek::Camera* camera, const vtek::CameraInfo* info) override
 	{
 
 	}
@@ -197,6 +177,11 @@ class FreeformModeBehaviour : public CameraModeBehaviour
 		glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
 		camera->orientation = glm::normalize(yRotor * camera->orientation);
 	}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
+	{
+		camera->fov -= y * camera->mouseScrollSpeed;
+		camera->projectionBehaviour->CreateProjectionMatrix(camera);
+	}
 	void CameraRoll(vtek::Camera* camera, float angle) override
 	{
 		angle *= 0.5f;
@@ -219,7 +204,7 @@ class FreeformModeBehaviour : public CameraModeBehaviour
 
 class FpsModeBehaviour : public CameraModeBehaviour
 {
-	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
+	void Init(vtek::Camera* camera, const vtek::CameraInfo* info) override
 	{
 
 	}
@@ -252,6 +237,10 @@ class FpsModeBehaviour : public CameraModeBehaviour
 		glm::quat yRotor = glm::quat(yCos, ySin*glm::vec3(1, 0, 0));
 		camera->orientation = glm::normalize(yRotor * camera->orientation);
 	}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
+	{
+
+	}
 	void CameraRoll(vtek::Camera* camera, float angle) override {};
 	void Update(vtek::Camera* camera) override
 	{
@@ -262,11 +251,15 @@ class FpsModeBehaviour : public CameraModeBehaviour
 
 class FpsGroundedModeBehaviour : public CameraModeBehaviour
 {
-	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
+	void Init(vtek::Camera* camera, const vtek::CameraInfo* info) override
 	{
 
 	}
 	void OnMouseMove(vtek::Camera* camera, double x, double y) override
+	{
+
+	}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
 	{
 
 	}
@@ -279,41 +272,64 @@ class FpsGroundedModeBehaviour : public CameraModeBehaviour
 
 class OrbitFreeModeBehaviour : public FreeformModeBehaviour
 {
-	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
+public:
+	void Init(vtek::Camera* camera, const vtek::CameraInfo* info) override
 	{
-		vtek_log_debug("OrbitFreeModeBehaviour::Init()");
-		orbitDistance = info->orbitDistance;
-		orbitDistanceClamp = info->orbitDistanceClamp;
-		orbitPoint = camera->position + (camera->front * orbitDistance);
+		if (info->orbitInfo == nullptr)
+		{
+			// default values
+			vtek::CameraOrbitInfo orbitInfo{};
+			orbitRange = orbitInfo.orbitRange;
+			orbitDist = orbitRange.clamp(orbitInfo.orbitDistance);
+		}
+		else
+		{
+			vtek::CameraOrbitInfo& orbitInfo = *info->orbitInfo;
+			orbitRange = orbitInfo.orbitRange;
+			orbitDist = orbitRange.clamp(orbitInfo.orbitDistance);
+		}
+
+		orbitPoint = info->position;
+		camera->position = orbitPoint - (orbitDist * camera->front);
+	}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
+	{
+		orbitDist = orbitRange.clamp(orbitDist - y * camera->mouseScrollSpeed);
+		camera->position = orbitPoint - (orbitDist * camera->front);
 	}
 	void Update(vtek::Camera* camera) override
 	{
-		orbitPoint = camera->position + (camera->front * orbitDistance);
+		// Camera may have been moved by input, which directly translates to
+		// the orbiting point being moved.
+		orbitPoint = camera->position + (camera->front * orbitDist);
 
 		const glm::quat& q = camera->orientation;
-
 		camera->front = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 0.0f, 1.0f));
 		camera->up = glm::rotate(glm::conjugate(q), glm::vec3(0.0f, 1.0f, 0.0f));
 		camera->right = glm::normalize(glm::cross(-camera->up, camera->front));
 
-		camera->position = orbitPoint - (camera->front * orbitDistance);
+		camera->position = orbitPoint - (camera->front * orbitDist);
 
 		camera->viewMatrix = glm::translate(glm::mat4_cast(q), camera->position);
 	}
 
 private:
-	float orbitDistance {1.0f};
-	glm::vec2 orbitDistanceClamp {0.1f, 100.0f};
-	glm::vec3 orbitPoint;
+	float orbitDist {1.0f};
+	vtek::FloatRange orbitRange {};
+	glm::vec3 orbitPoint {0.0f, 0.0f, 0.0f};
 };
 
 class OrbitFpsModeBehaviour : public CameraModeBehaviour
 {
-	void Init(vtek::Camera* camera, const vtek::CameraModeInfo* info) override
+	void Init(vtek::Camera* camera, const vtek::CameraInfo* info) override
 	{
 
 	}
 	void OnMouseMove(vtek::Camera* camera, double x, double y) override
+	{
+
+	}
+	void OnMouseScroll(vtek::Camera* camera, double x, double y) override
 	{
 
 	}
@@ -358,6 +374,9 @@ static void set_default_lookat(vtek::Camera* camera, glm::vec3 up, glm::vec3 fro
 		// https://github.com/g-truc/glm/pull/659
 		camera->orientation = glm::conjugate(glm::quatLookAt(-front, up));
 	}
+
+	camera->front = front;
+	camera->up = up;
 }
 
 static void set_fps_lookat(vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 front)
@@ -380,6 +399,8 @@ static void set_fps_lookat(vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 fro
 	}
 
 	camera->orientation = glm::conjugate(glm::quatLookAt(-front, upAxis));
+	camera->front = front;
+	camera->up = upAxis;
 }
 
 
@@ -387,16 +408,15 @@ static void set_fps_lookat(vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 fro
 /* interface */
 vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 {
-	CameraModeInfo* modeInfo = info->modeInfo;
-	CameraProjectionInfo* projInfo = info->projectionInfo;
-
-	if (modeInfo == nullptr || projInfo == nullptr)
+	if (info == nullptr || info->projectionInfo == nullptr)
 	{
 		vtek_log_error(
 			"vtek::camera_create(): {}",
-			"Both modeInfo and projectionInfo must be provided!");
+			"info must be provided, and projectionInfo must be non-null!");
 		return nullptr;
 	}
+
+	const CameraProjectionInfo* projInfo = info->projectionInfo;
 	if (projInfo->viewportSize.x * projInfo->viewportSize.y == 0)
 	{
 		vtek_log_error("vtek::camera_create(): Viewport size must be set!");
@@ -407,9 +427,23 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 	// TODO: Accommodate for camera handedness.
 
 	camera->position = info->position;
-	camera->mode = modeInfo->mode;
+	camera->mode = info->mode;
 	camera->viewportSize.x = static_cast<float>(projInfo->viewportSize.x);
 	camera->viewportSize.y = static_cast<float>(projInfo->viewportSize.y);
+
+	// camera sensitivity settings
+	if (info->sensitivityInfo == nullptr)
+	{
+		vtek::CameraSensitivityInfo sensInfo{};
+		camera->mouseSensitivity = sensInfo.mouseMoveSpeed;
+		camera->mouseScrollSpeed = sensInfo.mouseScrollSpeed;
+	}
+	else
+	{
+		vtek::CameraSensitivityInfo& sensInfo = *info->sensitivityInfo;
+		camera->mouseSensitivity = sensInfo.mouseMoveSpeed;
+		camera->mouseScrollSpeed = sensInfo.mouseScrollSpeed;
+	}
 
 	float near = glm::max(vtek::kNearClippingPlaneMin, projInfo->clipPlanes.x);
 	float far = projInfo->clipPlanes.y;
@@ -422,12 +456,8 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 	}
 	camera->clippingPlanes = { near, far };
 
-	// If mouse scroll wheel will zoom in/out by modifying the camera's FOV.
-	// This behaviour is disabled for orbiting cameras.
-	bool fovScroll = true;
-
 	// Camera orientation, ie. external matrix
-	switch (modeInfo->mode)
+	switch (info->mode)
 	{
 	case vtek::CameraMode::freeform:
 		camera->modeBehaviour = new FreeformModeBehaviour();
@@ -440,19 +470,17 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 		break;
 	case vtek::CameraMode::orbit_free:
 		camera->modeBehaviour = new OrbitFreeModeBehaviour();
-		fovScroll = false;
 		break;
 	case vtek::CameraMode::orbit_fps:
 		camera->modeBehaviour = new OrbitFpsModeBehaviour();
-		fovScroll = false;
 		break;
 	default:
 		vtek_log_error("vtek::camera_create(): Invalid camera mode!");
 		delete camera;
 		return nullptr;
 	}
-	set_default_lookat(camera, modeInfo->up, modeInfo->front); // TODO: Custom behaviour!
-	camera->modeBehaviour->Init(camera, modeInfo);
+	set_default_lookat(camera, info->up, info->front); // TODO: Custom behaviour!
+	camera->modeBehaviour->Init(camera, info);
 
 	// Camera projection, ie. internal matrix
 	if (projInfo->useFocalLength)
@@ -473,7 +501,7 @@ vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 	camera->projectionBehaviour =
 		(projInfo->projection == vtek::CameraProjection::orthographic)
 		? (CameraProjectionBehaviour*) (new OrthographicBehaviour())
-		: (CameraProjectionBehaviour*) (new PerspectiveBehaviour(fovScroll));
+		: (CameraProjectionBehaviour*) (new PerspectiveBehaviour());
 	camera->projectionBehaviour->CreateProjectionMatrix(camera);
 
 	return camera;
@@ -499,7 +527,7 @@ void vtek::camera_change_projection(
 }
 
 void vtek::camera_change_mode(
-	vtek::Camera* camera, const vtek::CameraModeInfo* info)
+	vtek::Camera* camera, vtek::CameraMode mode)
 {
 
 }
@@ -620,7 +648,7 @@ void vtek::camera_on_mouse_move(vtek::Camera* camera, double x, double y)
 void vtek::camera_on_mouse_scroll(Camera* camera, double x, double y)
 {
 	camera->mouseScroll += glm::vec2(x, y) * camera->mouseScrollSpeed;
-	camera->projectionBehaviour->OnMouseScroll(camera, x, y);
+	camera->modeBehaviour->OnMouseScroll(camera, x, y);
 }
 
 

@@ -381,14 +381,9 @@ int main()
 	// Camera
 	// NOTE: Experiment freely with these settings!
 	vtek::CameraSensitivityInfo cameraSensInfo{};
-	cameraSensInfo.mouseMoveSensitivity = 0.001f;
+	cameraSensInfo.mouseMoveSpeed = 0.001f;
 	cameraSensInfo.mouseScrollSpeed = 0.1f;
-	vtek::CameraModeInfo cameraModeInfo{};
-	cameraModeInfo.mode = vtek::CameraMode::orbit_free;
-	cameraModeInfo.front = {0.5990349f, 0.7475561f, 0.28690946f};
-	cameraModeInfo.up = {-0.18743359f, -0.21744627f, 0.95790696f};
-	cameraModeInfo.orbitDistance = 1.0f;
-	cameraModeInfo.orbitDistanceClamp = {0.2f, 10.0f};
+	cameraSensInfo.cameraRollSpeed = ;
 	vtek::CameraProjectionInfo cameraProjInfo{};
 	cameraProjInfo.projection = vtek::CameraProjection::perspective;
 	cameraProjInfo.viewportSize = windowSize;
@@ -396,11 +391,18 @@ int main()
 	cameraProjInfo.fovDegrees = 45.0f;
 	cameraProjInfo.fovFromAspectRatio = false;
 	cameraProjInfo.useFocalLength = false;
+	vtek::CameraOrbitInfo cameraOrbitInfo{};
+	cameraOrbitInfo.orbitDistance = 3.0f;
+	cameraOrbitInfo.orbitRange = vtek::FloatRange(0.2f, 10.0f);
 	vtek::CameraInfo cameraInfo{};
+	cameraInfo.mode = vtek::CameraMode::orbit_free;
 	cameraInfo.worldSpaceHandedness = vtek::CameraHandedness::right_handed;
 	cameraInfo.position = glm::vec3(-2.0968692f, -2.5813563f, -1.4253441f);
-	cameraInfo.modeInfo = &cameraModeInfo;
+	cameraInfo.front = {0.5990349f, 0.7475561f, 0.28690946f};
+	cameraInfo.up = {-0.18743359f, -0.21744627f, 0.95790696f};
+	cameraInfo.sensitivityInfo = &cameraSensInfo;
 	cameraInfo.projectionInfo = &cameraProjInfo;
+	cameraInfo.orbitInfo = &cameraOrbitInfo;
 	gCamera = vtek::camera_create(&cameraInfo);
 	if (gCamera == nullptr)
 	{
