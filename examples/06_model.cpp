@@ -390,19 +390,22 @@ int main()
 	}
 
 	// Camera
+	vtek::CameraProjectionInfo cameraProjInfo{};
+	cameraProjInfo.projection = vtek::CameraProjection::perspective;
+	cameraProjInfo.viewportSize = windowSize;
 	vtek::CameraInfo cameraInfo{};
+	cameraInfo.mode = vtek::CameraMode::freeform;
+	cameraInfo.worldSpaceHandedness = vtek::CameraHandedness::right_handed;
 	cameraInfo.position = glm::vec3(8.0f, 0.0f, 0.0f);
+	cameraInfo.front = {-1.0f, 0.0f, 0.0f};
+	cameraInfo.up = {0.0f, 0.0f, 1.0f};
+	cameraInfo.projectionInfo = &cameraProjInfo;
 	gCamera = vtek::camera_create(&cameraInfo);
 	if (gCamera == nullptr)
 	{
 		log_error("Failed to create camera!");
 		return -1;
 	}
-	glm::vec3 camFront {-1.0f, 0.0f, 0.0f};
-	glm::vec3 camUp {0.0f, 0.0f, 1.0f};
-	vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
-	float camFov = 45.0f; // NOTE: Experiment.
-	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
 	// TODO: Maybe for this application, use FPS-game style camera instead?
 	// TODO: It's also a good opportunity to test if the camera supports it properly
 

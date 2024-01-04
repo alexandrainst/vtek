@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <cstdint>
+#include <string_view>
 
 #include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
@@ -395,10 +396,13 @@ namespace vtek
 		bool operator==(Format _format) const;
 
 		// Check validity
-		inline bool is_valid() { return format != Format::undefined; }
+		inline bool is_valid() const { return format != Format::undefined; }
 
 		// Get the underlying Vulkan format
 		VkFormat get() const;
+
+		// Get format string for print debugging or visual display
+		std::string_view get_format_string() const;
 
 		// Retrieve format properties
 		FormatChannels get_num_channels() const;
@@ -418,7 +422,7 @@ namespace vtek
 		FormatStorageType get_storage_type() const;
 		EnumBitmask<FormatFeature> get_supported_features() const;
 
-		inline bool has_feature(FormatFeature feature) {
+		inline bool has_feature(FormatFeature feature) const {
 			return features.has_flag(feature);
 		}
 

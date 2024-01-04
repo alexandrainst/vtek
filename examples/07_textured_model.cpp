@@ -383,7 +383,6 @@ int main()
 	vtek::CameraSensitivityInfo cameraSensInfo{};
 	cameraSensInfo.mouseMoveSpeed = 0.001f;
 	cameraSensInfo.mouseScrollSpeed = 0.1f;
-	cameraSensInfo.cameraRollSpeed = ;
 	vtek::CameraProjectionInfo cameraProjInfo{};
 	cameraProjInfo.projection = vtek::CameraProjection::perspective;
 	cameraProjInfo.viewportSize = windowSize;

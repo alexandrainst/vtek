@@ -1,4 +1,5 @@
 #include <vtek/vtek.hpp>
+#include <iostream>
 
 /* global data */
 vtek::ApplicationWindow* gWindow = nullptr;
@@ -55,7 +56,7 @@ void update_movement()
 
 bool update_uniform(vtek::Buffer* buffer, vtek::Device* device)
 {
-	vtek::Uniform_v2 uniform {v2 = gMoveOffset};
+	vtek::Uniform_v2 uniform {.v2 = gMoveOffset};
 	vtek::BufferRegion region {.offset = 0, .size = uniform.size()};
 
 	if (!vtek::buffer_write_data(buffer, &uniform, &region, device))
@@ -180,8 +181,8 @@ int main()
 
 	// Framebuffer attachment formats
 	std::vector<vtek::Format> prioritizedColorFormats = {
-		vtek::format::r8g8b8_unorm,
-		vtek::format::r8g8b8a8_unorm
+		vtek::Format::r8g8b8_unorm,
+		vtek::Format::r8g8b8a8_unorm
 	};
 	vtek::SupportedFormat colorFormat;
 	vtek::FormatQuery framebufferFormatQuery{};
@@ -205,11 +206,17 @@ int main()
 	}
 
 	// Framebuffer
-	vtek::FramebufferInfo framebufferInfo{};
 	vtek::FramebufferAttachment colorAttachment{};
 	colorAttachment.type = vtek::AttachmentType::color;
-	framebufferInfo.attachments.push_back()
-	vtek::Framebuffer* framebuffer = vtek::framebuffer_create();
+	colorAttachment.supportedFormat = colorFormat;
+	vtek::FramebufferInfo framebufferInfo{};
+	framebufferInfo.attachments.push_back(colorAttachment);
+	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(&framebufferInfo, device);
+	if (framebuffer == nullptr)
+	{
+		log_error("Failed to create framebuffer!");
+		return 0;
+	}
 
 	// Graphics command pool
 	vtek::CommandPoolInfo commandPoolInfo{};

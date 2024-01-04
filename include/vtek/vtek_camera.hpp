@@ -85,7 +85,6 @@ namespace vtek
 	{
 		float mouseMoveSpeed {0.001f};
 		float mouseScrollSpeed {0.1f};
-		float cameraRollSpeed {0.025f};
 	};
 
 	struct CameraProjectionInfo

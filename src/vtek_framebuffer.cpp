@@ -64,8 +64,13 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	std::vector<vtek::Image2D*> images(info->attachments.size());
 	for (const auto& att: info->attachments)
 	{
-		imageInfo.supportedFormat = att.supportedFormat;
+		if (!att.supportedFormat.is_valid())
+		{
+			vtek_log_error("Framebuffer attachment format is not supported!");
+			return nullptr;
+		}
 
+		imageInfo.supportedFormat = att.supportedFormat;
 		switch (att.type)
 		{
 		case vtek::AttachmentType::color:
