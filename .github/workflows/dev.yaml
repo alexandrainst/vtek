@@ -1,0 +1,26 @@
+name: Test deployment of vtek master branch
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  # environment variables
+
+jobs:
+  build:
+    # runs on our own machine to not pay for github cloud machines
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Install app dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y ...
+
+
+
+
