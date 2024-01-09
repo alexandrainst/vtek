@@ -68,6 +68,48 @@ bool update_uniform(vtek::Buffer* buffer, vtek::Device* device)
 	return true;
 }
 
+bool recordCommandBuffer(
+	vtek::CommandBuffer* commandBuffer, vtek::GraphicsPipeline* pipeline,
+	vtek::Swapchain* swapchain, vtek::Framebuffer* framebuffer, uint32_t imageIndex,
+	vtek::Model* model, vtek::DescriptorSet* descriptorSet)
+{
+	// imaginative scenario:
+	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
+	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
+	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+
+	// 1) begin recording on the command buffer
+	if (!vtek::command_buffer_begin(commandBuffer))
+	{
+		log_error("Failed to begin command buffer {} recording!", imageIndex);
+		return false;
+	}
+
+	// 2) begin dynamic rendering on the framebuffer
+	if (!vtek::framebuffer_dynrender_begin(framebuffer))
+	{
+		log_error("Failed to begin dynamic rendering on framebuffer!");
+		return false;
+	}
+
+	// 3) bind pipeline and set dynamic states
+
+	// 4) bind and render each model, including descriptor sets and push constants
+
+	// 5) end dynamic rendering on the framebuffer
+
+	// 6) begin dynamic rendering on the swapchain
+
+	// 7) bind framebuffer targets for reading (descriptor sets?)
+
+	// 8) draw fullscreen quad
+
+	// 9) end dynamic rendering on the swapchain
+
+	// 10) end recording on the command buffer
+}
+
+
 
 int main()
 {

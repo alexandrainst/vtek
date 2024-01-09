@@ -8,10 +8,19 @@
 #include "vtek_queue.hpp"
 
 
+/* attachment helper struct */
+struct FramebufferAttachment
+{
+	// TODO: Can we have 1D or 3D or 4D framebuffer attachment?
+	// TODO: Should we?
+	vtek::Image2d* image {nullptr};
+};
+
 /* struct implementation */
 struct vtek::Framebuffer
 {
 	VkFramebuffer handle {VK_NULL_HANDLE};
+	std::vector<FramebufferAttachment> attachments {};
 };
 
 
@@ -40,7 +49,33 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	imageInfo.extent =  { info->resolution.x, info->resolution.y };
 	imageInfo.initialLayout = vtek::ImageInitialLayout::undefined; // default
 	imageInfo.useMipmaps = false; // default
-	imageInfo.multisampling = info->multisampling; // TODO: Does device support it?
+
+	// check multisampling support
+	vtek::SampleCountQuery msaaQuery{};
+	for (const auto& att : info->attachments)
+	{
+		if (att.type == vtek::AttachmentType::color) {
+			msaaQuery.color = true;
+		}
+		else if (att.type == vtek::AttachmentType::depth) {
+			msaaQuery.depth = true;
+		}
+		else if (att.type == vtek::AttachmentType::depth_stencil) {
+			msaaQuery.stencil = true;
+		}
+	}
+	auto supportedMsaa = vtek::device_get_max_sample_count(device, &msaaQuery);
+	auto requestedMsaa = vtek::get_multisample_count(info->multisampling);
+	if (requestedMsaa > supportedMsaa)
+	{
+		vtek_log_warn(
+			"Requested multisample count for framebuffer creation {}",
+			"exceeds device support! Clamping {} down to {}",
+			requestedMsaa, supportedMsaa);
+		requestedMsaa = supportedMsaa;
+	}
+	imageInfo.multisampling = vtek::get_multisample_enum(requestedMsaa);
+
 	imageInfo.usageFlags = vtek::ImageUsageFlag::sampled; // TODO: Do we need more flags?
 	imageInfo.sharingMode = vtek::ImageSharingMode::exclusive;
 	// Check if any of the queues that need to access the framebuffer are from
@@ -115,6 +150,11 @@ vtek::Framebuffer* vtek::framebuffer_create(
 }
 
 void vtek::framebuffer_destroy(vtek::Framebuffer* framebuffer)
+{
+
+}
+
+bool vtek::framebuffer_dynrender_begin(vtek::Framebuffer* framebuffer)
 {
 
 }

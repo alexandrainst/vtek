@@ -21,6 +21,23 @@ VkSampleCountFlagBits vtek::get_multisample_count(vtek::MultisampleType sample)
 	}
 }
 
+vtek::MultisampleType vtek::get_multisample_enum(VkSampleCountFlagBits count)
+{
+	switch (count)
+	{
+	case VK_SAMPLE_COUNT_1_BIT:  return vtek::MultisampleType::none;
+	case VK_SAMPLE_COUNT_2_BIT:  return vtek::MultisampleType::msaa_x2;
+	case VK_SAMPLE_COUNT_4_BIT:  return vtek::MultisampleType::msaa_x4;
+	case VK_SAMPLE_COUNT_8_BIT:  return vtek::MultisampleType::msaa_x8;
+	case VK_SAMPLE_COUNT_16_BIT: return vtek::MultisampleType::msaa_x16;
+	case VK_SAMPLE_COUNT_32_BIT: return vtek::MultisampleType::msaa_x32;
+	case VK_SAMPLE_COUNT_64_BIT: return vtek::MultisampleType::msaa_x64;
+	default:
+		vtek_log_error("vtek::get_multisample_enum(): Invalid count value!");
+		return vtek::MultisampleType::none;
+	}
+}
+
 VkCullModeFlags vtek::get_cull_mode(vtek::CullMode mode)
 {
 	switch (mode)

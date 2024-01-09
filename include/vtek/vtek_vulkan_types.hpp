@@ -16,6 +16,7 @@ namespace vtek
 	};
 
 	VkSampleCountFlagBits get_multisample_count(MultisampleType sample);
+	MultisampleType get_multisample_enum(VkSampleCountFlagBits count);
 
 
 	// Cull mode determines if any face of rendered polygons should be culled

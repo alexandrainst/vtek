@@ -17,7 +17,7 @@ namespace vtek
 		color, depth, depth_stencil
 	};
 
-	struct FramebufferAttachment
+	struct FramebufferAttachmentInfo
 	{
 		AttachmentType type {AttachmentType::color};
 		SupportedFormat supportedFormat {};
@@ -25,7 +25,7 @@ namespace vtek
 
 	struct FramebufferInfo
 	{
-		std::vector<FramebufferAttachment> attachments;
+		std::vector<FramebufferAttachmentInfo> attachments;
 		glm::uvec2 resolution {1,1};
 		vtek::MultisampleType multisampling {vtek::MultisampleType::none};
 		// A list of queues which need access to the framebuffer attachments.
@@ -35,4 +35,7 @@ namespace vtek
 	Framebuffer* framebuffer_create(
 		const FramebufferInfo* info, Device* device);
 	void framebuffer_destroy(Framebuffer* framebuffer);
+
+	bool framebuffer_dynrender_begin(Framebuffer* framebuffer);
+	void framebuffer_dynrender_end(Framebuffer* framebuffer);
 }

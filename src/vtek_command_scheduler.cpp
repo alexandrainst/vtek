@@ -106,6 +106,8 @@ vtek::CommandScheduler* vtek::command_scheduler_create(
 	// Place at start to enable custom allocator
 	auto scheduler = new vtek::CommandScheduler;
 
+	// TODO: The `info` struct is unused!
+
 	if (!create_pools(scheduler, device))
 	{
 		vtek_log_error("Failed to create all pools for command scheduler!");

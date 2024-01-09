@@ -407,10 +407,6 @@ static std::string_view get_format_string_helper(vtek::Format format)
 	case vfmt::r64g64b64_sfloat:         return "r64g64b64_sfloat";
 	case vfmt::r64g64b64a64_uint:        return "r64g64b64a64_uint";
 	case vfmt::r64g64b64a64_sint:        return "r64g64b64a64_sint";
-
-
-
-
 	case vfmt::r64g64b64a64_sfloat:     return "r64g64b64a64_sfloat";
 	case vfmt::b10g11r11_ufloat_pack32: return "b10g11r11_ufloat_pack32";
 	case vfmt::e5b9g9r9_ufloat_pack32:  return "e5b9g9r9_ufloat_pack32";
@@ -533,7 +529,6 @@ static std::string_view get_format_string_helper(vtek::Format format)
 	case vfmt::astc_10x10_sfloat_block:     return "astc_10x10_sfloat_block";
 	case vfmt::astc_12x10_sfloat_block:     return "astc_12x10_sfloat_block";
 	case vfmt::astc_12x12_sfloat_block:     return "astc_12x12_sfloat_block";
-
 
 	default:
 		vtek_log_error("vtek_format_support.cpp: unrecognized format enum!");
