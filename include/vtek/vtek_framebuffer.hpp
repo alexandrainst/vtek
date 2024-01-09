@@ -21,6 +21,7 @@ namespace vtek
 	{
 		AttachmentType type {AttachmentType::color};
 		SupportedFormat supportedFormat {};
+		glm::vec4 clearValue {0.0f};
 	};
 
 	struct FramebufferInfo
@@ -36,6 +37,7 @@ namespace vtek
 		const FramebufferInfo* info, Device* device);
 	void framebuffer_destroy(Framebuffer* framebuffer);
 
-	bool framebuffer_dynrender_begin(Framebuffer* framebuffer);
+	bool framebuffer_dynrender_begin(
+		Framebuffer* framebuffer, CommandBuffer* commandBuffer);
 	void framebuffer_dynrender_end(Framebuffer* framebuffer);
 }

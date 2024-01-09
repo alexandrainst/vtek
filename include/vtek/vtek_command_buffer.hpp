@@ -12,4 +12,6 @@ namespace vtek
 
 	bool command_buffer_begin(CommandBuffer* commandBuffer);
 	bool command_buffer_end(CommandBuffer* commandBuffer);
+
+	bool command_buffer_is_recording(CommandBuffer* commandBuffer);
 }

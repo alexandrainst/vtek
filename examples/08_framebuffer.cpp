@@ -212,6 +212,7 @@ int main()
 	swapchainInfo.prioritizeLowLatency = false;
 	swapchainInfo.framebufferWidth = gFramebufferWidth;
 	swapchainInfo.framebufferHeight = gFramebufferHeight;
+	// NOTE: Depth buffering is handled by the framebuffer!
 	swapchainInfo.depthBuffer = vtek::SwapchainDepthBuffer::none;
 	vtek::Swapchain* swapchain = vtek::swapchain_create(
 		&swapchainInfo, surface, physicalDevice, device);
@@ -251,6 +252,7 @@ int main()
 	vtek::FramebufferAttachment colorAttachment{};
 	colorAttachment.type = vtek::AttachmentType::color;
 	colorAttachment.supportedFormat = colorFormat;
+	colorAttachment.clearValue = {0.2f, 0.2f, 0.2f, 1.0f};
 	vtek::FramebufferInfo framebufferInfo{};
 	framebufferInfo.attachments.push_back(colorAttachment);
 	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(&framebufferInfo, device);

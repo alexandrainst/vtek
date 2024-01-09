@@ -105,3 +105,8 @@ bool vtek::command_buffer_end(vtek::CommandBuffer* commandBuffer)
 	commandBuffer->state = CBState::executable;
 	return true;
 }
+
+bool vtek::command_buffer_is_recording(vtek::CommandBuffer* commandBuffer)
+{
+	return commandBuffer->state == CBState::recording;
+}

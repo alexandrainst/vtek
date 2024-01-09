@@ -4,7 +4,7 @@
 initial_dir="$(pwd)"
 
 # travelling back until we are at VV/src/ directory
-while [ "$(pwd | awk -F/ '{print $NF}')" != "vclab-vtek" ];
+while [ "$(pwd | awk -F/ '{print $NF}')" != "vtek" ];
 do
     cd ..
     if [ "$(pwd)" == "/" ];

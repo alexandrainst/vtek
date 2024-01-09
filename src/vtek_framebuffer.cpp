@@ -13,15 +13,45 @@ struct FramebufferAttachment
 {
 	// TODO: Can we have 1D or 3D or 4D framebuffer attachment?
 	// TODO: Should we?
-	vtek::Image2d* image {nullptr};
+	vtek::Image2D* image {nullptr};
+	glm::vec4 clearValue {0.0f};
 };
 
 /* struct implementation */
 struct vtek::Framebuffer
 {
 	VkFramebuffer handle {VK_NULL_HANDLE};
-	std::vector<FramebufferAttachment> attachments {};
+	std::vector<FramebufferAttachment> colorAttachments {};
+	glm::uvec2 resolution {1,1};
 };
+
+
+/* helper functions */
+void color_memory_barrier_begin(
+	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment)
+{
+	// Transition from whatever (probably present src) to color attachment
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+	barrier.srcAccessMask = 0;
+	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	barrier.srcQueueFamilyIndex = ; // TODO: Graphics queue family index
+	barrier.dstQueueFamilyIndex = ; // TODO: Graphics queue family index ?
+	barrier.image = attachment.image;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0; // TODO: Would a framebuffer ever be mipped?
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
+		0, nullptr, 1, &barrier);
+}
 
 
 
@@ -146,6 +176,9 @@ vtek::Framebuffer* vtek::framebuffer_create(
 		return nullptr;
 	}
 
+	// Fill in data
+	framebuffer->resolution = info->resolution;
+
 	return framebuffer;
 }
 
@@ -154,7 +187,58 @@ void vtek::framebuffer_destroy(vtek::Framebuffer* framebuffer)
 
 }
 
-bool vtek::framebuffer_dynrender_begin(vtek::Framebuffer* framebuffer)
+bool vtek::framebuffer_dynrender_begin(
+	vtek::Framebuffer* framebuffer, vtek::CommandBuffer* commandBuffer)
 {
+	if (!vtek::command_buffer_is_recording(commandBuffer))
+	{
+		vtek_log_error(
+			"Command buffer is not recording -- cannot begin dynamic rendering!");
+		return false;
+	}
 
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+
+	// TODO: Transition for each color attachment
+	std::vector<VkRenderingAttachmentInfo> colorAttachmentInfos{};
+
+	for (auto& att : framebuffer->colorAttachments)
+	{
+		// Image memory barrier for each color attachment
+		color_memory_barrier_begin();
+
+		// Color attachment info for dynamic rendering
+		VkRenderingAttachmentInfo attachInfo{};
+		attachInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		attachInfo.pNext = nullptr;
+		attachInfo.imageView = vtek::image2d_get_view_handle(att.image);          
+		attachInfo.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL; // TODO: Always?
+		attachInfo.resolveMode = VK_RESOLVE_MODE_NONE; // TODO: Multisampled framebuffer!
+		attachInfo.resolveImageView = VK_NULL_HANDLE; // TODO: Multisampled framebuffer!
+		attachInfo.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO: Multisampling!
+		attachInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		glm::vec4 c = att.clearValue;
+		attachInfo.clearValue.color.float32 = { c.x, c.y, c.z, c.w };
+
+		colorAttachmentInfos.emplace_back(std::move(attachInfo)); // TODO: std::forward?
+	}
+
+	// Begin dynamic rendering
+	VkRenderingInfo renderingInfo{};
+	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderingInfo.pNext = nullptr;
+	renderingInfo.flags = 0;
+	renderingInfo.renderArea =
+		{ 0U, 0U, framebuffer->resolution.x, framebuffer->resolution.y };
+	renderingInfo.layerCount = 1;
+	renderingInfo.viewMask = 0;
+	renderingInfo.colorAttachmentCount = colorAttachmentInfos.size();
+	renderingInfo.pColorAttachments = colorAttachmentInfos.data();
+	// TODO: Check depth/stencil attachments!
+	renderingInfo.pDepthAttachment = nullptr;
+	renderingInfo.pStencilAttachment = nullptr;
+
+	vkCmdBeginRendering(cmdBuf, &renderingInfo);
+	return true;
 }
