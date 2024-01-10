@@ -252,9 +252,12 @@ int main()
 	vtek::FramebufferAttachment colorAttachment{};
 	colorAttachment.type = vtek::AttachmentType::color;
 	colorAttachment.supportedFormat = colorFormat;
-	colorAttachment.clearValue = {0.2f, 0.2f, 0.2f, 1.0f};
+	colorAttachment.clearValue.setColorFloat(0.2f, 0.2f, 0.2f, 1.0f);
 	vtek::FramebufferInfo framebufferInfo{};
 	framebufferInfo.attachments.push_back(colorAttachment);
+	framebufferInfo.resolution = windowSize;
+	framebufferInfo.multisampling = vtek::MultisamplingType::none; // TODO: Try it out?
+	framebufferInfo.sharingQueues.push_back(graphicsQueue);
 	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(&framebufferInfo, device);
 	if (framebuffer == nullptr)
 	{

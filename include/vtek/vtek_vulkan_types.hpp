@@ -116,4 +116,61 @@ namespace vtek
 	};
 
 	VkAccessFlags get_access_mask(EnumBitmask<AccessMask> accessMask);
+
+
+	class ClearValue
+	{
+	public:
+		// Get the underlying Vulkan format
+		VkClearValue get() const;
+
+		inline void setDepth(float d) {
+			_value = { .depthStencil = { .depth = d, .stencil = 0 }};
+		}
+		inline void setDepthStencil(float d, uint32_t s) {
+			_value = { .depthStencil = { .depth = d, .stencil = s } };
+		}
+
+		inline void setColorFloat(float r) {
+			_value = { .color = { .float32 = {r, 0.0f, 0.0f, 1.0f} } };
+		}
+		inline void setColorFloat(float r, float g) {
+			_value = { .color = { .float32 = {r, g, 0.0f, 1.0f} } };
+		}
+		inline void setColorFloat(float r, float g, float b) {
+			_value = { .color = { .float32 = {r, g, b, 1.0f} } };
+		}
+		inline void setColorFloat(float r, float g, float b, float a) {
+			_value = { .color = { .float32 = {r, g, b, a} } };
+		}
+
+		inline void setColorInt(int32_t r) {
+			_value = { .color = { .int32 = {r, 0, 0, 0} } };
+		}
+		inline void setColorInt(int32_t r, int32_t g) {
+			_value = { .color = { .int32 = {r, g, 0, 0} } };
+		}
+		inline void setColorInt(int32_t r, int32_t g, int32_t b) {
+			_value = { .color = { .int32 = {r, g, b, 0} } };
+		}
+		inline void setColorInt(int32_t r, int32_t g, int32_t b, int32_t a) {
+			_value = { .color = { .int32 = {r, g, b, a} } };
+		}
+
+		inline void setColorUint(uint32_t r) {
+			_value = { .color = { .uint32 = {r, 0U, 0U, 0U} } };
+		}
+		inline void setColorUint(uint32_t r, uint32_t g) {
+			_value = { .color = { .uint32 = {r, g, 0U, 0U} } };
+		}
+		inline void setColorUint(uint32_t r, uint32_t g, uint32_t b) {
+			_value = { .color = { .uint32 = {r, g, b, 0U} } };
+		}
+		inline void setColorUint(uint32_t r, uint32_t g, uint32_t b, uint32_t a) {
+			_value = { .color = { .uint32 = {r, g, b, a} } };
+		}
+
+	private:
+		VkClearValue _value { .color = { .float32 = {0.0f, 0.0f, 0.0f, 1.0f}}};
+	};
 }

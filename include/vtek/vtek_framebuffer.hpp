@@ -21,7 +21,7 @@ namespace vtek
 	{
 		AttachmentType type {AttachmentType::color};
 		SupportedFormat supportedFormat {};
-		glm::vec4 clearValue {0.0f};
+		ClearValue clearValue {};
 	};
 
 	struct FramebufferInfo

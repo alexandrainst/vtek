@@ -2,6 +2,7 @@
 #include "vtek_framebuffer.hpp"
 
 #include "impl/vtek_queue_struct.hpp"
+#include "vtek_command_buffer.hpp"
 #include "vtek_device.hpp"
 #include "vtek_image.hpp"
 #include "vtek_logging.hpp"
@@ -14,7 +15,7 @@ struct FramebufferAttachment
 	// TODO: Can we have 1D or 3D or 4D framebuffer attachment?
 	// TODO: Should we?
 	vtek::Image2D* image {nullptr};
-	glm::vec4 clearValue {0.0f};
+	vtek::ClearValue clearValue {};
 };
 
 /* struct implementation */
@@ -23,12 +24,15 @@ struct vtek::Framebuffer
 	VkFramebuffer handle {VK_NULL_HANDLE};
 	std::vector<FramebufferAttachment> colorAttachments {};
 	glm::uvec2 resolution {1,1};
+	uint32_t owningQueueFamilyIndex {0};
 };
+
 
 
 /* helper functions */
 void color_memory_barrier_begin(
-	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment)
+	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment,
+	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex)
 {
 	// Transition from whatever (probably present src) to color attachment
 	VkImageMemoryBarrier barrier{};
@@ -38,11 +42,11 @@ void color_memory_barrier_begin(
 	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	barrier.srcQueueFamilyIndex = ; // TODO: Graphics queue family index
-	barrier.dstQueueFamilyIndex = ; // TODO: Graphics queue family index ?
-	barrier.image = attachment.image;
+	barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
+	barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+	barrier.image = vtek::image2d_get_handle(attachment.image);
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseMipLevel = 0; // TODO: Would a framebuffer ever be mipped?
+	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = 1;
@@ -99,8 +103,8 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	if (requestedMsaa > supportedMsaa)
 	{
 		vtek_log_warn(
-			"Requested multisample count for framebuffer creation {}",
-			"exceeds device support! Clamping {} down to {}",
+			"{} exceeds device support! Clamping {} down to {}",
+			"Requested multisample count for framebuffer creation",
 			requestedMsaa, supportedMsaa);
 		requestedMsaa = supportedMsaa;
 	}
@@ -116,9 +120,9 @@ vtek::Framebuffer* vtek::framebuffer_create(
 		uint32_t index = queue->familyIndex;
 
 		// check if index was already encountered
-		for (const vtek::Queue* queue : imageInfo.sharingQueues)
+		for (const vtek::Queue* q : imageInfo.sharingQueues)
 		{
-			if (queue->familyIndex != index)
+			if (q->familyIndex != index)
 			{
 				imageInfo.sharingMode = vtek::ImageSharingMode::concurrent;
 			}
@@ -139,11 +143,11 @@ vtek::Framebuffer* vtek::framebuffer_create(
 		switch (att.type)
 		{
 		case vtek::AttachmentType::color:
-			imageInfo.usageFlags | vtek::ImageUsageFlag::color_attachment;
+			imageInfo.usageFlags |= vtek::ImageUsageFlag::color_attachment;
 			break;
 		case vtek::AttachmentType::depth:
 		case vtek::AttachmentType::depth_stencil:
-			imageInfo.usageFlags | vtek::ImageUsageFlag::depth_stencil_attachment;
+			imageInfo.usageFlags |= vtek::ImageUsageFlag::depth_stencil_attachment;
 			break;
 		}
 
@@ -205,21 +209,20 @@ bool vtek::framebuffer_dynrender_begin(
 	for (auto& att : framebuffer->colorAttachments)
 	{
 		// Image memory barrier for each color attachment
-		color_memory_barrier_begin();
+		color_memory_barrier_begin(cmdBuf, att);
 
 		// Color attachment info for dynamic rendering
 		VkRenderingAttachmentInfo attachInfo{};
 		attachInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		attachInfo.pNext = nullptr;
-		attachInfo.imageView = vtek::image2d_get_view_handle(att.image);          
+		attachInfo.imageView = vtek::image2d_get_view_handle(att.image);
 		attachInfo.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL; // TODO: Always?
 		attachInfo.resolveMode = VK_RESOLVE_MODE_NONE; // TODO: Multisampled framebuffer!
 		attachInfo.resolveImageView = VK_NULL_HANDLE; // TODO: Multisampled framebuffer!
 		attachInfo.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO: Multisampling!
 		attachInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		attachInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		glm::vec4 c = att.clearValue;
-		attachInfo.clearValue.color.float32 = { c.x, c.y, c.z, c.w };
+		attachInfo.clearValue = att.clearValue.get();
 
 		colorAttachmentInfos.emplace_back(std::move(attachInfo)); // TODO: std::forward?
 	}
