@@ -157,6 +157,10 @@ namespace vtek
 			return EnumBitmask{ mask | static_cast<Type>(e) };
 		}
 
+		inline Type operator& (Enum e) {
+			return mask & static_cast<Type>(e);
+		}
+
 	private:
 		Type mask {Type{0}};
 	};

@@ -75,6 +75,7 @@ struct RenderingInfo
 	vtek::GraphicsPipeline* mainPipeline {nullptr};
 	vtek::GraphicsPipeline* quadPipeline {nullptr};
 	vtek::Swapchain* swapchain {nullptr};
+	glm::uvec2 windowSize {0U, 0U};
 };
 
 bool recordCommandBuffer(
@@ -106,19 +107,38 @@ bool recordCommandBuffer(
 	// 3) bind pipeline and set dynamic states
 	vtek::cmd_bind_graphics_pipeline(commandBuffer, info->mainPipeline);
 
+	vtek::cmd_set_viewport_scissor(commandBuffer, info->windowSize, {0.0f, 0.0f});
+
 	// 4) bind and render each model, including descriptor sets and push constants
 
 	// 5) end dynamic rendering on the framebuffer
+	vtek::framebuffer_dynrender_end(framebuffer);
 
 	// 6) begin dynamic rendering on the swapchain
+	glm::vec3 clearColor(0.15f, 0.15f, 0.15f);
+	vtek::swapchain_dynamic_rendering_begin(
+		swapchain, imageIndex, commandBuffer, clearColor);
 
 	// 7) bind framebuffer targets for reading (descriptor sets?)
+	vtek::PushConstant_m4 pc{ .m1 = glm::mat4(1.0f) };
+	vtek::EnumBitmask<vtek::ShaderStageGraphics> pcStages =
+		vtek::ShaderStageGraphics::vertex;
+	vtek::cmd_push_constants_graphics(
+		commandBuffer, info->mainPipeline, &pc, pcStages);
 
 	// 8) draw fullscreen quad
 
 	// 9) end dynamic rendering on the swapchain
+	vtek::swapchain_dynamic_rendering_end(swapchain, imageIndex, commandBuffer);
 
 	// 10) end recording on the command buffer
+	if (!vtek::command_buffer_end(commandBuffer))
+	{
+		log_error("Failed to end command buffer {} recording!", imageIndex);
+		return false;
+	}
+
+	return true;
 }
 
 

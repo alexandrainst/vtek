@@ -24,7 +24,8 @@ struct vtek::Framebuffer
 	VkFramebuffer handle {VK_NULL_HANDLE};
 	std::vector<FramebufferAttachment> colorAttachments {};
 	glm::uvec2 resolution {1,1};
-	uint32_t owningQueueFamilyIndex {0};
+	uint32_t graphicsQueueFamilyIndex {0};
+	// TODO: Attachments can have had explicit queue ownership transfers!
 };
 
 
@@ -42,6 +43,7 @@ void color_memory_barrier_begin(
 	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// TODO: Attachments can have had explicit queue ownership transfers!
 	barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
 	barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
 	barrier.image = vtek::image2d_get_handle(attachment.image);
@@ -103,9 +105,10 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	if (requestedMsaa > supportedMsaa)
 	{
 		vtek_log_warn(
-			"{} exceeds device support! Clamping {} down to {}",
-			"Requested multisample count for framebuffer creation",
-			requestedMsaa, supportedMsaa);
+			"{} Device supports {} but {} requested. Number will be clamped!",
+			"Exceeded multisample count for framebuffer creation.",
+			static_cast<uint32_t>(requestedMsaa),
+			static_cast<uint32_t>(supportedMsaa));
 		requestedMsaa = supportedMsaa;
 	}
 	imageInfo.multisampling = vtek::get_multisample_enum(requestedMsaa);
@@ -182,6 +185,8 @@ vtek::Framebuffer* vtek::framebuffer_create(
 
 	// Fill in data
 	framebuffer->resolution = info->resolution;
+	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
+	framebuffer->graphicsQueueFamilyIndex = graphicsQueue->familyIndex;
 
 	return framebuffer;
 }
@@ -209,7 +214,10 @@ bool vtek::framebuffer_dynrender_begin(
 	for (auto& att : framebuffer->colorAttachments)
 	{
 		// Image memory barrier for each color attachment
-		color_memory_barrier_begin(cmdBuf, att);
+		// TODO: Attachments can have had explicit queue ownership transfers!
+		uint32_t queueFamilyIndex = framebuffer->graphicsQueueFamilyIndex;
+		color_memory_barrier_begin(
+			cmdBuf, att, queueFamilyIndex, queueFamilyIndex);
 
 		// Color attachment info for dynamic rendering
 		VkRenderingAttachmentInfo attachInfo{};
@@ -244,4 +252,10 @@ bool vtek::framebuffer_dynrender_begin(
 
 	vkCmdBeginRendering(cmdBuf, &renderingInfo);
 	return true;
+}
+
+void vtek::framebuffer_dynrender_end(
+	vtek::Framebuffer* framebuffer, vtek::CommandBuffer* commandBuffer)
+{
+
 }

@@ -420,6 +420,9 @@ VkShaderStageFlags vtek::get_shader_stage_flags_graphics(
 		flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
 	}
 
+	// TODO: branchless version?
+	flags |= (mask & SSGraphics::vertex) & VK_SHADER_STAGE_VERTEX_BIT;
+
 	return flags;
 }
 

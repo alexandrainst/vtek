@@ -1,11 +1,12 @@
 #include "vtek_vulkan.pch"
 #include "vtek_commands.hpp"
-#include "vtek_graphics_pipeline.hpp"
 
 #include "imgutils/vtek_image_formats.hpp"
 #include "impl/vtek_queue_struct.hpp"
 #include "vtek_command_buffer.hpp"
+#include "vtek_graphics_pipeline.hpp"
 #include "vtek_image.hpp"
+#include "vtek_push_constants.hpp"
 
 
 void vtek::cmd_image_layout_transition(
@@ -75,4 +76,47 @@ void vtek::cmd_bind_graphics_pipeline(
 	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 	auto pipl = vtek::graphics_pipeline_get_handle(pipeline);
 	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
+}
+
+void vtek::cmd_set_viewport_scissor(
+	vtek::CommandBuffer* commandBuffer, glm::uvec2 size, glm::vec2 depthBounds)
+{
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+
+	VkViewport viewport{};
+	viewport.x = 0.0f; viewport.y = 0.0f; // upper-left corner
+	viewport.width = static_cast<float>(size.x);
+	viewport.height = static_cast<float>(size.y);
+	viewport.minDepth = depthBounds.x;
+	viewport.maxDepth = depthBounds.y;
+
+	VkRect2D scissor{};
+	scissor.offset = { 0, 0 };
+	scissor.extent = { size.x, size.y };
+
+	vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+	vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+}
+
+void vtek::cmd_push_constant_graphics(
+	vtek::CommandBuffer* commandBuffer, vtek::GraphicsPipeline* pipeline,
+	vtek::IPushConstant* pushConstant,
+	vtek::EnumBitmask<vtek::ShaderStageGraphics> stages)
+{
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	auto pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
+	auto size = pushConstant->size();
+	auto data = pushConstant->data();
+
+	VkShaderStageFlags stageFlags =
+		vtek::get_shader_stage_flags_graphics(stages);
+
+	vkCmdPushConstants(cmdBuf, pipLayout, stageFlags, 0, size, data);
+}
+
+void vtek::cmd_draw_vertices(
+	vtek::CommandBuffer* commandBuffer, uint32_t numVertices)
+{
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	vkCmdDraw(cmdBuf, numVertices, 1, 0, 0);
 }

@@ -39,5 +39,6 @@ namespace vtek
 
 	bool framebuffer_dynrender_begin(
 		Framebuffer* framebuffer, CommandBuffer* commandBuffer);
-	void framebuffer_dynrender_end(Framebuffer* framebuffer);
+	void framebuffer_dynrender_end(
+		Framebuffer* framebuffer, CommandBuffer* commandBuffer);
 }
