@@ -404,24 +404,17 @@ VkShaderStageFlags vtek::get_shader_stage_flags_graphics(
 {
 	VkShaderStageFlags flags = 0U;
 
-	if (mask.has_flag(SSGraphics::vertex)) {
-		flags |= VK_SHADER_STAGE_VERTEX_BIT;
-	}
-	if (mask.has_flag(SSGraphics::tessellation_control)) {
-		flags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-	}
-	if (mask.has_flag(SSGraphics::tessellation_eval)) {
-		flags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-	}
-	if (mask.has_flag(SSGraphics::geometry)) {
-		flags |= VK_SHADER_STAGE_GEOMETRY_BIT;
-	}
-	if (mask.has_flag(SSGraphics::fragment)) {
-		flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-	}
-
-	// TODO: branchless version?
-	flags |= (mask & SSGraphics::vertex) & VK_SHADER_STAGE_VERTEX_BIT;
+	// branchless version
+	flags |= (mask & SSGraphics::vertex)
+		& VK_SHADER_STAGE_VERTEX_BIT;
+	flags |= (mask & SSGraphics::tessellation_control)
+		& VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+	flags |= (mask & SSGraphics::tessellation_eval)
+		& VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+	flags |= (mask & SSGraphics::geometry)
+		& VK_SHADER_STAGE_GEOMETRY_BIT;
+	flags |= (mask & SSGraphics::fragment)
+		& VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	return flags;
 }

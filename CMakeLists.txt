@@ -293,6 +293,7 @@ if(VTEK_CREATE_UNIT_TESTS)
     message(STATUS "Generate unit tests")
     set(unit_test_src
         tests/test_camera.cpp
+        tests/test_shaders.cpp
         # tests/test_formats.cpp
         # tests/test_ut.cpp
     )

@@ -93,7 +93,7 @@ namespace vtek
 		CameraProjection projection {CameraProjection::perspective};
 
 		// Size of the viewport, in pixels.
-		glm::uvec2 viewportSize {0, 0};
+		glm::uvec2 viewportSize {1, 1};
 
 		// Camera's near and far clip planes.
 		glm::vec2 clipPlanes {0.1f, 100.0f};

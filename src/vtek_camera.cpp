@@ -408,15 +408,21 @@ static void set_fps_lookat(vtek::Camera* camera, glm::vec3 upAxis, glm::vec3 fro
 /* interface */
 vtek::Camera* vtek::camera_create(const vtek::CameraInfo* info)
 {
-	if (info == nullptr || info->projectionInfo == nullptr)
+	if (info == nullptr)
 	{
 		vtek_log_error(
-			"vtek::camera_create(): {}",
-			"info must be provided, and projectionInfo must be non-null!");
+			"vtek::camera_create(): info must be provided!");
 		return nullptr;
 	}
 
-	const CameraProjectionInfo* projInfo = info->projectionInfo;
+	vtek::CameraProjectionInfo defaultProjInfo;
+	vtek::CameraProjectionInfo* projInfo = info->projectionInfo;
+	if (projInfo == nullptr)
+	{
+		defaultProjInfo = {};
+		projInfo = &defaultProjInfo;
+	}
+
 	if (projInfo->viewportSize.x * projInfo->viewportSize.y == 0)
 	{
 		vtek_log_error("vtek::camera_create(): Viewport size must be set!");

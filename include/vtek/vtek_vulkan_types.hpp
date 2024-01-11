@@ -122,7 +122,7 @@ namespace vtek
 	{
 	public:
 		// Get the underlying Vulkan format
-		VkClearValue get() const;
+		inline VkClearValue get() const { return _value; }
 
 		inline void setDepth(float d) {
 			_value = { .depthStencil = { .depth = d, .stencil = 0 }};
