@@ -68,11 +68,22 @@ bool update_uniform(vtek::Buffer* buffer, vtek::Device* device)
 	return true;
 }
 
+struct RenderingInfo
+{
+	std::vector<vtek::CommandBuffer*> commandBuffers;
+	std::vector<vtek::Framebuffer*> framebuffers;
+	vtek::GraphicsPipeline* mainPipeline {nullptr};
+	vtek::GraphicsPipeline* quadPipeline {nullptr};
+	vtek::Swapchain* swapchain {nullptr};
+};
+
 bool recordCommandBuffer(
-	vtek::CommandBuffer* commandBuffer, vtek::GraphicsPipeline* pipeline,
-	vtek::Swapchain* swapchain, vtek::Framebuffer* framebuffer, uint32_t imageIndex,
+	RenderingInfo* info, uint32_t imageIndex,
 	vtek::Model* model, vtek::DescriptorSet* descriptorSet)
 {
+	auto commandBuffer = commandBuffers[imageIndex];
+	auto framebuffer = framebuffers[imageIndex];
+
 	// imaginative scenario:
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
@@ -93,6 +104,7 @@ bool recordCommandBuffer(
 	}
 
 	// 3) bind pipeline and set dynamic states
+	vtek::cmd_bind_graphics_pipeline(commandBuffer, info->mainPipeline);
 
 	// 4) bind and render each model, including descriptor sets and push constants
 
@@ -276,7 +288,73 @@ int main()
 		return -1;
 	}
 
+	// Shader for main render pass
+	const char* shaderdirstrMain = "../shaders/08_framebuffer/main/";
+	vtek::Directory* shaderdirMain = vtek::directory_open(shaderdirstrMain);
+	if (shaderdirMain == nullptr)
+	{
+		log_error("Failed to open shader directory (main)!");
+		return -1;
+	}
+	vtek::GraphicsShaderInfo shaderInfo{};
+	shaderInfo.vertex = true;
+	shaderInfo.fragment = true;
+	vtek::GraphicsShader* shaderMain =
+		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdirMain, device);
+	if (shaderMain == nullptr)
+	{
+		log_error("Failed to load graphics shader (main)!");
+		return -1;
+	}
 
+	// Shader for fullscreen quad
+	const char* shaderdirstrQuad = "../shaders/08_framebuffer/quad/";
+	vtek::Directory* shaderdirQuad = vtek::directory_open(shaderdirstrQuad);
+	if (shaderdirQuad == nullptr)
+	{
+		log_error("Failed to open shader directory (quad)!");
+		return -1;
+	}
+	vtek::GraphicsShader* shaderQuad =
+		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdirQuad, device);
+	if (shaderQuad == nullptr)
+	{
+		log_error("Failed to load graphics shader (quad)!");
+		return -1;
+	}
+
+	// Graphics pipeline for main render pass
+	vtek::GraphicsPipelineInfo pipelineInfo{};
+	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
+	pipelineInfo.renderPass = nullptr; // Nice!
+	pipelineInfo.pipelineRendering = &pipelineRendering;
+	pipelineInfo.shader = shader;
+	// TODO: Rename to `vertexBufferBindings`
+	pipelineInfo.vertexInputBindings = &bindings;
+	pipelineInfo.primitiveTopology =
+		vtek::PrimitiveTopology::triangle_list;
+	pipelineInfo.enablePrimitiveRestart = false;
+	pipelineInfo.viewportState = &viewport;
+	pipelineInfo.rasterizationState = &rasterizer;
+	pipelineInfo.multisampleState = &multisampling;
+	pipelineInfo.depthStencilState = &depthStencil;
+	pipelineInfo.colorBlendState = &colorBlending;
+	pipelineInfo.dynamicStateFlags
+		= vtek::PipelineDynamicState::viewport
+		| vtek::PipelineDynamicState::scissor;
+	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayout);
+	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
+	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
+
+	vtek::GraphicsPipeline* mainPipeline =
+		vtek::graphics_pipeline_create(&pipelineInfo, device);
+	if (mainPipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline (main)!");
+		return -1;
+	}
+
+	// Graphics pipeline for fullscreen quad
 
 
 

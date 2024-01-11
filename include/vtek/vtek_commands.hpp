@@ -30,4 +30,10 @@ namespace vtek
 
 	void cmd_image_layout_transition(
 		CommandBuffer* commandBuffer, const ImageLayoutTransitionCmdInfo* info);
+
+	// ======================= //
+	// === Pipeline states === //
+	// ======================= //
+	void cmd_bind_graphics_pipeline(
+		CommandBuffer* commandBuffer, GraphicsPipeline* pipeline);
 }

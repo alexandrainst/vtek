@@ -1,5 +1,6 @@
 #include "vtek_vulkan.pch"
 #include "vtek_commands.hpp"
+#include "vtek_graphics_pipeline.hpp"
 
 #include "imgutils/vtek_image_formats.hpp"
 #include "impl/vtek_queue_struct.hpp"
@@ -66,4 +67,12 @@ void vtek::cmd_image_layout_transition(
 
 	vkCmdPipelineBarrier(
 		cmdBuf, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void vtek::cmd_bind_graphics_pipeline(
+	vtek::CommandBuffer* commandBuffer, vtek::GraphicsPipeline* pipeline)
+{
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	auto pipl = vtek::graphics_pipeline_get_handle(pipeline);
+	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 }
