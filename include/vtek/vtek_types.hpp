@@ -137,6 +137,7 @@ namespace vtek
 
 		inline EnumBitmask() {}
 		inline constexpr EnumBitmask(Type _mask) : mask(_mask) {}
+		inline constexpr EnumBitmask(Enum e) : mask(static_cast<Type>(e)) {}
 
 		inline Type get() const { return mask; }
 		inline void add_flag(Enum e) { mask |= static_cast<Type>(e); }

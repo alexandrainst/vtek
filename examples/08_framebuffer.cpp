@@ -82,13 +82,8 @@ bool recordCommandBuffer(
 	RenderingInfo* info, uint32_t imageIndex,
 	vtek::Model* model, vtek::DescriptorSet* descriptorSet)
 {
-	auto commandBuffer = commandBuffers[imageIndex];
-	auto framebuffer = framebuffers[imageIndex];
-
-	// imaginative scenario:
-	VkPipeline pipl = vtek::graphics_pipeline_get_handle(pipeline);
-	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
-	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	auto commandBuffer = info->commandBuffers[imageIndex];
+	auto framebuffer = info->framebuffers[imageIndex];
 
 	// 1) begin recording on the command buffer
 	if (!vtek::command_buffer_begin(commandBuffer))
@@ -98,7 +93,7 @@ bool recordCommandBuffer(
 	}
 
 	// 2) begin dynamic rendering on the framebuffer
-	if (!vtek::framebuffer_dynrender_begin(framebuffer))
+	if (!vtek::framebuffer_dynrender_begin(framebuffer, commandBuffer))
 	{
 		log_error("Failed to begin dynamic rendering on framebuffer!");
 		return false;
@@ -112,24 +107,26 @@ bool recordCommandBuffer(
 	// 4) bind and render each model, including descriptor sets and push constants
 
 	// 5) end dynamic rendering on the framebuffer
-	vtek::framebuffer_dynrender_end(framebuffer);
+	vtek::framebuffer_dynrender_end(framebuffer, commandBuffer);
 
 	// 6) begin dynamic rendering on the swapchain
 	glm::vec3 clearColor(0.15f, 0.15f, 0.15f);
 	vtek::swapchain_dynamic_rendering_begin(
-		swapchain, imageIndex, commandBuffer, clearColor);
+		info->swapchain, imageIndex, commandBuffer, clearColor);
 
 	// 7) bind framebuffer targets for reading (descriptor sets?)
-	vtek::PushConstant_m4 pc{ .m1 = glm::mat4(1.0f) };
+	vtek::PushConstant_m4 pc{};
+	pc.m1 = glm::mat4(1.0f);
 	vtek::EnumBitmask<vtek::ShaderStageGraphics> pcStages =
 		vtek::ShaderStageGraphics::vertex;
-	vtek::cmd_push_constants_graphics(
+	vtek::cmd_push_constant_graphics(
 		commandBuffer, info->mainPipeline, &pc, pcStages);
 
 	// 8) draw fullscreen quad
 
 	// 9) end dynamic rendering on the swapchain
-	vtek::swapchain_dynamic_rendering_end(swapchain, imageIndex, commandBuffer);
+	vtek::swapchain_dynamic_rendering_end(
+		info->swapchain, imageIndex, commandBuffer);
 
 	// 10) end recording on the command buffer
 	if (!vtek::command_buffer_end(commandBuffer))
@@ -281,14 +278,14 @@ int main()
 	}
 
 	// Framebuffer
-	vtek::FramebufferAttachment colorAttachment{};
+	vtek::FramebufferAttachmentInfo colorAttachment{};
 	colorAttachment.type = vtek::AttachmentType::color;
 	colorAttachment.supportedFormat = colorFormat;
 	colorAttachment.clearValue.setColorFloat(0.2f, 0.2f, 0.2f, 1.0f);
 	vtek::FramebufferInfo framebufferInfo{};
 	framebufferInfo.attachments.push_back(colorAttachment);
 	framebufferInfo.resolution = windowSize;
-	framebufferInfo.multisampling = vtek::MultisamplingType::none; // TODO: Try it out?
+	framebufferInfo.multisampling = vtek::MultisampleType::none; // TODO: Try it out?
 	framebufferInfo.sharingQueues.push_back(graphicsQueue);
 	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(&framebufferInfo, device);
 	if (framebuffer == nullptr)
@@ -344,11 +341,42 @@ int main()
 	}
 
 	// Graphics pipeline for main render pass
+	vtek::ViewportState viewport{
+		.viewportRegion = {
+			.offset = {0U, 0U},
+			.extent = {gFramebufferWidth, gFramebufferHeight}
+		},
+	};
+	// Buffer bindings: Vertex, Normal, TexCoord
+	vtek::VertexBufferBindings bindings{};
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex);
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex);
+	bindings.add_buffer(
+		vtek::VertexAttributeType::vec2, vtek::VertexInputRate::per_vertex);
+	vtek::RasterizationState rasterizer{};
+	rasterizer.cullMode = vtek::CullMode::none; // enable back-face culling
+	rasterizer.polygonMode = vtek::PolygonMode::fill;
+	rasterizer.frontFace = vtek::FrontFace::clockwise;
+	vtek::MultisampleState multisampling{};
+	vtek::DepthStencilState depthStencil{};
+	depthStencil.depthTestEnable = true;
+	depthStencil.depthWriteEnable = true;
+	vtek::ColorBlendState colorBlending{};
+	colorBlending.attachments.emplace_back(
+		vtek::ColorBlendAttachment::GetDefault());
+	vtek::PipelineRendering pipelineRendering{};
+	pipelineRendering.colorAttachmentFormats.push_back(
+		vtek::swapchain_get_image_format(swapchain));
+	pipelineRendering.depthAttachmentFormat =
+		vtek::swapchain_get_depth_image_format(swapchain);
+
 	vtek::GraphicsPipelineInfo pipelineInfo{};
 	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
 	pipelineInfo.renderPass = nullptr; // Nice!
 	pipelineInfo.pipelineRendering = &pipelineRendering;
-	pipelineInfo.shader = shader;
+	pipelineInfo.shader = shaderMain;
 	// TODO: Rename to `vertexBufferBindings`
 	pipelineInfo.vertexInputBindings = &bindings;
 	pipelineInfo.primitiveTopology =

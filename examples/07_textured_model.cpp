@@ -207,8 +207,8 @@ bool recordCommandBuffer(
 	// Push constant for the model, ie. transformation matrix
 	vtek::PushConstant_m4 pc{};
 	pc.m1 = glm::mat4(1.0f); // unit matrix
-	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-	pc.cmdPush(cmdBuf, pipLayout);
+	vtek::cmd_push_constant_graphics(
+		commandBuffer, pipeline, &pc, vtek::ShaderStageGraphics::vertex);
 
 	// Draw the model
 	uint32_t numVertices = vtek::model_get_num_vertices(model);

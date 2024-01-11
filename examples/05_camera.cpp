@@ -233,32 +233,32 @@ bool record_command_buffers(
 		// Cube 0 - located at Origo
 		vtek::PushConstant_m4 pc{};
 		pc.m1 = glm::mat4(1.0f); // unit matrix
-		pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc.cmdPush(cmdBuf, pipLayout);
+		vtek::cmd_push_constant_graphics(
+			commandBuffer, pipeline, &pc, vtek::ShaderStageGraphics::vertex);
 		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		// Cube 1 - translated along the X-axis
 		vtek::PushConstant_m4 pc1{};
 		pc1.m1 = glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 0.0f, 0.0f));
-		pc1.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc1.cmdPush(cmdBuf, pipLayout);
+		vtek::cmd_push_constant_graphics(
+			commandBuffer, pipeline, &pc1, vtek::ShaderStageGraphics::vertex);
 		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		// Cube 2 - translated along the Y-axis
 		vtek::PushConstant_m4 pc2{};
 		pc2.m1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.25f, 0.0f));
-		pc2.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc2.cmdPush(cmdBuf, pipLayout);
+		vtek::cmd_push_constant_graphics(
+			commandBuffer, pipeline, &pc2, vtek::ShaderStageGraphics::vertex);
 		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		// Cube 3 - translated along the Z-axis
 		vtek::PushConstant_m4 pc3{};
 		pc3.m1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 3.0f));
-		pc3.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc3.cmdPush(cmdBuf, pipLayout);
+		vtek::cmd_push_constant_graphics(
+			commandBuffer, pipeline, &pc3, vtek::ShaderStageGraphics::vertex);
 		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 

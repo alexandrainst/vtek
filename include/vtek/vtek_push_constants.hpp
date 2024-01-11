@@ -38,15 +38,6 @@ namespace vtek
 		static constexpr uint32_t static_size() { return Size; }
 
 		constexpr PushConstantType type() { return Type; }
-
-		// /*
-		void cmdPush(VkCommandBuffer buf, VkPipelineLayout layout)
-		{
-			vkCmdPushConstants(buf, layout, stageFlags, 0, Size, data());
-		}
-
-		VkShaderStageFlags stageFlags {0U};
-		// */
 	};
 
 
