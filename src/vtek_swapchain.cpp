@@ -1222,6 +1222,7 @@ bool vtek::swapchain_recreate(
 	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
 	vtek::Queue* presentQueue = vtek::device_get_present_queue(device);
 
+	std::vector<const vtek::Queue*> queues;
 	uint32_t qf_indices[2] = {
 		vtek::queue_get_family_index(graphicsQueue),
 		vtek::queue_get_family_index(presentQueue)
@@ -1239,6 +1240,9 @@ bool vtek::swapchain_recreate(
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
 		createInfo.pQueueFamilyIndices = qf_indices;
+
+		queues.push_back(graphicsQueue);
+		queues.push_back(presentQueue);
 	}
 
 	createInfo.preTransform = choose_pre_transform(capabilities);
@@ -1259,6 +1263,7 @@ bool vtek::swapchain_recreate(
 	// Cleanup the old swapchain images and handle
 	destroy_swapchain_image_views(swapchain, dev);
 	destroy_swapchain_handle(swapchain, dev);
+	destroy_depth_images(swapchain, device);
 
 	vkGetSwapchainImagesKHR(dev, newSwapchain, &swapchainLength, nullptr);
 	swapchain->images.resize(swapchainLength, VK_NULL_HANDLE);
@@ -1295,6 +1300,28 @@ bool vtek::swapchain_recreate(
 	{
 		vtek_log_error("Failed to find supported depth image format!");
 		return false;
+	}
+
+	// Create depth images
+	switch (swapchain->depthBufferType)
+	{
+	case vtek::SwapchainDepthBuffer::single_shared:
+		if (!create_depth_images(swapchain, device, 1, std::move(queues)))
+		{
+			vtek_log_error("Failed to re-create shared swapchain depth buffer!");
+			return false;
+		}
+		break;
+	case vtek::SwapchainDepthBuffer::one_per_image:
+		if (!create_depth_images(
+			    swapchain, device, swapchain->length, std::move(queues)))
+		{
+			vtek_log_error("Failed to re-create swapchain depth buffers!");
+			return false;
+		}
+		break;
+	default:
+		break;
 	}
 
 	// Reset frame sync objects

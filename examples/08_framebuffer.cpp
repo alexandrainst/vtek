@@ -390,7 +390,7 @@ int main()
 	pipelineInfo.dynamicStateFlags
 		= vtek::PipelineDynamicState::viewport
 		| vtek::PipelineDynamicState::scissor;
-	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayout);
+	//pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayout); // TODO: Unfinished!
 	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
 	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
 
