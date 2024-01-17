@@ -68,14 +68,17 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	auto dev = vtek::device_get_handle(device);
 
 	// Input validation
-	if (info->attachments.empty())
+	if (info->colorAttachments.empty() && !info->useDepthStencil)
 	{
-		vtek_log_error("No attachments specified -- cannot create framebuffer!");
+		vtek_log_error(
+			"No attachments specified -- cannot create empty framebuffer!");
 		return nullptr;
 	}
-	if (info->sharingQueues.empty())
+	if (info->resolution.x == 0U || info->resolution.y == 0U)
 	{
-		vtek_log_error("No sharing queues provided -- cannot create framebuffer!");
+		vtek_log_error("Invalid resolution \{{},{}\} -- {}",
+		               info->resolution.x, info->resolution.y,
+		               "cannot create framebuffer!");
 		return nullptr;
 	}
 
@@ -88,17 +91,18 @@ vtek::Framebuffer* vtek::framebuffer_create(
 
 	// check multisampling support
 	vtek::SampleCountQuery msaaQuery{};
-	for (const auto& att : info->attachments)
+	msaaQuery.color = !info->colorAttachments.empty();
+	if (info->useDepthStencil)
 	{
-		if (att.type == vtek::AttachmentType::color) {
-			msaaQuery.color = true;
+		const auto& fmt = info->depthStencilAttachment.supportedFormat;
+		if (!fmt.is_depth_stencil())
+		{
+			vtek_log_error("Invalid depth/stencil attachment format -- {}",
+			               "cannot create framebuffer!");
+			return nullptr;
 		}
-		else if (att.type == vtek::AttachmentType::depth) {
-			msaaQuery.depth = true;
-		}
-		else if (att.type == vtek::AttachmentType::depth_stencil) {
-			msaaQuery.stencil = true;
-		}
+		msaaQuery.depth = fmt.has_depth();
+		msaaQuery.stencil = fmt.has_stencil();
 	}
 	auto supportedMsaa = vtek::device_get_max_sample_count(device, &msaaQuery);
 	auto requestedMsaa = vtek::get_multisample_count(info->multisampling);
@@ -115,19 +119,36 @@ vtek::Framebuffer* vtek::framebuffer_create(
 
 	imageInfo.usageFlags = vtek::ImageUsageFlag::sampled; // TODO: Do we need more flags?
 	imageInfo.sharingMode = vtek::ImageSharingMode::exclusive;
+
 	// Check if any of the queues that need to access the framebuffer are from
 	// different queues families.
-	for (const vtek::Queue* queue : info->sharingQueues)
+	if (info->sharingQueues.empty())
 	{
-		imageInfo.sharingQueues.push_back(queue);
-		uint32_t index = queue->familyIndex;
-
-		// check if index was already encountered
-		for (const vtek::Queue* q : imageInfo.sharingQueues)
+		vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue();
+		if (graphicsQueue == nullptr)
 		{
-			if (q->familyIndex != index)
+			vtek_log_error(
+				"Framebuffer creation assumes device's graphics queue, {}{}",
+				"but device has no graphics queue",
+				" -- cannot create framebuffer!");
+			return nullptr;
+		}
+		imageInfo.sharingQueues.push_back(graphicsQueue);
+	}
+	else
+	{
+		for (const vtek::Queue* queue : info->sharingQueues)
+		{
+			imageInfo.sharingQueues.push_back(queue);
+			uint32_t index = queue->familyIndex;
+
+			// check if index was already encountered
+			for (const vtek::Queue* q : imageInfo.sharingQueues)
 			{
-				imageInfo.sharingMode = vtek::ImageSharingMode::concurrent;
+				if (q->familyIndex != index)
+				{
+					imageInfo.sharingMode = vtek::ImageSharingMode::concurrent;
+				}
 			}
 		}
 	}

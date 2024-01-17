@@ -12,24 +12,22 @@
 
 namespace vtek
 {
-	enum class AttachmentType
-	{
-		color, depth, depth_stencil
-	};
-
 	struct FramebufferAttachmentInfo
 	{
-		AttachmentType type {AttachmentType::color};
 		SupportedFormat supportedFormat {};
 		ClearValue clearValue {};
 	};
 
 	struct FramebufferInfo
 	{
-		std::vector<FramebufferAttachmentInfo> attachments;
+		std::vector<FramebufferAttachmentInfo> colorAttachments;
+		FramebufferAttachmentInfo depthStencilAttachment;
+		bool useDepthStencil {false};
 		glm::uvec2 resolution {1,1};
 		vtek::MultisampleType multisampling {vtek::MultisampleType::none};
+
 		// A list of queues which need access to the framebuffer attachments.
+		// If empty, only the device's graphics queue is considered.
 		std::vector<vtek::Queue*> sharingQueues;
 	};
 
