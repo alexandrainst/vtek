@@ -279,20 +279,21 @@ int main()
 
 	// Framebuffer
 	vtek::FramebufferAttachmentInfo colorAttachment{};
-	colorAttachment.type = vtek::AttachmentType::color;
 	colorAttachment.supportedFormat = colorFormat;
 	colorAttachment.clearValue.setColorFloat(0.2f, 0.2f, 0.2f, 1.0f);
 	vtek::FramebufferInfo framebufferInfo{};
-	framebufferInfo.attachments.push_back(colorAttachment);
+	framebufferInfo.colorAttachments.emplace_back(colorAttachment);
 	framebufferInfo.resolution = windowSize;
-	framebufferInfo.multisampling = vtek::MultisampleType::none; // TODO: Try it out?
-	framebufferInfo.sharingQueues.push_back(graphicsQueue);
-	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(&framebufferInfo, device);
+	 // TODO: When multisampling implemented in vtek, try it out?
+	framebufferInfo.multisampling = vtek::MultisampleType::none;
+	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(
+		&framebufferInfo, device);
 	if (framebuffer == nullptr)
 	{
 		log_error("Failed to create framebuffer!");
 		return 0;
 	}
+	exit(1);
 
 	// Graphics command pool
 	vtek::CommandPoolInfo commandPoolInfo{};

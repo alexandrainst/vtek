@@ -7,6 +7,7 @@
 #include "vtek_image.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_queue.hpp"
+#include "vtek_render_pass.hpp"
 
 
 /* attachment helper struct */
@@ -23,15 +24,92 @@ struct vtek::Framebuffer
 {
 	VkFramebuffer handle {VK_NULL_HANDLE};
 	std::vector<FramebufferAttachment> colorAttachments {};
+	FramebufferAttachment depthStencilAttachment {};
 	glm::uvec2 resolution {1,1};
 	uint32_t graphicsQueueFamilyIndex {0};
+	bool dynamicRenderingOnly {false};
 	// TODO: Attachments can have had explicit queue ownership transfers!
 };
 
 
 
 /* helper functions */
-void color_memory_barrier_begin(
+static bool validate_framebuffer_info(const vtek::FramebufferInfo* info)
+{
+	if (info->colorAttachments.empty() && !info->useDepthStencil)
+	{
+		vtek_log_error(
+			"No attachments specified -- cannot create empty framebuffer!");
+		return false;
+	}
+	if (info->resolution.x == 0U || info->resolution.y == 0U)
+	{
+		vtek_log_error("Invalid resolution ({},{}) -- {}",
+		               info->resolution.x, info->resolution.y,
+		               "cannot create framebuffer!");
+		return false;
+	}
+	for (const auto& att : info->colorAttachments)
+	{
+		if (!att.supportedFormat.is_valid())
+		{
+			vtek_log_error("Unsupported color attachment format -- {}!",
+			               "cannot create framebuffer!");
+			return false;
+		}
+	}
+	if (info->useDepthStencil &&
+	    !info->depthStencilAttachment.supportedFormat.is_valid())
+	{
+		vtek_log_error("Unsupported depth/stencil attachment format -- {}!",
+		               "cannot create framebuffer!");
+		return false;
+	}
+	if (info->renderPass == nullptr && !info->useDynamicRendering)
+	{
+		vtek_log_error(
+			"{} {}",
+			"No render pass specified, and dynamic rendering not indicated.",
+			"At least one of those must be present for framebuffer creation!");
+		return false;
+	}
+
+	return true;
+}
+
+static bool create_vulkan_framebuffer_handle(
+	vtek::Framebuffer* framebuffer, const vtek::FramebufferInfo* info,
+	vtek::Device* device)
+{
+	std::vector<VkImageView> attachments;
+	for (auto& att : framebuffer->colorAttachments)
+	{
+		attachments.push_back(vtek::image2d_get_view_handle(att.image));
+	}
+	if (auto img = framebuffer->depthStencilAttachment.image; img != nullptr)
+	{
+		attachments.push_back(vtek::image2d_get_view_handle(img));
+	}
+
+	VkFramebufferCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	createInfo.renderPass = vtek::render_pass_get_handle(info->renderPass);
+	createInfo.attachmentCount = attachments.size();
+	createInfo.pAttachments = attachments.data();
+	createInfo.width = info->resolution.x;
+	createInfo.height = info->resolution.y;
+	// NOTE: layers is used for multiview render passes which is not supported!
+	// NOTE: If render pass has non-zero view mask, layers must be 1!
+	createInfo.layers = 1;
+
+	auto dev = vtek::device_get_handle(device);
+	VkResult result = vkCreateFramebuffer(
+		dev, &createInfo, nullptr, &framebuffer->handle);
+
+	return result == VK_SUCCESS;
+}
+
+static void color_memory_barrier_begin(
 	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment,
 	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex)
 {
@@ -65,22 +143,8 @@ void color_memory_barrier_begin(
 vtek::Framebuffer* vtek::framebuffer_create(
 	const vtek::FramebufferInfo* info, vtek::Device* device)
 {
-	auto dev = vtek::device_get_handle(device);
-
 	// Input validation
-	if (info->colorAttachments.empty() && !info->useDepthStencil)
-	{
-		vtek_log_error(
-			"No attachments specified -- cannot create empty framebuffer!");
-		return nullptr;
-	}
-	if (info->resolution.x == 0U || info->resolution.y == 0U)
-	{
-		vtek_log_error("Invalid resolution \{{},{}\} -- {}",
-		               info->resolution.x, info->resolution.y,
-		               "cannot create framebuffer!");
-		return nullptr;
-	}
+	if (!validate_framebuffer_info(info)) { return nullptr; }
 
 	// Image createInfo for the attachments
 	vtek::Image2DInfo imageInfo{};
@@ -117,14 +181,15 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	}
 	imageInfo.multisampling = vtek::get_multisample_enum(requestedMsaa);
 
-	imageInfo.usageFlags = vtek::ImageUsageFlag::sampled; // TODO: Do we need more flags?
-	imageInfo.sharingMode = vtek::ImageSharingMode::exclusive;
+	// TODO: Do we need more usage flags?
+	vtek::ImageUsageFlag sharedUsageFlags = vtek::ImageUsageFlag::sampled;
 
 	// Check if any of the queues that need to access the framebuffer are from
 	// different queues families.
+	imageInfo.sharingMode = vtek::ImageSharingMode::exclusive;
 	if (info->sharingQueues.empty())
 	{
-		vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue();
+		vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
 		if (graphicsQueue == nullptr)
 		{
 			vtek_log_error(
@@ -153,55 +218,45 @@ vtek::Framebuffer* vtek::framebuffer_create(
 		}
 	}
 
-	// TODO: Probably create an image for each attachment
-	std::vector<vtek::Image2D*> images(info->attachments.size());
-	for (const auto& att: info->attachments)
-	{
-		if (!att.supportedFormat.is_valid())
-		{
-			vtek_log_error("Framebuffer attachment format is not supported!");
-			return nullptr;
-		}
+	// Alloc
+	auto framebuffer = new vtek::Framebuffer;
 
+	// Create color attachments
+	for (const auto& att : info->colorAttachments)
+	{
 		imageInfo.supportedFormat = att.supportedFormat;
-		switch (att.type)
-		{
-		case vtek::AttachmentType::color:
-			imageInfo.usageFlags |= vtek::ImageUsageFlag::color_attachment;
-			break;
-		case vtek::AttachmentType::depth:
-		case vtek::AttachmentType::depth_stencil:
-			imageInfo.usageFlags |= vtek::ImageUsageFlag::depth_stencil_attachment;
-			break;
-		}
+		imageInfo.usageFlags =
+			sharedUsageFlags | vtek::ImageUsageFlag::color_attachment;
 
 		vtek::Image2D* image = vtek::image2d_create(&imageInfo, device);
 		if (image == nullptr)
 		{
-			vtek_log_error("Failed to create framebuffer attachment!");
+			vtek_log_error("Failed to create framebuffer color attachment!");
+			vtek::framebuffer_destroy(framebuffer, device);
 			return nullptr;
 		}
+
+		framebuffer->colorAttachments.push_back({ image, att.clearValue });
 	}
 
-	// Alloc
-	auto framebuffer = new vtek::Framebuffer;
-
-	VkFramebufferCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	createInfo.renderPass = VK_NULL_HANDLE; // ?
-	createInfo.attachmentCount = info->attachments.size();
-	createInfo.pAttachments = nullptr; // ?
-	createInfo.width = info->resolution.x;
-	createInfo.height = info->resolution.y;
-	createInfo.layers = 1; // ?
-
-	VkResult result = vkCreateFramebuffer(
-		dev, &createInfo, nullptr, &framebuffer->handle);
-	if (result != VK_SUCCESS)
+	// Create depth/stencil attachment
+	if (info->useDepthStencil)
 	{
-		vtek_log_error("Failed to create framebuffer!");
-		delete framebuffer;
-		return nullptr;
+		const FramebufferAttachmentInfo& attInfo = info->depthStencilAttachment;
+		imageInfo.supportedFormat = attInfo.supportedFormat;
+		imageInfo.usageFlags =
+			sharedUsageFlags | vtek::ImageUsageFlag::depth_stencil_attachment;
+
+		vtek::Image2D* image = vtek::image2d_create(&imageInfo, device);
+		if (image == nullptr)
+		{
+			vtek_log_error(
+				"Failed to create framebuffer depth/stencil attachment!");
+			vtek::framebuffer_destroy(framebuffer, device);
+			return nullptr;
+		}
+
+		framebuffer->depthStencilAttachment = { image, attInfo.clearValue };
 	}
 
 	// Fill in data
@@ -209,12 +264,60 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	vtek::Queue* graphicsQueue = vtek::device_get_graphics_queue(device);
 	framebuffer->graphicsQueueFamilyIndex = graphicsQueue->familyIndex;
 
+	//
+	// DONE: For dynamic rendering only, no vkFramebuffer can be created!
+	//
+	// Without a render pass, we cannot create a vulkan framebuffer object.
+	// But we can still return a shell to host the image attachments.
+	if (info->renderPass == nullptr && info->useDynamicRendering)
+	{
+		framebuffer->dynamicRenderingOnly = true;
+		return framebuffer;
+	}
+
+	//
+	// NEXT: With render pass object provided, create vkFramebuffer object!
+	//
+	if (!create_vulkan_framebuffer_handle(framebuffer, info, device))
+	{
+		vtek_log_error("Failed to create framebuffer!");
+		vtek::framebuffer_destroy(framebuffer, device);
+		delete framebuffer;
+		return nullptr;
+	}
+
 	return framebuffer;
 }
 
-void vtek::framebuffer_destroy(vtek::Framebuffer* framebuffer)
+void vtek::framebuffer_destroy(
+	vtek::Framebuffer* framebuffer, vtek::Device* device)
 {
+	if (framebuffer == nullptr) { return; }
 
+	for (auto& att : framebuffer->colorAttachments)
+	{
+		vtek::image2d_destroy(att.image, device);
+	}
+	framebuffer->colorAttachments.clear();
+
+	if (auto img = framebuffer->depthStencilAttachment.image; img != nullptr)
+	{
+		vtek::image2d_destroy(img, device);
+		framebuffer->depthStencilAttachment = {};
+	}
+
+	if (framebuffer->handle != VK_NULL_HANDLE)
+	{
+		auto dev = vtek::device_get_handle(device);
+
+		vkDestroyFramebuffer(dev, framebuffer->handle, nullptr);
+		framebuffer->handle = VK_NULL_HANDLE;
+	}
+}
+
+bool vtek::framebuffer_dynamic_rendering_only(vtek::Framebuffer* framebuffer)
+{
+	return framebuffer->dynamicRenderingOnly;
 }
 
 bool vtek::framebuffer_dynrender_begin(

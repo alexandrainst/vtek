@@ -240,7 +240,7 @@ namespace vtek
 		astc_12x10, astc_12x12,
 	};
 
-	enum class FormatStorageType
+	enum class FormatStorageType : uint8_t
 	{
 		srgb,    // encoded sRGB color; storage type not applicable
 
@@ -395,6 +395,19 @@ namespace vtek
 		inline SupportedFormat() {}
 		bool operator==(Format _format) const;
 
+		// Construction
+
+		// Returns true is the specified format is supported.
+		static bool FindFormat(
+			const FormatQuery* query, Format format,
+			const Device* device, SupportedFormat& out);
+
+		// Returns true if any of the specified formats are supported.
+		// The first supported format in the list is selected.
+		static bool FindFormat(
+			const FormatQuery* query, const std::vector<Format>& formats,
+			const Device* device, SupportedFormat& out);
+
 		// Check validity
 		inline bool is_valid() const { return format != Format::undefined; }
 
@@ -432,11 +445,13 @@ namespace vtek
 			const FormatQuery*,const Device*,SupportedFormat*);
 		SupportedFormat(Format _format, VkFormat _fmt, bool linearTiling);
 
+		// 16+8+8 = 32 bits
 		Format format {Format::undefined};
-		VkFormat fmt {VK_FORMAT_UNDEFINED};
-
 		FormatCompression compression {FormatCompression::none};
 		FormatStorageType storage {FormatStorageType::unorm};
+
+		// 3*32 = 96 bits
+		VkFormat fmt {VK_FORMAT_UNDEFINED};
 		EnumBitmask<FormatFeature> features {};
 		uint32_t propertyMask {0U};
 		// TODO: Store VkFormatFeatureFlags ?
