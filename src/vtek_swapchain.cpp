@@ -28,8 +28,8 @@ struct vtek::Swapchain
 	VkSwapchainKHR vulkanHandle {VK_NULL_HANDLE};
 	uint32_t length {0};
 	VkExtent2D imageExtent {0, 0};
-	VkFormat imageFormat {VK_FORMAT_UNDEFINED};
-	VkFormat depthImageFormat {VK_FORMAT_UNDEFINED};
+	vtek::Format imageFormat {vtek::Format::undefined};
+	vtek::Format depthImageFormat {vtek::Format::undefined};
 	SwapchainDepthBuffer depthBufferType {vtek::SwapchainDepthBuffer::none};
 	tDynRenderBegin fDynRenderBegin;
 
@@ -530,6 +530,23 @@ static std::vector<VkPresentModeKHR> get_supported_present_modes(
 	modes.resize(count);
 	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &count, modes.data());
 	return modes;
+}
+
+static bool get_supported_depth_format(
+	const vtek::Device* device, vtek::SupportedFormat& out)
+{
+	// Determine image format for framebuffer depth attachments.
+	// Even though depth images are not used by the swapchain, they are
+	// linked to the framebuffers that use the swapchain, so this is a
+	// logical place to determine depth format.
+	std::vector<vtek::Format> depthFormatCandidates = {
+		// Place first because it's more performant, and should be used unless
+		// the extra precision is really needed.
+		vtek::Format::d24_unorm_s8_uint,
+		vtek::Format::d32_sfloat,
+		vtek::Format::d32_sfloat_s8_uint
+	};
+
 }
 
 static bool create_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
@@ -1286,13 +1303,18 @@ bool vtek::swapchain_recreate(
 	}
 
 	// Depth buffer format
-	std::vector<VkFormat> depthFormatCandidates = {
-		VK_FORMAT_D32_SFLOAT,
-		VK_FORMAT_D32_SFLOAT_S8_UINT,
-		VK_FORMAT_D24_UNORM_S8_UINT
+	std::vector<vtek::Format> depthFormatCandidates = {
+		vtek::Format::d32_sfloat,
+		vtek::Format::d32_sfloat_s8_uint,
+		vtek::Format::d24_unorm_s8_uint
 	};
-	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-	VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	vtek::FormatInfo depthFormatInfo{};
+	depthFormatInfo.tiling = vtek::ImageTiling::optimal;
+	depthFormatInfo.features = vtek::FormatFeature::depth_stencil_attachment;
+
+	vtek::SupportedFormat supportedDepthFormat;
+	if (!vtek::SupportedFormat::FindFormat(
+		    &depthFormatInfo,))
 
 	if (!vtek::find_supported_image_format(
 		    physDev, depthFormatCandidates, tiling, features,

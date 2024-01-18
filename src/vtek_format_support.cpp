@@ -9,8 +9,7 @@ using vfmt = vtek::Format;
 
 
 /* helper functions */
-// NOTE: Keep this function as it might be needed at some point! (but unused)
-static VkFormat get_format(vtek::Format format)
+VkFormat vtek::get_format(vtek::Format format)
 {
 	switch (format)
 	{
@@ -1759,27 +1758,27 @@ static void get_format_details(vtek::Format format, FormatDetails* details)
 
 /* query color format (LONG section) */
 static void get_format_color_srgb(
-	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+	const vtek::FormatQuery* query, std::vector<vtek::Format>& priorities)
 {
 	uint32_t channels = static_cast<uint32_t>(query->channels);
 
 	if (channels == 1)
 	{
-		priorities.push_back(VK_FORMAT_R8_SRGB);
+		priorities.push_back(vfmt::r8_srgb);
 	}
 	else if (channels == 2)
 	{
-		priorities.push_back(VK_FORMAT_R8G8_SRGB);
+		priorities.push_back(vfmt::r8g8_srgb);
 	}
 	else if (channels == 3)
 	{
 		if (query->swizzleBGR)
 		{
-			priorities.push_back(VK_FORMAT_B8G8R8_SRGB);
+			priorities.push_back(vfmt::b8g8r8_srgb);
 		}
 		else
 		{
-			priorities.push_back(VK_FORMAT_R8G8B8_SRGB);
+			priorities.push_back(vfmt::r8g8b8_srgb);
 		}
 	}
 	else if (channels == 4)
@@ -1787,43 +1786,43 @@ static void get_format_color_srgb(
 		if (query->swizzleBGR &&
 		    query->storageType == vtek::FormatStorageType::unorm_pack32)
 		{
-			priorities.push_back(VK_FORMAT_A8B8G8R8_SRGB_PACK32);
+			priorities.push_back(vfmt::a8b8g8r8_srgb_pack32);
 		}
 		else if (query->swizzleBGR)
 		{
-			priorities.push_back(VK_FORMAT_B8G8R8A8_SRGB);
+			priorities.push_back(vfmt::b8g8r8a8_srgb);
 		}
 		else
 		{
-			priorities.push_back(VK_FORMAT_R8G8B8A8_SRGB);
+			priorities.push_back(vfmt::r8g8b8a8_srgb);
 		}
 	}
 }
 
 static void get_format_color_channel_1(
-	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+	const vtek::FormatQuery* query, std::vector<vtek::Format>& priorities)
 {
 	if (query->channelSize == vtek::FormatChannelSize::channel_8)
 	{
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::unorm:
-			priorities.push_back(VK_FORMAT_R8_UNORM);
+			priorities.push_back(vfmt::r8_unorm);
 			break;
 		case vtek::FormatStorageType::snorm:
-			priorities.push_back(VK_FORMAT_R8_SNORM);
+			priorities.push_back(vfmt::r8_snorm);
 			break;
 		case vtek::FormatStorageType::uscaled:
-			priorities.push_back(VK_FORMAT_R8_USCALED);
+			priorities.push_back(vfmt::r8_uscaled);
 			break;
 		case vtek::FormatStorageType::sscaled:
-			priorities.push_back(VK_FORMAT_R8_SSCALED);
+			priorities.push_back(vfmt::r8_sscaled);
 			break;
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R8_UINT);
+			priorities.push_back(vfmt::r8_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R8_SINT);
+			priorities.push_back(vfmt::r8_sint);
 			break;
 		default:
 			break;
@@ -1834,25 +1833,25 @@ static void get_format_color_channel_1(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::unorm:
-			priorities.push_back(VK_FORMAT_R16_UNORM);
+			priorities.push_back(vfmt::r16_unorm);
 			break;
 		case vtek::FormatStorageType::snorm:
-			priorities.push_back(VK_FORMAT_R16_SNORM);
+			priorities.push_back(vfmt::r16_snorm);
 			break;
 		case vtek::FormatStorageType::uscaled:
-			priorities.push_back(VK_FORMAT_R16_USCALED);
+			priorities.push_back(vfmt::r16_uscaled);
 			break;
 		case vtek::FormatStorageType::sscaled:
-			priorities.push_back(VK_FORMAT_R16_SSCALED);
+			priorities.push_back(vfmt::r16_sscaled);
 			break;
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R16_UINT);
+			priorities.push_back(vfmt::r16_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R16_SINT);
+			priorities.push_back(vfmt::r16_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R16_SFLOAT);
+			priorities.push_back(vfmt::r16_sfloat);
 			break;
 		default:
 			break;
@@ -1863,13 +1862,13 @@ static void get_format_color_channel_1(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R32_UINT);
+			priorities.push_back(vfmt::r32_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R32_SINT);
+			priorities.push_back(vfmt::r32_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R32_SFLOAT);
+			priorities.push_back(vfmt::r32_sfloat);
 			break;
 		default:
 			break;
@@ -1880,13 +1879,13 @@ static void get_format_color_channel_1(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R64_UINT);
+			priorities.push_back(vfmt::r64_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R64_SINT);
+			priorities.push_back(vfmt::r64_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R64_SFLOAT);
+			priorities.push_back(vfmt::r64_sfloat);
 			break;
 		default:
 			break;
@@ -1896,36 +1895,36 @@ static void get_format_color_channel_1(
 	{
 		if (query->storageType == vtek::FormatStorageType::unorm_pack16)
 		{
-			priorities.push_back(VK_FORMAT_R12X4_UNORM_PACK16);
-			priorities.push_back(VK_FORMAT_R10X6_UNORM_PACK16);
+			priorities.push_back(vfmt::r12x4_unorm_pack16);
+			priorities.push_back(vfmt::r10x6_unorm_pack16);
 		}
 	}
 }
 
 static void get_format_color_channel_2(
-	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+	const vtek::FormatQuery* query, std::vector<vtek::Format>& priorities)
 {
 	if (query->channelSize == vtek::FormatChannelSize::channel_8)
 	{
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::unorm:
-			priorities.push_back(VK_FORMAT_R8G8_UNORM);
+			priorities.push_back(vfmt::r8g8_unorm);
 			break;
 		case vtek::FormatStorageType::snorm:
-			priorities.push_back(VK_FORMAT_R8G8_SNORM);
+			priorities.push_back(vfmt::r8g8_snorm);
 			break;
 		case vtek::FormatStorageType::uscaled:
-			priorities.push_back(VK_FORMAT_R8G8_USCALED);
+			priorities.push_back(vfmt::r8g8_uscaled);
 			break;
 		case vtek::FormatStorageType::sscaled:
-			priorities.push_back(VK_FORMAT_R8G8_SSCALED);
+			priorities.push_back(vfmt::r8g8_sscaled);
 			break;
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R8G8_UINT);
+			priorities.push_back(vfmt::r8g8_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R8G8_SINT);
+			priorities.push_back(vfmt::r8g8_sint);
 			break;
 		default:
 			break;
@@ -1936,25 +1935,25 @@ static void get_format_color_channel_2(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::unorm:
-			priorities.push_back(VK_FORMAT_R16G16_UNORM);
+			priorities.push_back(vfmt::r16g16_unorm);
 			break;
 		case vtek::FormatStorageType::snorm:
-			priorities.push_back(VK_FORMAT_R16G16_SNORM);
+			priorities.push_back(vfmt::r16g16_snorm);
 			break;
 		case vtek::FormatStorageType::uscaled:
-			priorities.push_back(VK_FORMAT_R16G16_USCALED);
+			priorities.push_back(vfmt::r16g16_uscaled);
 			break;
 		case vtek::FormatStorageType::sscaled:
-			priorities.push_back(VK_FORMAT_R16G16_SSCALED);
+			priorities.push_back(vfmt::r16g16_sscaled);
 			break;
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R16G16_UINT);
+			priorities.push_back(vfmt::r16g16_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R16G16_SINT);
+			priorities.push_back(vfmt::r16g16_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R16G16_SFLOAT);
+			priorities.push_back(vfmt::r16g16_sfloat);
 			break;
 		default:
 			break;
@@ -1965,13 +1964,13 @@ static void get_format_color_channel_2(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R32G32_UINT);
+			priorities.push_back(vfmt::r32g32_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R32G32_SINT);
+			priorities.push_back(vfmt::r32g32_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R32G32_SFLOAT);
+			priorities.push_back(vfmt::r32g32_sfloat);
 			break;
 		default:
 			break;
@@ -1982,13 +1981,13 @@ static void get_format_color_channel_2(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R64G64_UINT);
+			priorities.push_back(vfmt::r64g64_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R64G64_SINT);
+			priorities.push_back(vfmt::r64g64_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R64G64_SFLOAT);
+			priorities.push_back(vfmt::r64g64_sfloat);
 			break;
 		default:
 			break;
@@ -1998,18 +1997,18 @@ static void get_format_color_channel_2(
 	{
 		if (query->storageType == vtek::FormatStorageType::unorm_pack8)
 		{
-			priorities.push_back(VK_FORMAT_R4G4_UNORM_PACK8);
+			priorities.push_back(vfmt::r4g4_unorm_pack8);
 		}
 		else if (query->storageType == vtek::FormatStorageType::unorm_pack16)
 		{
-			priorities.push_back(VK_FORMAT_R12X4G12X4_UNORM_2PACK16);
-			priorities.push_back(VK_FORMAT_R10X6G10X6_UNORM_2PACK16);
+			priorities.push_back(vfmt::r12x4g12x4_unorm_2pack16);
+			priorities.push_back(vfmt::r10x6g10x6_unorm_2pack16);
 		}
 	}
 }
 
 static void get_format_color_channel_3(
-	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+	const vtek::FormatQuery* query, std::vector<vtek::Format>& priorities)
 {
 	if (query->channelSize == vtek::FormatChannelSize::channel_8)
 	{
@@ -2018,32 +2017,32 @@ static void get_format_color_channel_3(
 		case vtek::FormatStorageType::unorm:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8_UNORM : VK_FORMAT_R8G8B8_UNORM);
+				? vfmt::b8g8r8_unorm : vfmt::r8g8b8_unorm);
 			break;
 		case vtek::FormatStorageType::snorm:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8_SNORM : VK_FORMAT_R8G8B8_SNORM);
+				? vfmt::b8g8r8_snorm : vfmt::r8g8b8_snorm);
 			break;
 		case vtek::FormatStorageType::uscaled:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8_USCALED : VK_FORMAT_R8G8B8_USCALED);
+				? vfmt::b8g8r8_uscaled : vfmt::r8g8b8_uscaled);
 			break;
 		case vtek::FormatStorageType::sscaled:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8_SSCALED : VK_FORMAT_R8G8B8_SSCALED);
+				? vfmt::b8g8r8_sscaled : vfmt::r8g8b8_sscaled);
 			break;
 		case vtek::FormatStorageType::uint:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8_UINT : VK_FORMAT_R8G8B8_UINT);
+				? vfmt::b8g8r8_uint : vfmt::r8g8b8_uint);
 			break;
 		case vtek::FormatStorageType::sint:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8_SINT : VK_FORMAT_R8G8B8_SINT);
+				? vfmt::b8g8r8_sint : vfmt::r8g8b8_sint);
 			break;
 		default:
 			break;
@@ -2055,25 +2054,25 @@ static void get_format_color_channel_3(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::unorm:
-			priorities.push_back(VK_FORMAT_R16G16B16_UNORM);
+			priorities.push_back(vfmt::r16g16b16_unorm);
 			break;
 		case vtek::FormatStorageType::snorm:
-			priorities.push_back(VK_FORMAT_R16G16B16_SNORM);
+			priorities.push_back(vfmt::r16g16b16_snorm);
 			break;
 		case vtek::FormatStorageType::uscaled:
-			priorities.push_back(VK_FORMAT_R16G16B16_USCALED);
+			priorities.push_back(vfmt::r16g16b16_uscaled);
 			break;
 		case vtek::FormatStorageType::sscaled:
-			priorities.push_back(VK_FORMAT_R16G16B16_SSCALED);
+			priorities.push_back(vfmt::r16g16b16_sscaled);
 			break;
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R16G16B16_UINT);
+			priorities.push_back(vfmt::r16g16b16_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R16G16B16_SINT);
+			priorities.push_back(vfmt::r16g16b16_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R16G16B16_SFLOAT);
+			priorities.push_back(vfmt::r16g16b16_sfloat);
 			break;
 		default:
 			break;
@@ -2085,13 +2084,13 @@ static void get_format_color_channel_3(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R32G32B32_UINT);
+			priorities.push_back(vfmt::r32g32b32_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R32G32B32_SINT);
+			priorities.push_back(vfmt::r32g32b32_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R32G32B32_SFLOAT);
+			priorities.push_back(vfmt::r32g32b32_sfloat);
 			break;
 		default:
 			break;
@@ -2103,13 +2102,13 @@ static void get_format_color_channel_3(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R64G64B64_UINT);
+			priorities.push_back(vfmt::r64g64b64_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R64G64B64_SINT);
+			priorities.push_back(vfmt::r64g64b64_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R64G64B64_SFLOAT);
+			priorities.push_back(vfmt::r64g64b64_sfloat);
 			break;
 		default:
 			break;
@@ -2119,13 +2118,13 @@ static void get_format_color_channel_3(
 	{
 		if (query->storageType == vtek::FormatStorageType::ufloat_pack32)
 		{
-			priorities.push_back(VK_FORMAT_B10G11R11_UFLOAT_PACK32);
+			priorities.push_back(vfmt::b10g11r11_ufloat_pack32);
 		}
 	}
 }
 
 static void get_format_color_channel_4(
-	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+	const vtek::FormatQuery* query, std::vector<vtek::Format>& priorities)
 {
 	if (query->channelSize == vtek::FormatChannelSize::channel_8)
 	{
@@ -2134,50 +2133,50 @@ static void get_format_color_channel_4(
 		case vtek::FormatStorageType::unorm:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R8G8B8A8_UNORM);
+				? vfmt::b8g8r8a8_unorm : vfmt::r8g8b8a8_unorm);
 			break;
 		case vtek::FormatStorageType::snorm:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8A8_SNORM : VK_FORMAT_R8G8B8A8_SNORM);
+				? vfmt::b8g8r8a8_snorm : vfmt::r8g8b8a8_snorm);
 			break;
 		case vtek::FormatStorageType::uscaled:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8A8_USCALED : VK_FORMAT_R8G8B8A8_USCALED);
+				? vfmt::b8g8r8a8_uscaled : vfmt::r8g8b8a8_uscaled);
 			break;
 		case vtek::FormatStorageType::sscaled:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8A8_SSCALED : VK_FORMAT_R8G8B8A8_SSCALED);
+				? vfmt::b8g8r8a8_sscaled : vfmt::r8g8b8a8_sscaled);
 			break;
 		case vtek::FormatStorageType::uint:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8A8_UINT : VK_FORMAT_R8G8B8A8_UINT);
+				? vfmt::b8g8r8a8_uint : vfmt::r8g8b8a8_uint);
 			break;
 		case vtek::FormatStorageType::sint:
 			priorities.push_back(
 				(query->swizzleBGR)
-				? VK_FORMAT_B8G8R8A8_SINT : VK_FORMAT_R8G8B8A8_SINT);
+				? vfmt::b8g8r8a8_sint : vfmt::r8g8b8a8_sint);
 			break;
 		case vtek::FormatStorageType::unorm_pack32:
-			priorities.push_back(VK_FORMAT_A8B8G8R8_UNORM_PACK32);
+			priorities.push_back(vfmt::a8b8g8r8_unorm_pack32);
 			break;
 		case vtek::FormatStorageType::snorm_pack32:
-			priorities.push_back(VK_FORMAT_A8B8G8R8_SNORM_PACK32);
+			priorities.push_back(vfmt::a8b8g8r8_snorm_pack32);
 			break;
 		case vtek::FormatStorageType::uscaled_pack32:
-			priorities.push_back(VK_FORMAT_A8B8G8R8_USCALED_PACK32);
+			priorities.push_back(vfmt::a8b8g8r8_uscaled_pack32);
 			break;
 		case vtek::FormatStorageType::sscaled_pack32:
-			priorities.push_back(VK_FORMAT_A8B8G8R8_SSCALED_PACK32);
+			priorities.push_back(vfmt::a8b8g8r8_sscaled_pack32);
 			break;
 		case vtek::FormatStorageType::uint_pack32:
-			priorities.push_back(VK_FORMAT_A8B8G8R8_UINT_PACK32);
+			priorities.push_back(vfmt::a8b8g8r8_uint_pack32);
 			break;
 		case vtek::FormatStorageType::sint_pack32:
-			priorities.push_back(VK_FORMAT_A8B8G8R8_SINT_PACK32);
+			priorities.push_back(vfmt::a8b8g8r8_sint_pack32);
 			break;
 		default:
 			break;
@@ -2188,25 +2187,25 @@ static void get_format_color_channel_4(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::unorm:
-			priorities.push_back(VK_FORMAT_R16G16B16A16_UNORM);
+			priorities.push_back(vfmt::r16g16b16a16_unorm);
 			break;
 		case vtek::FormatStorageType::snorm:
-			priorities.push_back(VK_FORMAT_R16G16B16A16_SNORM);
+			priorities.push_back(vfmt::r16g16b16a16_snorm);
 			break;
 		case vtek::FormatStorageType::uscaled:
-			priorities.push_back(VK_FORMAT_R16G16B16A16_USCALED);
+			priorities.push_back(vfmt::r16g16b16a16_uscaled);
 			break;
 		case vtek::FormatStorageType::sscaled:
-			priorities.push_back(VK_FORMAT_R16G16B16A16_SSCALED);
+			priorities.push_back(vfmt::r16g16b16a16_sscaled);
 			break;
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R16G16B16A16_UINT);
+			priorities.push_back(vfmt::r16g16b16a16_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R16G16B16A16_SINT);
+			priorities.push_back(vfmt::r16g16b16a16_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R16G16B16A16_SFLOAT);
+			priorities.push_back(vfmt::r16g16b16a16_sfloat);
 			break;
 		default:
 			break;
@@ -2217,13 +2216,13 @@ static void get_format_color_channel_4(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R32G32B32A32_UINT);
+			priorities.push_back(vfmt::r32g32b32a32_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R32G32B32A32_SINT);
+			priorities.push_back(vfmt::r32g32b32a32_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+			priorities.push_back(vfmt::r32g32b32a32_sfloat);
 			break;
 		default:
 			break;
@@ -2234,13 +2233,13 @@ static void get_format_color_channel_4(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::uint:
-			priorities.push_back(VK_FORMAT_R64G64B64A64_UINT);
+			priorities.push_back(vfmt::r64g64b64a64_uint);
 			break;
 		case vtek::FormatStorageType::sint:
-			priorities.push_back(VK_FORMAT_R64G64B64A64_SINT);
+			priorities.push_back(vfmt::r64g64b64a64_sint);
 			break;
 		case vtek::FormatStorageType::sfloat:
-			priorities.push_back(VK_FORMAT_R64G64B64A64_SFLOAT);
+			priorities.push_back(vfmt::r64g64b64a64_sfloat);
 			break;
 		default:
 			break;
@@ -2252,30 +2251,30 @@ static void get_format_color_channel_4(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::unorm_pack16:
-			priorities.push_back(VK_FORMAT_R4G4B4A4_UNORM_PACK16);
+			priorities.push_back(vfmt::r4g4b4a4_unorm_pack16);
 #if defined(VK_API_VERSION_1_3)
-			priorities.push_back(VK_FORMAT_A4R4G4B4_UNORM_PACK16);
+			priorities.push_back(vfmt::a4r4g4b4_unorm_pack16);
 #endif
-			priorities.push_back(VK_FORMAT_R5G5B5A1_UNORM_PACK16);
-			priorities.push_back(VK_FORMAT_A1R5G5B5_UNORM_PACK16);
+			priorities.push_back(vfmt::r5g5b5a1_unorm_pack16);
+			priorities.push_back(vfmt::a1r5g5b5_unorm_pack16);
 			break;
 		case vtek::FormatStorageType::unorm_pack32:
-			priorities.push_back(VK_FORMAT_A2R10G10B10_UNORM_PACK32);
+			priorities.push_back(vfmt::a2r10g10b10_unorm_pack32);
 			break;
 		case vtek::FormatStorageType::snorm_pack32:
-			priorities.push_back(VK_FORMAT_A2R10G10B10_SNORM_PACK32);
+			priorities.push_back(vfmt::a2r10g10b10_snorm_pack32);
 			break;
 		case vtek::FormatStorageType::uscaled_pack32:
-			priorities.push_back(VK_FORMAT_A2R10G10B10_USCALED_PACK32);
+			priorities.push_back(vfmt::a2r10g10b10_uscaled_pack32);
 			break;
 		case vtek::FormatStorageType::sscaled_pack32:
-			priorities.push_back(VK_FORMAT_A2R10G10B10_SSCALED_PACK32);
+			priorities.push_back(vfmt::a2r10g10b10_sscaled_pack32);
 			break;
 		case vtek::FormatStorageType::uint_pack32:
-			priorities.push_back(VK_FORMAT_A2R10G10B10_UINT_PACK32);
+			priorities.push_back(vfmt::a2r10g10b10_uint_pack32);
 			break;
 		case vtek::FormatStorageType::sint_pack32:
-			priorities.push_back(VK_FORMAT_A2R10G10B10_SINT_PACK32);
+			priorities.push_back(vfmt::a2r10g10b10_sint_pack32);
 			break;
 		default:
 			break;
@@ -2287,32 +2286,32 @@ static void get_format_color_channel_4(
 		switch (query->storageType)
 		{
 		case vtek::FormatStorageType::unorm_pack16:
-			priorities.push_back(VK_FORMAT_B4G4R4A4_UNORM_PACK16);
+			priorities.push_back(vfmt::b4g4r4a4_unorm_pack16);
 #if defined(VK_API_VERSION_1_3)
-			priorities.push_back(VK_FORMAT_A4B4G4R4_UNORM_PACK16);
+			priorities.push_back(vfmt::a4b4g4r4_unorm_pack16);
 #endif
-			priorities.push_back(VK_FORMAT_B5G5R5A1_UNORM_PACK16);
+			priorities.push_back(vfmt::b5g5r5a1_unorm_pack16);
 			break;
 		case vtek::FormatStorageType::unorm_pack32:
-			priorities.push_back(VK_FORMAT_A2B10G10R10_UNORM_PACK32);
+			priorities.push_back(vfmt::a2b10g10r10_unorm_pack32);
 			break;
 		case vtek::FormatStorageType::snorm_pack32:
-			priorities.push_back(VK_FORMAT_A2B10G10R10_SNORM_PACK32);
+			priorities.push_back(vfmt::a2b10g10r10_snorm_pack32);
 			break;
 		case vtek::FormatStorageType::uscaled_pack32:
-			priorities.push_back(VK_FORMAT_A2B10G10R10_USCALED_PACK32);
+			priorities.push_back(vfmt::a2b10g10r10_uscaled_pack32);
 			break;
 		case vtek::FormatStorageType::sscaled_pack32:
-			priorities.push_back(VK_FORMAT_A2B10G10R10_SSCALED_PACK32);
+			priorities.push_back(vfmt::a2b10g10r10_sscaled_pack32);
 			break;
 		case vtek::FormatStorageType::uint_pack32:
-			priorities.push_back(VK_FORMAT_A2B10G10R10_UINT_PACK32);
+			priorities.push_back(vfmt::a2b10g10r10_uint_pack32);
 			break;
 		case vtek::FormatStorageType::sint_pack32:
-			priorities.push_back(VK_FORMAT_A2B10G10R10_SINT_PACK32);
+			priorities.push_back(vfmt::a2b10g10r10_sint_pack32);
 			break;
 		case vtek::FormatStorageType::ufloat_pack32:
-			priorities.push_back(VK_FORMAT_E5B9G9R9_UFLOAT_PACK32);
+			priorities.push_back(vfmt::e5b9g9r9_ufloat_pack32);
 			break;
 		default:
 			break;
@@ -2321,13 +2320,13 @@ static void get_format_color_channel_4(
 }
 
 static void get_format_compressed_srgb(
-	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+	const vtek::FormatQuery* query, std::vector<vtek::Format>& priorities)
 {
 	vtek_log_error("get_format_compressed_srgb(): Not implemented!");
 }
 
 static void get_format_compressed(
-	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+	const vtek::FormatQuery* query, std::vector<vtek::Format>& priorities)
 {
 	vtek_log_error("get_format_compressed(): Not implemented!");
 }
@@ -2359,7 +2358,7 @@ bool vtek::SupportedFormat::FindFormat(
 	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
 	VkFormatFeatureFlags fflags = vtek::get_format_features(info->features);
 	VkFormat fmt = get_format(format);
-	bool linear = info->linearTiling;
+	bool linear = (info->tiling == vtek::ImageTiling::linear);
 	VkFormatProperties props;
 	vkGetPhysicalDeviceFormatProperties(physDev, fmt, &props);
 
@@ -2390,53 +2389,47 @@ bool vtek::SupportedFormat::FindFormat(
 	return false; // no match
 }
 
-static bool vtek::SupportedFormat::QueryColorFormat(
+bool vtek::SupportedFormat::QueryColorFormat(
 	const vtek::FormatQuery* query, const vtek::FormatInfo* info,
 	const vtek::Device* device, vtek::SupportedFormat& out)
 {
-	VkFormat vtek::get_format_color(
-		const vtek::FormatInfo* info, VkPhysicalDevice physDev,
-		vtek::EnumBitmask<vtek::FormatFeature> featureFlags)
+	std::vector<vtek::Format> priorities;
+	uint32_t channels = static_cast<uint32_t>(query->channels);
+
+	// TODO: Independent function for all compressed formats!
+	if (query->compression != vtek::FormatCompression::none)
 	{
-		VkFormat outFormat = VK_FORMAT_UNDEFINED;
-		std::vector<vtek::Format> priorities; // TODO: Use `vtek::Format` instead!
-		uint32_t channels = static_cast<uint32_t>(info->channels);
-
-		// TODO: Independent function for all compressed formats!
-		if (info->compression != vtek::FormatCompression::none)
+		if (query->sRGB)
 		{
-			if (info->sRGB)
-			{
-				get_format_compressed_srgb(info, priorities);
-			}
-			else
-			{
-				get_format_compressed(info, priorities);
-			}
+			get_format_compressed_srgb(query, priorities);
 		}
-		else if (info->sRGB)
+		else
 		{
-			get_format_color_srgb(info, priorities);
+			get_format_compressed(query, priorities);
 		}
-		else if (channels == 1)
-		{
-			get_format_color_channel_1(info, priorities);
-		}
-		else if (channels == 2)
-		{
-			get_format_color_channel_2(info, priorities);
-		}
-		else if (channels == 3)
-		{
-			get_format_color_channel_3(info, priorities);
-		}
-		else if (channels == 4)
-		{
-			get_format_color_channel_4(info, priorities);
-		}
-
-		return FindFormat(info, priorities, device, out);
 	}
+	else if (query->sRGB)
+	{
+		get_format_color_srgb(query, priorities);
+	}
+	else if (channels == 1)
+	{
+		get_format_color_channel_1(query, priorities);
+	}
+	else if (channels == 2)
+	{
+		get_format_color_channel_2(query, priorities);
+	}
+	else if (channels == 3)
+	{
+		get_format_color_channel_3(query, priorities);
+	}
+	else if (channels == 4)
+	{
+		get_format_color_channel_4(query, priorities);
+	}
+
+	return FindFormat(info, priorities, device, out);
 }
 
 // private constructor

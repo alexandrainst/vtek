@@ -6,6 +6,7 @@
 
 #include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
+#include "vtek_vulkan_types.hpp"
 
 
 namespace vtek
@@ -337,6 +338,9 @@ namespace vtek
 		// Provided by Vulkan >= 1.2
 		sampled_image_filter_minmax = 0x00400000U
 	};
+
+	// Convert a `vtek::Format` into a `VkFormat`.
+	VkFormat get_format(Format format);
 
 
 	// ============================== //

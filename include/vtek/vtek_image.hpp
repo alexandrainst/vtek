@@ -133,9 +133,10 @@ namespace vtek
 		VkExtent2D extent {0U, 0U};
 
 		// Format specification:
-		// 1) Directly specify a Vulkan format (not recommended, GPU support unsafe!)
+		// 1) Directly specify an image format (not recommended,
+		//    GPU support not guaranteed!)
 		// 2) Query a known supported format (recommended path)
-		VkFormat format {VK_FORMAT_UNDEFINED};
+		Format format {Format::undefined};
 		SupportedFormat supportedFormat {};
 
 		// Specify how the image should be used. At least one flag must be set.
