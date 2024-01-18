@@ -1757,35 +1757,582 @@ static void get_format_details(vtek::Format format, FormatDetails* details)
 
 
 
-/* format queries */
-bool vtek::has_format_support(
-	const vtek::FormatQuery* query, const vtek::Device* device,
-	vtek::SupportedFormat* outSupport)
+/* query color format (LONG section) */
+static void get_format_color_srgb(
+	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
 {
-	if (query->format == vtek::Format::undefined) { return false; }
+	uint32_t channels = static_cast<uint32_t>(query->channels);
 
-	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
-	VkFormatFeatureFlags fflags = vtek::get_format_features(query->features);
-	VkFormat fmt = get_format(query->format);
-	bool linear = query->linearTiling;
-	VkFormatProperties props;
-	vkGetPhysicalDeviceFormatProperties(physDev, fmt, &props);
-
-	if (linear && (props.linearTilingFeatures & fflags) == fflags)
+	if (channels == 1)
 	{
-		*outSupport = vtek::SupportedFormat(query->format, fmt, linear);
-		return true;
+		priorities.push_back(VK_FORMAT_R8_SRGB);
 	}
-	else if (!linear && (props.optimalTilingFeatures & fflags) == fflags)
+	else if (channels == 2)
 	{
-		*outSupport = vtek::SupportedFormat(query->format, fmt, linear);
-		return true;
+		priorities.push_back(VK_FORMAT_R8G8_SRGB);
 	}
-	else
+	else if (channels == 3)
 	{
-		return false;
+		if (query->swizzleBGR)
+		{
+			priorities.push_back(VK_FORMAT_B8G8R8_SRGB);
+		}
+		else
+		{
+			priorities.push_back(VK_FORMAT_R8G8B8_SRGB);
+		}
+	}
+	else if (channels == 4)
+	{
+		if (query->swizzleBGR &&
+		    query->storageType == vtek::FormatStorageType::unorm_pack32)
+		{
+			priorities.push_back(VK_FORMAT_A8B8G8R8_SRGB_PACK32);
+		}
+		else if (query->swizzleBGR)
+		{
+			priorities.push_back(VK_FORMAT_B8G8R8A8_SRGB);
+		}
+		else
+		{
+			priorities.push_back(VK_FORMAT_R8G8B8A8_SRGB);
+		}
 	}
 }
+
+static void get_format_color_channel_1(
+	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+{
+	if (query->channelSize == vtek::FormatChannelSize::channel_8)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm:
+			priorities.push_back(VK_FORMAT_R8_UNORM);
+			break;
+		case vtek::FormatStorageType::snorm:
+			priorities.push_back(VK_FORMAT_R8_SNORM);
+			break;
+		case vtek::FormatStorageType::uscaled:
+			priorities.push_back(VK_FORMAT_R8_USCALED);
+			break;
+		case vtek::FormatStorageType::sscaled:
+			priorities.push_back(VK_FORMAT_R8_SSCALED);
+			break;
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R8_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R8_SINT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_16)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm:
+			priorities.push_back(VK_FORMAT_R16_UNORM);
+			break;
+		case vtek::FormatStorageType::snorm:
+			priorities.push_back(VK_FORMAT_R16_SNORM);
+			break;
+		case vtek::FormatStorageType::uscaled:
+			priorities.push_back(VK_FORMAT_R16_USCALED);
+			break;
+		case vtek::FormatStorageType::sscaled:
+			priorities.push_back(VK_FORMAT_R16_SSCALED);
+			break;
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R16_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R16_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R16_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_32)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R32_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R32_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R32_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_64)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R64_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R64_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R64_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::special)
+	{
+		if (query->storageType == vtek::FormatStorageType::unorm_pack16)
+		{
+			priorities.push_back(VK_FORMAT_R12X4_UNORM_PACK16);
+			priorities.push_back(VK_FORMAT_R10X6_UNORM_PACK16);
+		}
+	}
+}
+
+static void get_format_color_channel_2(
+	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+{
+	if (query->channelSize == vtek::FormatChannelSize::channel_8)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm:
+			priorities.push_back(VK_FORMAT_R8G8_UNORM);
+			break;
+		case vtek::FormatStorageType::snorm:
+			priorities.push_back(VK_FORMAT_R8G8_SNORM);
+			break;
+		case vtek::FormatStorageType::uscaled:
+			priorities.push_back(VK_FORMAT_R8G8_USCALED);
+			break;
+		case vtek::FormatStorageType::sscaled:
+			priorities.push_back(VK_FORMAT_R8G8_SSCALED);
+			break;
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R8G8_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R8G8_SINT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_16)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm:
+			priorities.push_back(VK_FORMAT_R16G16_UNORM);
+			break;
+		case vtek::FormatStorageType::snorm:
+			priorities.push_back(VK_FORMAT_R16G16_SNORM);
+			break;
+		case vtek::FormatStorageType::uscaled:
+			priorities.push_back(VK_FORMAT_R16G16_USCALED);
+			break;
+		case vtek::FormatStorageType::sscaled:
+			priorities.push_back(VK_FORMAT_R16G16_SSCALED);
+			break;
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R16G16_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R16G16_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R16G16_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_32)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R32G32_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R32G32_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R32G32_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_64)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R64G64_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R64G64_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R64G64_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::special)
+	{
+		if (query->storageType == vtek::FormatStorageType::unorm_pack8)
+		{
+			priorities.push_back(VK_FORMAT_R4G4_UNORM_PACK8);
+		}
+		else if (query->storageType == vtek::FormatStorageType::unorm_pack16)
+		{
+			priorities.push_back(VK_FORMAT_R12X4G12X4_UNORM_2PACK16);
+			priorities.push_back(VK_FORMAT_R10X6G10X6_UNORM_2PACK16);
+		}
+	}
+}
+
+static void get_format_color_channel_3(
+	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+{
+	if (query->channelSize == vtek::FormatChannelSize::channel_8)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8_UNORM : VK_FORMAT_R8G8B8_UNORM);
+			break;
+		case vtek::FormatStorageType::snorm:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8_SNORM : VK_FORMAT_R8G8B8_SNORM);
+			break;
+		case vtek::FormatStorageType::uscaled:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8_USCALED : VK_FORMAT_R8G8B8_USCALED);
+			break;
+		case vtek::FormatStorageType::sscaled:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8_SSCALED : VK_FORMAT_R8G8B8_SSCALED);
+			break;
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8_UINT : VK_FORMAT_R8G8B8_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8_SINT : VK_FORMAT_R8G8B8_SINT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_16 &&
+	         !query->swizzleBGR)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm:
+			priorities.push_back(VK_FORMAT_R16G16B16_UNORM);
+			break;
+		case vtek::FormatStorageType::snorm:
+			priorities.push_back(VK_FORMAT_R16G16B16_SNORM);
+			break;
+		case vtek::FormatStorageType::uscaled:
+			priorities.push_back(VK_FORMAT_R16G16B16_USCALED);
+			break;
+		case vtek::FormatStorageType::sscaled:
+			priorities.push_back(VK_FORMAT_R16G16B16_SSCALED);
+			break;
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R16G16B16_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R16G16B16_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R16G16B16_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_32 &&
+	         !query->swizzleBGR)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R32G32B32_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R32G32B32_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R32G32B32_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_64 &&
+	         !query->swizzleBGR)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R64G64B64_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R64G64B64_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R64G64B64_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::special)
+	{
+		if (query->storageType == vtek::FormatStorageType::ufloat_pack32)
+		{
+			priorities.push_back(VK_FORMAT_B10G11R11_UFLOAT_PACK32);
+		}
+	}
+}
+
+static void get_format_color_channel_4(
+	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+{
+	if (query->channelSize == vtek::FormatChannelSize::channel_8)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R8G8B8A8_UNORM);
+			break;
+		case vtek::FormatStorageType::snorm:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_SNORM : VK_FORMAT_R8G8B8A8_SNORM);
+			break;
+		case vtek::FormatStorageType::uscaled:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_USCALED : VK_FORMAT_R8G8B8A8_USCALED);
+			break;
+		case vtek::FormatStorageType::sscaled:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_SSCALED : VK_FORMAT_R8G8B8A8_SSCALED);
+			break;
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_UINT : VK_FORMAT_R8G8B8A8_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(
+				(query->swizzleBGR)
+				? VK_FORMAT_B8G8R8A8_SINT : VK_FORMAT_R8G8B8A8_SINT);
+			break;
+		case vtek::FormatStorageType::unorm_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_UNORM_PACK32);
+			break;
+		case vtek::FormatStorageType::snorm_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_SNORM_PACK32);
+			break;
+		case vtek::FormatStorageType::uscaled_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_USCALED_PACK32);
+			break;
+		case vtek::FormatStorageType::sscaled_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_SSCALED_PACK32);
+			break;
+		case vtek::FormatStorageType::uint_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_UINT_PACK32);
+			break;
+		case vtek::FormatStorageType::sint_pack32:
+			priorities.push_back(VK_FORMAT_A8B8G8R8_SINT_PACK32);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_16)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_UNORM);
+			break;
+		case vtek::FormatStorageType::snorm:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_SNORM);
+			break;
+		case vtek::FormatStorageType::uscaled:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_USCALED);
+			break;
+		case vtek::FormatStorageType::sscaled:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_SSCALED);
+			break;
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R16G16B16A16_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_32)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R32G32B32A32_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R32G32B32A32_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::channel_64)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::uint:
+			priorities.push_back(VK_FORMAT_R64G64B64A64_UINT);
+			break;
+		case vtek::FormatStorageType::sint:
+			priorities.push_back(VK_FORMAT_R64G64B64A64_SINT);
+			break;
+		case vtek::FormatStorageType::sfloat:
+			priorities.push_back(VK_FORMAT_R64G64B64A64_SFLOAT);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::special &&
+	         !query->swizzleBGR)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm_pack16:
+			priorities.push_back(VK_FORMAT_R4G4B4A4_UNORM_PACK16);
+#if defined(VK_API_VERSION_1_3)
+			priorities.push_back(VK_FORMAT_A4R4G4B4_UNORM_PACK16);
+#endif
+			priorities.push_back(VK_FORMAT_R5G5B5A1_UNORM_PACK16);
+			priorities.push_back(VK_FORMAT_A1R5G5B5_UNORM_PACK16);
+			break;
+		case vtek::FormatStorageType::unorm_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_UNORM_PACK32);
+			break;
+		case vtek::FormatStorageType::snorm_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_SNORM_PACK32);
+			break;
+		case vtek::FormatStorageType::uscaled_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_USCALED_PACK32);
+			break;
+		case vtek::FormatStorageType::sscaled_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_SSCALED_PACK32);
+			break;
+		case vtek::FormatStorageType::uint_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_UINT_PACK32);
+			break;
+		case vtek::FormatStorageType::sint_pack32:
+			priorities.push_back(VK_FORMAT_A2R10G10B10_SINT_PACK32);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (query->channelSize == vtek::FormatChannelSize::special &&
+	         query->swizzleBGR)
+	{
+		switch (query->storageType)
+		{
+		case vtek::FormatStorageType::unorm_pack16:
+			priorities.push_back(VK_FORMAT_B4G4R4A4_UNORM_PACK16);
+#if defined(VK_API_VERSION_1_3)
+			priorities.push_back(VK_FORMAT_A4B4G4R4_UNORM_PACK16);
+#endif
+			priorities.push_back(VK_FORMAT_B5G5R5A1_UNORM_PACK16);
+			break;
+		case vtek::FormatStorageType::unorm_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_UNORM_PACK32);
+			break;
+		case vtek::FormatStorageType::snorm_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_SNORM_PACK32);
+			break;
+		case vtek::FormatStorageType::uscaled_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_USCALED_PACK32);
+			break;
+		case vtek::FormatStorageType::sscaled_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_SSCALED_PACK32);
+			break;
+		case vtek::FormatStorageType::uint_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_UINT_PACK32);
+			break;
+		case vtek::FormatStorageType::sint_pack32:
+			priorities.push_back(VK_FORMAT_A2B10G10R10_SINT_PACK32);
+			break;
+		case vtek::FormatStorageType::ufloat_pack32:
+			priorities.push_back(VK_FORMAT_E5B9G9R9_UFLOAT_PACK32);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static void get_format_compressed_srgb(
+	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+{
+	vtek_log_error("get_format_compressed_srgb(): Not implemented!");
+}
+
+static void get_format_compressed(
+	const vtek::FormatQuery* query, std::vector<VkFormat>& priorities)
+{
+	vtek_log_error("get_format_compressed(): Not implemented!");
+}
+
+
 
 
 
@@ -1802,11 +2349,104 @@ constexpr uint32_t kStencilBit       = 0x0200;
 constexpr uint32_t kDepthStencilBits = kDepthBit | kStencilBit;
 constexpr uint32_t kPlanarBit        = 0x0400;
 
+// static construction methods
+bool vtek::SupportedFormat::FindFormat(
+	const vtek::FormatInfo* info, vtek::Format format,
+	const vtek::Device* device, vtek::SupportedFormat& out)
+{
+	if (format == vtek::Format::undefined || info == nullptr) { return false; }
+
+	VkPhysicalDevice physDev = vtek::device_get_physical_handle(device);
+	VkFormatFeatureFlags fflags = vtek::get_format_features(info->features);
+	VkFormat fmt = get_format(format);
+	bool linear = info->linearTiling;
+	VkFormatProperties props;
+	vkGetPhysicalDeviceFormatProperties(physDev, fmt, &props);
+
+	if (linear && (props.linearTilingFeatures & fflags) == fflags)
+	{
+		out = vtek::SupportedFormat(format, fmt, linear);
+		return true;
+	}
+	else if (!linear && (props.optimalTilingFeatures & fflags) == fflags)
+	{
+		out = vtek::SupportedFormat(format, fmt, linear);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool vtek::SupportedFormat::FindFormat(
+	const vtek::FormatInfo* info, const std::vector<vtek::Format>& formats,
+	const vtek::Device* device, vtek::SupportedFormat& out)
+{
+	for (auto fmt : formats)
+	{
+		if (FindFormat(info, fmt, device, out)) { return true; }
+	}
+	return false; // no match
+}
+
+static bool vtek::SupportedFormat::QueryColorFormat(
+	const vtek::FormatQuery* query, const vtek::FormatInfo* info,
+	const vtek::Device* device, vtek::SupportedFormat& out)
+{
+	VkFormat vtek::get_format_color(
+		const vtek::FormatInfo* info, VkPhysicalDevice physDev,
+		vtek::EnumBitmask<vtek::FormatFeature> featureFlags)
+	{
+		VkFormat outFormat = VK_FORMAT_UNDEFINED;
+		std::vector<vtek::Format> priorities; // TODO: Use `vtek::Format` instead!
+		uint32_t channels = static_cast<uint32_t>(info->channels);
+
+		// TODO: Independent function for all compressed formats!
+		if (info->compression != vtek::FormatCompression::none)
+		{
+			if (info->sRGB)
+			{
+				get_format_compressed_srgb(info, priorities);
+			}
+			else
+			{
+				get_format_compressed(info, priorities);
+			}
+		}
+		else if (info->sRGB)
+		{
+			get_format_color_srgb(info, priorities);
+		}
+		else if (channels == 1)
+		{
+			get_format_color_channel_1(info, priorities);
+		}
+		else if (channels == 2)
+		{
+			get_format_color_channel_2(info, priorities);
+		}
+		else if (channels == 3)
+		{
+			get_format_color_channel_3(info, priorities);
+		}
+		else if (channels == 4)
+		{
+			get_format_color_channel_4(info, priorities);
+		}
+
+		return FindFormat(info, priorities, device, out);
+	}
+}
+
 // private constructor
 vtek::SupportedFormat::SupportedFormat(
 	vtek::Format _format, VkFormat _fmt, bool linearTiling)
 {
 	propertyMask = 0U;
+	// TODO: Switch `format` and `_format` for consistency and readability!
+	format = _format;
+	fmt = _fmt;
 
 	FormatDetails details{};
 	get_format_details(_format, &details);

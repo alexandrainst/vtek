@@ -7,6 +7,29 @@
 
 namespace vtek
 {
+	// Image tiling specifies the tiling arrangement of texel blocks in an
+	// image. This is used for querying for supported image formats, and for
+	// creating images and framebuffer attachments.
+	enum class ImageTiling
+	{
+		// In almost all cases, optimal tiling is preferred. The internal
+		// arrangement of texels is implementation-dependent for more
+		// efficient memory access.
+		optimal,
+
+		// Linear tiling specifies texels to be laid out in row-major order,
+		// possibly with some padding on each row. This makes it easier to
+		// read/write texel data to/from the CPU without performing image
+		// layout transition barriers, but makes for less efficient memory
+		// access during rendering.
+		// NOTE: Linear tiling has limited supported, so optimal tiling
+		// should be preferred.
+		linear
+	};
+
+	VkImageTiling get_image_tiling(ImageTiling tiling);
+
+
 	// Multisampling is one way to perform anti-aliasing, by sampling multiple
 	// fragments per-pixel, and then resolving those fragments. This smooths out
 	// polygon edges. Multisampling is not recommended for deferred rendering.

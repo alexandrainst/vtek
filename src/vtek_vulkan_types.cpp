@@ -4,6 +4,12 @@
 #include "vtek_logging.hpp"
 
 
+VkImageTiling vtek::get_image_tiling(vtek::ImageTiling tiling)
+{
+	if (tiling == vtek::ImageTiling::linear) return VK_IMAGE_TILING_LINEAR;
+	else return VK_IMAGE_TILING_OPTIMAL;
+}
+
 VkSampleCountFlagBits vtek::get_multisample_count(vtek::MultisampleType sample)
 {
 	switch (sample)

@@ -343,20 +343,12 @@ namespace vtek
 	// === Supported format query === //
 	// ============================== //
 
-	// Forward-declaration, defined further below
-	class SupportedFormat;
-
-	struct FormatQuery
+	struct FormatInfo
 	{
-		Format format {Format::undefined};
-		bool linearTiling {false};
+		// Features and tiling describing the usage scenarios of the format.
+		ImageTiling tiling {ImageTiling::optimal};
 		EnumBitmask<FormatFeature> features {};
 	};
-
-	bool has_format_support(
-		const FormatQuery* query, const Device* device,
-		SupportedFormat* outSupport);
-
 
 	// Specify how vtek should search for a suitable Vulkan image format.
 	// The restrictions are prioritized as such:
@@ -366,8 +358,9 @@ namespace vtek
 	// 4) channel size
 	// 5) storage type
 	// 6) swizzled channels
-	struct FormatInfo
+	struct FormatQuery
 	{
+		// query info regarding the format
 		FormatChannels channels {FormatChannels::channels_4};
 		bool sRGB {false};
 		bool swizzleBGR {false}; // TODO: When, why, and how?
@@ -375,14 +368,6 @@ namespace vtek
 		FormatChannelSize channelSize {FormatChannelSize::channel_8};
 		FormatCompression compression {FormatCompression::none};
 	};
-
-	// Check if the device supports a given image format, specified by overloads:
-	// - ImageFormatInfo: Specific number of channels, sRGB, compression, etc.
-	// - FormatQuery
-	// TODO: This is not implemented (check functionality in impl/vtek_image_formats).
-	bool has_format_support(
-		const FormatInfo* info, const FormatQuery* query,
-		const Device* device, SupportedFormat* outSupport);
 
 
 	// ======================== //
@@ -392,21 +377,27 @@ namespace vtek
 	class SupportedFormat
 	{
 	public:
-		inline SupportedFormat() {}
-		bool operator==(Format _format) const;
-
-		// Construction
-
 		// Returns true is the specified format is supported.
 		static bool FindFormat(
-			const FormatQuery* query, Format format,
+			const FormatInfo* info, Format format,
 			const Device* device, SupportedFormat& out);
 
 		// Returns true if any of the specified formats are supported.
 		// The first supported format in the list is selected.
 		static bool FindFormat(
-			const FormatQuery* query, const std::vector<Format>& formats,
+			const FormatInfo* info, const std::vector<Format>& formats,
 			const Device* device, SupportedFormat& out);
+
+		// Query for a supported color format which has the properties
+		// specified in the FormatQuery struct. Returns false if no
+		// supported format satisfies those properties, and true otherwise.
+		static bool QueryColorFormat(
+			const FormatQuery* query, const FormatInfo* info,
+			const Device* device, SupportedFormat& out);
+
+		// Public empty constructor: Creates an invalid object.
+		inline SupportedFormat() {}
+		bool operator==(Format _format) const;
 
 		// Check validity
 		inline bool is_valid() const { return format != Format::undefined; }
@@ -440,9 +431,7 @@ namespace vtek
 		}
 
 	private:
-		// Only the friend function may properly construct this object
-		friend bool vtek::has_format_support(
-			const FormatQuery*,const Device*,SupportedFormat*);
+		// Private constructor only
 		SupportedFormat(Format _format, VkFormat _fmt, bool linearTiling);
 
 		// 16+8+8 = 32 bits

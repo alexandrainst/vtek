@@ -256,22 +256,15 @@ int main()
 		vtek::Format::r8g8b8_unorm,
 		vtek::Format::r8g8b8a8_unorm
 	};
-	vtek::SupportedFormat colorFormat;
-	vtek::FormatQuery framebufferFormatQuery{};
-	framebufferFormatQuery.linearTiling = false;
-	framebufferFormatQuery.features
+	vtek::FormatInfo framebufferFormatInfo{};
+	framebufferFormatInfo.linearTiling = false;
+	framebufferFormatInfo.features
 		= vtek::FormatFeature::sampled_image
 		| vtek::FormatFeature::color_attachment;
-	for (auto fmt : prioritizedColorFormats)
-	{
-		framebufferFormatQuery.format = fmt;
-		if (vtek::has_format_support(
-			    &framebufferFormatQuery, device, &colorFormat))
-		{
-			break;
-		}
-	}
-	if (!colorFormat.is_valid())
+	vtek::SupportedFormat colorFormat;
+	if (!vtek::SupportedFormat::FindFormat(
+		    &framebufferFormatInfo, prioritizedColorFormats,
+		    device, colorFormat))
 	{
 		log_error("Failed to find a supported framebuffer color format!");
 		return -1;
