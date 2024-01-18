@@ -211,6 +211,13 @@ namespace vtek
 		astc_12x12_sfloat_block
 	};
 
+	// Convert a `vtek::Format` into a `VkFormat`.
+	VkFormat get_format(Format format);
+
+	// Convert a `VkFormat` into a `vtek::Format`
+	Format get_format_from_native(VkFormat fmt);
+
+
 	enum class FormatCompression : uint8_t
 	{
 		// no compression (default)
@@ -339,9 +346,6 @@ namespace vtek
 		sampled_image_filter_minmax = 0x00400000U
 	};
 
-	// Convert a `vtek::Format` into a `VkFormat`.
-	VkFormat get_format(Format format);
-
 
 	// ============================== //
 	// === Supported format query === //
@@ -401,13 +405,14 @@ namespace vtek
 
 		// Public empty constructor: Creates an invalid object.
 		inline SupportedFormat() {}
-		bool operator==(Format _format) const;
+		bool operator==(Format format) const;
 
 		// Check validity
-		inline bool is_valid() const { return format != Format::undefined; }
+		inline bool is_valid() const { return mFormat != Format::undefined; }
 
-		// Get the underlying Vulkan format
-		VkFormat get() const;
+		// Get the underlying (Vulkan) format
+		Format get() const;
+		VkFormat get_native() const;
 
 		// Get format string for print debugging or visual display
 		std::string_view get_format_string() const;
@@ -430,24 +435,23 @@ namespace vtek
 		FormatStorageType get_storage_type() const;
 		EnumBitmask<FormatFeature> get_supported_features() const;
 
+		// Check if the format supports feature usage
 		inline bool has_feature(FormatFeature feature) const {
-			return features.has_flag(feature);
+			return mFeatures.has_flag(feature);
 		}
 
 	private:
 		// Private constructor only
-		SupportedFormat(Format _format, VkFormat _fmt, bool linearTiling);
+		SupportedFormat(Format format, bool linearTiling);
 
 		// 16+8+8 = 32 bits
-		Format format {Format::undefined};
-		FormatCompression compression {FormatCompression::none};
-		FormatStorageType storage {FormatStorageType::unorm};
+		Format mFormat {Format::undefined};
+		FormatCompression mCompression {FormatCompression::none};
+		FormatStorageType mStorage {FormatStorageType::unorm};
 
-		// 3*32 = 96 bits
-		VkFormat fmt {VK_FORMAT_UNDEFINED};
-		EnumBitmask<FormatFeature> features {};
-		uint32_t propertyMask {0U};
-		// TODO: Store VkFormatFeatureFlags ?
+		// 2*32 = 64 bits
+		EnumBitmask<FormatFeature> mFeatures {};
+		uint32_t mPropertyMask {0U};
 	};
 
 

@@ -538,10 +538,12 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ========================= //
 	VkPipelineRenderingCreateInfo renderingCreateInfo;
 	bool useDynamicRendering = (info->renderPassType == vtek::RenderPassType::dynamic);
+	std::vector<VkFormat> dynRenderFormats;
 	if (useDynamicRendering)
 	{
 		auto pipRender = info->pipelineRendering;
-		const std::vector<VkFormat>& attachments = pipRender->colorAttachmentFormats;
+		const std::vector<vtek::Format>& attachments =
+			pipRender->colorAttachmentFormats;
 
 		// Error handling ensured..
 
@@ -571,7 +573,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
-		bool depthSpecified = pipRender->depthAttachmentFormat != VK_FORMAT_UNDEFINED;
+		bool depthSpecified =
+			(pipRender->depthAttachmentFormat != vtek::Format::undefined);
 		if (!depthSpecified && dsState.depthWriteEnable.get())
 		{
 			vtek_log_error("No depth attachment format provided for dynamic rendering.");
@@ -580,7 +583,8 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
-		bool stencilSpecified = pipRender->stencilAttachmentFormat != VK_FORMAT_UNDEFINED;
+		bool stencilSpecified =
+			(pipRender->stencilAttachmentFormat != vtek::Format::undefined);
 		if (!stencilSpecified && dsState.stencilTestEnable.get())
 		{
 			vtek_log_error("No stencil attachment format provided for dynamic rendering.");
@@ -590,15 +594,20 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		}
 
 		// Fill rendering info struct
-		renderingCreateInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-			.pNext = nullptr,
-			.viewMask = 0, // TODO: uint32_t ?
-			.colorAttachmentCount = static_cast<uint32_t>(attachments.size()),
-			.pColorAttachmentFormats = attachments.data(),
-			.depthAttachmentFormat = pipRender->depthAttachmentFormat,
-			.stencilAttachmentFormat = pipRender->stencilAttachmentFormat
-		};
+		for (auto fmt : attachments) {
+			dynRenderFormats.push_back(vtek::get_format(fmt));
+		}
+		renderingCreateInfo.sType =
+			VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+		renderingCreateInfo.pNext = nullptr;
+		renderingCreateInfo.viewMask = 0;
+		renderingCreateInfo.colorAttachmentCount =
+			static_cast<uint32_t>(dynRenderFormats.size());
+		renderingCreateInfo.pColorAttachmentFormats = dynRenderFormats.data();
+		renderingCreateInfo.depthAttachmentFormat =
+			vtek::get_format(pipRender->depthAttachmentFormat);
+		renderingCreateInfo.stencilAttachmentFormat =
+			vtek::get_format(pipRender->stencilAttachmentFormat);
 	}
 	else
 	{

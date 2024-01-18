@@ -302,7 +302,7 @@ bool vtek::allocator_image2d_create(
 		return false;
 	}
 	else {
-		imageInfo.format = info->supportedFormat.get();
+		imageInfo.format = info->supportedFormat.get_native();
 	}
 
 	if (info->useMipmaps) {

@@ -9,6 +9,7 @@
 #include "vtek_object_handles.hpp"
 #include "vtek_push_constants.hpp"
 #include "vtek_shaders.hpp"
+#include "vtek_format_support.hpp"
 #include "vtek_types.hpp"
 #include "vtek_vertex_data.hpp"
 #include "vtek_vulkan_types.hpp" // MultisampleType, CullMode
@@ -248,9 +249,9 @@ namespace vtek
 
 	struct PipelineRendering
 	{
-		std::vector<VkFormat> colorAttachmentFormats;
-		VkFormat depthAttachmentFormat {VK_FORMAT_UNDEFINED};
-		VkFormat stencilAttachmentFormat {VK_FORMAT_UNDEFINED};
+		std::vector<Format> colorAttachmentFormats;
+		Format depthAttachmentFormat {Format::undefined};
+		Format stencilAttachmentFormat {Format::undefined};
 	};
 
 

@@ -314,7 +314,7 @@ static bool create_image_views(vtek::Swapchain* swapchain, VkDevice dev)
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		createInfo.image = swapchain->images[i];
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		createInfo.format = swapchain->imageFormat;
+		createInfo.format = vtek::get_format(swapchain->imageFormat);
 		// We don't need to swizzle (swap around) any of the color channels
 		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_R;
 		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY; // VK_COMPONENT_SWIZZLE_G;
@@ -539,14 +539,18 @@ static bool get_supported_depth_format(
 	// Even though depth images are not used by the swapchain, they are
 	// linked to the framebuffers that use the swapchain, so this is a
 	// logical place to determine depth format.
-	std::vector<vtek::Format> depthFormatCandidates = {
+	std::vector<vtek::Format> formats = {
 		// Place first because it's more performant, and should be used unless
 		// the extra precision is really needed.
 		vtek::Format::d24_unorm_s8_uint,
 		vtek::Format::d32_sfloat,
 		vtek::Format::d32_sfloat_s8_uint
 	};
+	vtek::FormatInfo info{};
+	info.tiling = vtek::ImageTiling::optimal;
+	info.features = vtek::FormatFeature::depth_stencil_attachment;
 
+	return vtek::SupportedFormat::FindFormat(&info, formats, device, out);
 }
 
 static bool create_frame_sync_objects(vtek::Swapchain* swapchain, VkDevice dev)
@@ -1077,7 +1081,7 @@ vtek::Swapchain* vtek::swapchain_create(
 	vkGetSwapchainImagesKHR(dev, swapchain->vulkanHandle, &swapchainLength, swapchain->images.data());
 
 	// Fill out the data members of the swapchain struct
-	swapchain->imageFormat = surfaceFormat.format;
+	swapchain->imageFormat = vtek::get_format_from_native(surfaceFormat.format);
 	swapchain->imageExtent = imageExtent;
 	swapchain->length = swapchainLength;
 	swapchain->isInvalidated = false;
@@ -1103,28 +1107,15 @@ vtek::Swapchain* vtek::swapchain_create(
 	// === Depth buffering === //
 	// ======================= //
 
-	// Determine image format for framebuffer depth attachments.
-	// Even though depth images are not used by the swapchain, they are
-	// linked to the framebuffers that use the swapchain, so this is a
-	// logical place to determine depth format.
-	std::vector<VkFormat> depthFormatCandidates = {
-		// Place first because it's more performant, and should be used unless
-		// the extra precision is really needed.
-		VK_FORMAT_D24_UNORM_S8_UINT,
-
-		VK_FORMAT_D32_SFLOAT,
-		VK_FORMAT_D32_SFLOAT_S8_UINT
-	};
-	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-	VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-
-	if (!vtek::find_supported_image_format(
-		physDev, depthFormatCandidates, tiling, features,
-		&swapchain->depthImageFormat))
+	// Depth buffer format
+	vtek::SupportedFormat supportedDepthFormat;
+	if (!get_supported_depth_format(device, supportedDepthFormat))
 	{
-		vtek_log_error("Failed to find supported depth image format!");
+		vtek_log_error("Failed to find suitable swapchain depth image format!");
 		return nullptr;
 	}
+	// TODO: Store `vtek::Format` or `VkFormat`?
+	swapchain->depthImageFormat = supportedDepthFormat.get();
 
 	switch (info->depthBuffer)
 	{
@@ -1289,7 +1280,7 @@ bool vtek::swapchain_recreate(
 
 	// Fill out the data members of the swapchain struct
 	swapchain->vulkanHandle = newSwapchain;
-	swapchain->imageFormat = surfaceFormat.format;
+	swapchain->imageFormat = vtek::get_format_from_native(surfaceFormat.format);
 	swapchain->imageExtent = imageExtent;
 	swapchain->length = swapchainLength;
 	swapchain->isInvalidated = false;
@@ -1299,28 +1290,6 @@ bool vtek::swapchain_recreate(
 	if (!create_image_views(swapchain, dev))
 	{
 		vtek_log_error("Failed to re-create swapchain image views!");
-		return false;
-	}
-
-	// Depth buffer format
-	std::vector<vtek::Format> depthFormatCandidates = {
-		vtek::Format::d32_sfloat,
-		vtek::Format::d32_sfloat_s8_uint,
-		vtek::Format::d24_unorm_s8_uint
-	};
-	vtek::FormatInfo depthFormatInfo{};
-	depthFormatInfo.tiling = vtek::ImageTiling::optimal;
-	depthFormatInfo.features = vtek::FormatFeature::depth_stencil_attachment;
-
-	vtek::SupportedFormat supportedDepthFormat;
-	if (!vtek::SupportedFormat::FindFormat(
-		    &depthFormatInfo,))
-
-	if (!vtek::find_supported_image_format(
-		    physDev, depthFormatCandidates, tiling, features,
-		    &swapchain->depthImageFormat))
-	{
-		vtek_log_error("Failed to find supported depth image format!");
 		return false;
 	}
 
@@ -1384,7 +1353,7 @@ VkImageView vtek::swapchain_get_image_view(vtek::Swapchain* swapchain, uint32_t 
 	return swapchain->imageViews[index];
 }
 
-VkFormat vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
+vtek::Format vtek::swapchain_get_image_format(vtek::Swapchain* swapchain)
 {
 	return swapchain->imageFormat;
 }
@@ -1399,7 +1368,7 @@ bool vtek::swapchain_has_depth_buffer(vtek::Swapchain* swapchain)
 	return swapchain->depthImages.size() > 0;
 }
 
-VkFormat vtek::swapchain_get_depth_image_format(vtek::Swapchain* swapchain)
+vtek::Format vtek::swapchain_get_depth_image_format(vtek::Swapchain* swapchain)
 {
 	return swapchain->depthImageFormat;
 }

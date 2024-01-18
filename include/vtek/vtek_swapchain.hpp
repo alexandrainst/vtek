@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
+#include "vtek_format_support.hpp"
 #include "vtek_object_handles.hpp"
 #include "vtek_submit_info.hpp"
 
@@ -76,11 +77,11 @@ namespace vtek
 
 	VkImage swapchain_get_image(Swapchain* swapchain, uint32_t index);
 	VkImageView swapchain_get_image_view(Swapchain* swapchain, uint32_t index);
-	VkFormat swapchain_get_image_format(Swapchain* swapchain);
+	Format swapchain_get_image_format(Swapchain* swapchain);
 	VkExtent2D swapchain_get_image_extent(const Swapchain* swapchain);
 
 	bool swapchain_has_depth_buffer(Swapchain* swapchain);
-	VkFormat swapchain_get_depth_image_format(Swapchain* swapchain);
+	Format swapchain_get_depth_image_format(Swapchain* swapchain);
 
 
 	// A status enum, returned by the frame functions below, to keep a client
