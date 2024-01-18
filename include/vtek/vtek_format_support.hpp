@@ -453,30 +453,4 @@ namespace vtek
 		EnumBitmask<FormatFeature> mFeatures {};
 		uint32_t mPropertyMask {0U};
 	};
-
-
-
-
-
-
-
-	// REVIEW: We might still want to use this class as a global format database
-	class FormatSupport
-	{
-	public:
-		FormatSupport(const Device* device);
-
-		inline bool sRGB_channel_1() { return mSRGB & 0x01; }
-		inline bool sRGB_channel_2() { return mSRGB & 0x02; }
-		inline bool sRGB_channel_3() { return mSRGB & 0x04; }
-
-		//bool
-
-	private:
-		VkPhysicalDevice physicalDevice {VK_NULL_HANDLE};
-		uint8_t mSRGB {0U};
-	};
-
-	// NOTE: Implemented in src/imgutils/vtek_image_formats.cpp
-
 };

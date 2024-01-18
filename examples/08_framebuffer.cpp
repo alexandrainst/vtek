@@ -257,7 +257,7 @@ int main()
 		vtek::Format::r8g8b8a8_unorm
 	};
 	vtek::FormatInfo framebufferFormatInfo{};
-	framebufferFormatInfo.linearTiling = false;
+	framebufferFormatInfo.tiling = vtek::ImageTiling::optimal;
 	framebufferFormatInfo.features
 		= vtek::FormatFeature::sampled_image
 		| vtek::FormatFeature::color_attachment;
