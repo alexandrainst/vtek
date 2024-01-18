@@ -279,6 +279,8 @@ int main()
 	framebufferInfo.resolution = windowSize;
 	 // TODO: When multisampling implemented in vtek, try it out?
 	framebufferInfo.multisampling = vtek::MultisampleType::none;
+	framebufferInfo.renderPass = nullptr;
+	framebufferInfo.useDynamicRendering = true;
 	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(
 		&framebufferInfo, device);
 	if (framebuffer == nullptr)

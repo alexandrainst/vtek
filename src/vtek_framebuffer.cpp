@@ -227,6 +227,7 @@ vtek::Framebuffer* vtek::framebuffer_create(
 		imageInfo.supportedFormat = att.supportedFormat;
 		imageInfo.usageFlags =
 			sharedUsageFlags | vtek::ImageUsageFlag::color_attachment;
+		imageInfo.imageViewInfo.aspectFlags = vtek::ImageAspectFlag::color;
 
 		vtek::Image2D* image = vtek::image2d_create(&imageInfo, device);
 		if (image == nullptr)
@@ -246,6 +247,15 @@ vtek::Framebuffer* vtek::framebuffer_create(
 		imageInfo.supportedFormat = attInfo.supportedFormat;
 		imageInfo.usageFlags =
 			sharedUsageFlags | vtek::ImageUsageFlag::depth_stencil_attachment;
+		imageInfo.imageViewInfo.aspectFlags = 0U;
+
+		const auto& fmt = info->depthStencilAttachment.supportedFormat;
+		if (fmt.has_depth()) {
+			imageInfo.imageViewInfo.aspectFlags |= vtek::ImageAspectFlag::depth;
+		}
+		if (fmt.has_stencil()) {
+			imageInfo.imageViewInfo.aspectFlags |= vtek::ImageAspectFlag::stencil;
+		}
 
 		vtek::Image2D* image = vtek::image2d_create(&imageInfo, device);
 		if (image == nullptr)
