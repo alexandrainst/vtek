@@ -301,6 +301,8 @@ int main()
 	framebufferInfo.multisampling = vtek::MultisampleType::none;
 	framebufferInfo.renderPass = nullptr;
 	framebufferInfo.useDynamicRendering = true;
+
+	// TODO: Multiple framebuffers, 1 per swapchain image!
 	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(
 		&framebufferInfo, device);
 	if (framebuffer == nullptr)
@@ -375,8 +377,31 @@ int main()
 	}
 
 	// Descriptor pool
+	constexpr uint32_t descriptorCount = vtek::kMaxFramesInFlight;
+	vtek::DescriptorPoolInfo descriptorPoolInfo{};
+	descriptorPoolInfo.allowIndividualFree = false; // TODO: Needed?
+	descriptorPoolInfo.allowUpdateAfterBind = false;
+	descriptorPoolInfo.descriptorTypes = {
+		{ vtek::DescriptorType::combined_image_sampler, 8 },
+		{ vtek::DescriptorType::sampled_image, 8 } // TODO: ?
+	};
+	vtek::DescriptorPool* descriptorPool = vtek::descriptor_pool_create(
+		&descriptorPoolInfo, device);
+	if (descriptorPool == nullptr)
+	{
+		log_error("Failed to create descriptor pool!");
+		return -1;
+	}
 
 	// Descriptor set (main)
+	// TODO: Multiple sets "alloc_sets", for each swapchain image?
+	// NOTE: Count should be for kMaxFramesInFlight !!
+	vtek::DescriptorSet* descriptorSetLayoutMain =
+		vtek::descriptor_pool_alloc_set();
+
+	// Descriptor set (quad)
+	// TODO: Multiple sets "alloc_sets", for each swapchain image?
+	// NOTE: Count should be for kMaxFramesInFlight !!
 
 	// Graphics pipeline for main render pass
 	vtek::ViewportState viewport{
