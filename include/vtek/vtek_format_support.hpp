@@ -218,6 +218,15 @@ namespace vtek
 	Format get_format_from_native(VkFormat fmt);
 
 
+	// Get depth/stencil test configuration from format
+	enum class FormatDepthStencilTest
+	{
+		none, depth, stencil, depth_and_stencil
+	};
+
+	FormatDepthStencilTest get_format_depth_stencil_test(Format format);
+
+
 	enum class FormatCompression : uint8_t
 	{
 		// no compression (default)
@@ -345,6 +354,9 @@ namespace vtek
 		// Provided by Vulkan >= 1.2
 		sampled_image_filter_minmax = 0x00400000U
 	};
+
+	// Get format feature flags
+	VkFormatFeatureFlags get_format_features(EnumBitmask<FormatFeature> features);
 
 
 	// ============================== //

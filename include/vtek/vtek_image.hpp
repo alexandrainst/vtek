@@ -196,5 +196,5 @@ namespace vtek
 
 	VkImage image2d_get_handle(const Image2D* image);
 	VkImageView image2d_get_view_handle(const Image2D* image);
-	VkFormat image2d_get_format(const Image2D* image);
+	Format image2d_get_format(const Image2D* image);
 }

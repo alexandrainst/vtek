@@ -1,7 +1,6 @@
 #include "vtek_vulkan.pch"
 #include "vtek_format_support.hpp"
 
-#include "imgutils/vtek_image_formats.hpp"
 #include "vtek_device.hpp"
 #include "vtek_logging.hpp"
 
@@ -788,6 +787,111 @@ static std::string_view get_format_string_helper(vtek::Format format)
 		return "undefined";
 	}
 }
+
+
+VkFormatFeatureFlags vtek::get_format_features(
+	vtek::EnumBitmask<vtek::FormatFeature> features)
+{
+	VkFormatFeatureFlags flags = 0;
+
+	if (features.has_flag(vtek::FormatFeature::sampled_image)) {
+		flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::storage_image)) {
+		flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::storage_image_atomic)) {
+		flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::uniform_texel_buffer)) {
+		flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::storage_texel_buffer)) {
+		flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::storage_texel_buffer_atomic)) {
+		flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::vertex_buffer)) {
+		flags |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::color_attachment)) {
+		flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::color_attachment_blend)) {
+		flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::depth_stencil_attachment)) {
+		flags |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::blit_src)) {
+		flags |= VK_FORMAT_FEATURE_BLIT_SRC_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::blit_dst)) {
+		flags |= VK_FORMAT_FEATURE_BLIT_DST_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::sampled_image_filter_linear)) {
+		flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+	}
+
+#if defined(VK_API_VERSION_1_1)
+	if (features.has_flag(vtek::FormatFeature::transfer_src)) {
+		flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::transfer_dst)) {
+		flags |= VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::midpoint_chroma_samples)) {
+		flags |= VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::sampled_image_ycbcr_conv_lin_filter)) {
+		flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::sampled_image_ycbcr_conv_sep_rec_filter)) {
+		flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::sampled_image_ycbcr_conv_chroma_Rec_ex)) {
+		flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_CHROMA_RECONSTRUCTION_EXPLICIT_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::sampled_image_ycbcr_conv_chroma_rec_ex_force)) {
+		flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_CHROMA_RECONSTRUCTION_EXPLICIT_FORCEABLE_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::disjoint_bit)) {
+		flags |= VK_FORMAT_FEATURE_DISJOINT_BIT;
+	}
+	if (features.has_flag(vtek::FormatFeature::cosited_chroma_samples)) {
+		flags |= VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT;
+	}
+#endif
+
+#if defined(VK_API_VERSION_1_2)
+	if (features.has_flag(vtek::FormatFeature::sampled_image_filter_minmax)) {
+		flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT;
+	}
+#endif
+
+	return flags;
+}
+
+vtek::FormatDepthStencilTest vtek::get_format_depth_stencil_test(vtek::Format format)
+{
+	switch (format)
+	{
+	case vtek::Format::d16_unorm:
+	case vtek::Format::x8_d24_unorm_pack32:
+	case vtek::Format::d32_sfloat:
+		return vtek::FormatDepthStencilTest::depth;
+	case vtek::Format::s8_uint:
+		return vtek::FormatDepthStencilTest::stencil;
+	case vtek::Format::d16_unorm_s8_uint:
+	case vtek::Format::d24_unorm_s8_uint:
+	case vtek::Format::d32_sfloat_s8_uint:
+		return vtek::FormatDepthStencilTest::depth_and_stencil;
+	default:
+		return vtek::FormatDepthStencilTest::none;
+	}
+}
+
 
 using FCSize = vtek::FormatChannelSize;
 using SType = vtek::FormatStorageType;

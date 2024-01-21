@@ -2,7 +2,6 @@
 #include "vtek_image.hpp"
 
 #include "imgutils/vtek_image_load.hpp"
-#include "imgutils/vtek_image_formats.hpp"
 #include "impl/vtek_queue_struct.hpp"
 #include "impl/vtek_vma_helpers.hpp"
 #include "vtek_buffer.hpp"
@@ -597,7 +596,7 @@ VkImageView vtek::image2d_get_view_handle(const vtek::Image2D* image)
 	return image->viewHandle;
 }
 
-VkFormat vtek::image2d_get_format(const vtek::Image2D* image)
+vtek::Format vtek::image2d_get_format(const vtek::Image2D* image)
 {
-	return image->format;
+	return vtek::get_format_from_native(image->format);
 }

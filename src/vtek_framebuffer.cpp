@@ -137,6 +137,69 @@ static void color_memory_barrier_begin(
 		0, nullptr, 1, &barrier);
 }
 
+static void color_memory_barrier_end(
+	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment,
+	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex)
+{
+	// Transition from color attachment to read something
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask
+		//= VK_ACCESS_UNIFORM_READ_BIT
+		//| VK_ACCESS_SHADER_READ_BIT
+		= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT; // NOTE: Probably the best!?
+	barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	// TODO: Attachments can have had explicit queue ownership transfers!
+	barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
+	barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+	barrier.image = vtek::image2d_get_handle(attachment.image);
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	vkCmdPipelineBarrier(
+		cmdBuf, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // TODO: BOTTOM ?
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
+		0, nullptr, 1, &barrier);
+}
+
+static void depth_stencil_memory_barrier_begin(
+	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment,
+	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex)
+{
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+	barrier.srcAccessMask = 0;
+	barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	// TODO: Attachments can have had explicit queue ownership transfers!
+	barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
+	barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+}
+
+static void depth_stencil_memory_barrier_end(
+	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment,
+	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex)
+{
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+	barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	// TODO: Attachments can have had explicit queue ownership transfers!
+	barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
+	barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+}
+
 
 
 /* interface */
@@ -391,5 +454,55 @@ bool vtek::framebuffer_dynrender_begin(
 void vtek::framebuffer_dynrender_end(
 	vtek::Framebuffer* framebuffer, vtek::CommandBuffer* commandBuffer)
 {
+	if (!vtek::command_buffer_is_recording(commandBuffer))
+	{
+		vtek_log_error(
+			"Command buffer is not recording -- cannot end dynamic rendering!");
+		return;
+	}
 
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+
+	// "applications must ensure that all memory writes have been made available
+	// before a layout transition is executed."
+	// NOTE: This probably means we need a fence!?
+
+
+	// TODO: Transition for each color attachment
+	std::vector<VkRenderingAttachmentInfo> colorAttachmentInfos{};
+
+	// Transition attachments into read
+	for (auto& att : framebuffer->colorAttachments)
+	{
+		// Image memory barrier for each color attachment
+		// TODO: Attachments can have had explicit queue ownership transfers!
+		uint32_t queueFamilyIndex = framebuffer->graphicsQueueFamilyIndex;
+		color_memory_barrier_end(cmdBuf, att, queueFamilyIndex, queueFamilyIndex);
+	}
+
+	vkCmdEndRendering(cmdBuf);
+}
+
+std::vector<vtek::Format> vtek::framebuffer_get_color_formats(
+	vtek::Framebuffer* framebuffer)
+{
+	std::vector<vtek::Format> formats;
+	for (auto& att : framebuffer->colorAttachments)
+	{
+		formats.push_back(vtek::image2d_get_format(att.image));
+	}
+
+	return formats; // RVO
+}
+
+vtek::Format vtek::framebuffer_get_depth_stencil_format(
+	vtek::Framebuffer* framebuffer)
+{
+	vtek::Image2D* img = framebuffer->depthStencilAttachment.image;
+	if (img == nullptr)
+	{
+		return vtek::Format::undefined;
+	}
+
+	return vtek::image2d_get_format(img);
 }

@@ -1,9 +1,9 @@
 #include "vtek_vulkan.pch"
 #include "vtek_commands.hpp"
 
-#include "imgutils/vtek_image_formats.hpp"
 #include "impl/vtek_queue_struct.hpp"
 #include "vtek_command_buffer.hpp"
+#include "vtek_format_support.hpp"
 #include "vtek_graphics_pipeline.hpp"
 #include "vtek_image.hpp"
 #include "vtek_push_constants.hpp"
@@ -30,7 +30,7 @@ void vtek::cmd_image_layout_transition(
 	barrier.subresourceRange.layerCount = 1;
 
 	// Find the aspect mask
-	VkFormat format = vtek::image2d_get_format(info->image);
+	Format format = vtek::image2d_get_format(info->image);
 	vtek::FormatDepthStencilTest dsTest =
 		vtek::get_format_depth_stencil_test(format);
 	switch (dsTest)

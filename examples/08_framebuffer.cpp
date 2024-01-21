@@ -260,7 +260,7 @@ int main()
 	framebufferFormatInfo.tiling = vtek::ImageTiling::optimal;
 	framebufferFormatInfo.features
 		= vtek::FormatFeature::sampled_image
-		| vtek::FormatFeature::color_attachment;
+		| vtek::FormatFeature::color_attachment_blend; // TODO: With/without blend?
 	vtek::SupportedFormat colorFormat;
 	if (!vtek::SupportedFormat::FindFormat(
 		    &framebufferFormatInfo, prioritizedColorFormats,
@@ -269,13 +269,33 @@ int main()
 		log_error("Failed to find a supported framebuffer color format!");
 		return -1;
 	}
+	std::vector<vtek::Format> prioritizedDepthStencilFormats = {
+		vtek::Format::d24_unorm_s8_uint,
+		vtek::Format::d32_sfloat,
+		vtek::Format::d32_sfloat_s8_uint
+	};
+	framebufferFormatInfo.features
+		= vtek::FormatFeature::depth_stencil_attachment;
+	vtek::SupportedFormat depthStencilFormat;
+	if (!vtek::SupportedFormat::FindFormat(
+		    &framebufferFormatInfo, prioritizedDepthStencilFormats,
+		    device, depthStencilFormat))
+	{
+		log_error("Failed to find a supported framebuffer depth/stencil format!");
+		return -1;
+	}
 
 	// Framebuffer
 	vtek::FramebufferAttachmentInfo colorAttachment{};
 	colorAttachment.supportedFormat = colorFormat;
 	colorAttachment.clearValue.setColorFloat(0.2f, 0.2f, 0.2f, 1.0f);
+	vtek::FramebufferAttachmentInfo depthStencilAttachment{};
+	depthStencilAttachment.supportedFormat = depthStencilFormat;
+	depthStencilAttachment.clearValue.setDepthStencil();
 	vtek::FramebufferInfo framebufferInfo{};
 	framebufferInfo.colorAttachments.emplace_back(colorAttachment);
+	framebufferInfo.depthStencilAttachment = depthStencilAttachment;
+	framebufferInfo.useDepthStencil = true;
 	framebufferInfo.resolution = windowSize;
 	 // TODO: When multisampling implemented in vtek, try it out?
 	framebufferInfo.multisampling = vtek::MultisampleType::none;
@@ -286,9 +306,27 @@ int main()
 	if (framebuffer == nullptr)
 	{
 		log_error("Failed to create framebuffer!");
-		return 0;
+		return -1;
 	}
-	exit(1);
+	if (!vtek::framebuffer_dynamic_rendering_only(framebuffer))
+	{
+		log_error("Framebuffer not properly created for dynamic rendering!");
+		return -1;
+	}
+	for (vtek::Format fmt : vtek::framebuffer_get_color_formats(framebuffer))
+	{
+		if (fmt == vtek::Format::undefined)
+		{
+			log_error("Framebuffer color attachment has undefined format!");
+			return -1;
+		}
+	}
+	if (vtek::framebuffer_get_depth_stencil_format(framebuffer) ==
+	    vtek::Format::undefined)
+	{
+		log_error("Framebuffer depth/stencil attachment has undefined format!");
+		return -1;
+	}
 
 	// Graphics command pool
 	vtek::CommandPoolInfo commandPoolInfo{};
@@ -336,6 +374,10 @@ int main()
 		return -1;
 	}
 
+	// Descriptor pool
+
+	// Descriptor set (main)
+
 	// Graphics pipeline for main render pass
 	vtek::ViewportState viewport{
 		.viewportRegion = {
@@ -363,10 +405,11 @@ int main()
 	colorBlending.attachments.emplace_back(
 		vtek::ColorBlendAttachment::GetDefault());
 	vtek::PipelineRendering pipelineRendering{};
-	pipelineRendering.colorAttachmentFormats.push_back(
-		vtek::swapchain_get_image_format(swapchain));
+	// TODO: Get formats from framebuffer instead!
+	pipelineRendering.colorAttachmentFormats =
+		vtek::framebuffer_get_color_formats(framebuffer);
 	pipelineRendering.depthAttachmentFormat =
-		vtek::swapchain_get_depth_image_format(swapchain);
+		vtek::framebuffer_get_depth_stencil_format(framebuffer);
 
 	vtek::GraphicsPipelineInfo pipelineInfo{};
 	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
@@ -386,7 +429,8 @@ int main()
 	pipelineInfo.dynamicStateFlags
 		= vtek::PipelineDynamicState::viewport
 		| vtek::PipelineDynamicState::scissor;
-	//pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayout); // TODO: Unfinished!
+	// TODO: Create the descriptor set!
+	//pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutMain);
 	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
 	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
 
@@ -399,9 +443,35 @@ int main()
 	}
 
 	// Graphics pipeline for fullscreen quad
+	vtek::VertexBufferBindings quadBindings{};
+	quadBindings.add_buffer(
+		vtek::VertexAttributeType::vec2, vtek::VertexAttributeType::vec2,
+		vtek::VertexInputRate::per_vertex);
+	depthStencil.depthTestEnable = false;
+	depthStencil.depthWriteEnable = false;
+	pipelineRendering.colorAttachmentFormats.push_back(
+		vtek::swapchain_get_image_format(swapchain));
+	pipelineRendering.depthAttachmentFormat = vtek::Format::undefined;
+	pipelineInfo.shader = shaderQuad;
+	pipelineInfo.vertexInputBindings = &quadBindings;
+	pipelineInfo.dynamicStateFlags = {}; // reset
+	// TODO: Create the descriptor set!
+	pipelineInfo.descriptorSetLayout.push_back(descriptorSetLayoutQuad);
+	pipelineInfo.pushConstantType = vtek::PushConstantType::none;
+	pipelineInfo.pushConstantShaderStages = {}; // reset
+	vtek::GraphicsPipeline* quadPipeline =
+		vtek::graphics_pipeline_create(&pipelineInfo, device);
+	if (quadPipeline == nullptr)
+	{
+		log_error("Failed to create graphics pipeline (quad)!");
+		return -1;
+	}
 
 
 
 
 
+
+
+	return 0;
 }

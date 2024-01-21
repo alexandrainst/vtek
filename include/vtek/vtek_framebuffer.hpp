@@ -45,8 +45,15 @@ namespace vtek
 
 	bool framebuffer_dynamic_rendering_only(Framebuffer* framebuffer);
 
+
+	// Dynamic rendering
 	bool framebuffer_dynrender_begin(
 		Framebuffer* framebuffer, CommandBuffer* commandBuffer);
 	void framebuffer_dynrender_end(
 		Framebuffer* framebuffer, CommandBuffer* commandBuffer);
+
+
+	// Properties
+	std::vector<Format> framebuffer_get_color_formats(Framebuffer* framebuffer);
+	Format framebuffer_get_depth_stencil_format(Framebuffer* framebuffer);
 }

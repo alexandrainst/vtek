@@ -3,6 +3,7 @@
 
 #include "impl/vtek_vma_helpers.hpp" // Provides VMA include
 #include "vtek_device.hpp"
+#include "vtek_format_support.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_queue.hpp"
