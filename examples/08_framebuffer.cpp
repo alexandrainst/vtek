@@ -54,6 +54,32 @@ void update_movement()
 	}
 }
 
+/* helper functions */
+bool update_camera_uniform(vtek::Buffer* buffer, vtek::Device* device)
+{
+	// Wait until the device is finished with all operations
+	vtek::device_wait_idle(device);
+
+	// Packed data
+	gCameraUniform.m4 = *(vtek::camera_get_projection_matrix(gCamera));
+	gCameraUniform.m4 *= *(vtek::camera_get_view_matrix(gCamera));
+	gCameraUniform.v4 = glm::vec4(
+		vtek::camera_get_position(gCamera), gCameraExposure.get());
+
+	// Update uniform buffer
+	vtek::BufferRegion region{
+		.offset = 0,
+		.size = gCameraUniform.size()
+	};
+	if (!vtek::buffer_write_data(buffer, &gCameraUniform, &region, device))
+	{
+		log_error("Failed to write data to the uniform buffer!");
+		return false;
+	}
+
+	return true;
+}
+
 bool update_uniform(vtek::Buffer* buffer, vtek::Device* device)
 {
 	vtek::Uniform_v2 uniform {.v2 = gMoveOffset};
@@ -343,6 +369,22 @@ int main()
 		return -1;
 	}
 
+	// Command buffers
+	std::vector<vtek::CommandBuffer*> commandBuffers =
+		vtek::command_pool_alloc_buffers(
+			graphicsCommandPool, vtek::CommandBufferUsage::primary,
+			vtek::kMaxFramesInFlight, device);
+	if (commandBuffers.empty())
+	{
+		log_error("Failed to create command buffers!");
+		return -1;
+	}
+	if (commandBuffers.size() != vtek::kMaxFramesInFlight)
+	{
+		log_error("Number of command buffers created not same as number asked!");
+		return -1;
+	}
+
 	// Shader for main render pass
 	const char* shaderdirstrMain = "../shaders/08_framebuffer/main/";
 	vtek::Directory* shaderdirMain = vtek::directory_open(shaderdirstrMain);
@@ -384,7 +426,8 @@ int main()
 	descriptorPoolInfo.allowUpdateAfterBind = false;
 	descriptorPoolInfo.descriptorTypes = {
 		{ vtek::DescriptorType::combined_image_sampler, 8 },
-		{ vtek::DescriptorType::sampled_image, 8 } // TODO: ?
+		{ vtek::DescriptorType::sampled_image, 8 }, // TODO: ?
+		{ vtek::DescriptorType::uniform_buffer, 8 }
 	};
 	vtek::DescriptorPool* descriptorPool = vtek::descriptor_pool_create(
 		&descriptorPoolInfo, device);
@@ -394,33 +437,142 @@ int main()
 		return -1;
 	}
 
-	// Command buffers
-	// TODO: Length same as max frames in flight instead of swapchain length?
-	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
-	std::vector<vtek::CommandBuffer*> commandBuffers =
-		vtek::command_pool_alloc_buffers(
-			graphicsCommandPool, vtek::CommandBufferUsage::primary,
-			commandBufferCount, device);
-	if (commandBuffers.empty())
+	// Descriptor set layout (main)
+	vtek::DescriptorLayoutBinding descriptorBindingCamera{};
+	descriptorBindingCamera.type = vtek::DescriptorType::uniform_buffer;
+	descriptorBindingCamera.binding = 0;
+	descriptorBindingCamera.shaderStages = vtek::ShaderStage::vertex;
+	descriptorBindingCamera.updateAfterBind = false;
+	vtek::DescriptorLayoutBinding descriptorBindingSampler{};
+	descriptorBindingSampler.type = vtek::DescriptorType::combined_image_sampler;
+	descriptorBindingSampler.binding = 1;
+	descriptorBindingSampler.shaderStages = vtek::ShaderStage::fragment;
+	descriptorBindingSampler.updateAfterBind = false;
+	vtek::DescriptorSetLayoutInfo descriptorLayoutInfo{};
+	descriptorLayoutInfo.bindings.emplace_back(descriptorBindingCamera);
+	descriptorLayoutInfo.bindings.emplace_back(descriptorBindingSampler);
+	vtek::DescriptorSetLayout* descriptorSetLayoutMain =
+		vtek::descriptor_set_layout_create(&descriptorLayoutInfo, device);
+	if (descriptorSetLayoutMain == nullptr)
 	{
-		log_error("Failed to create command buffers!");
-		return -1;
-	}
-	if (commandBufferCount != commandBuffers.size())
-	{
-		log_error("Number of command buffers created not same as number asked!");
+		log_error("Failed to create descriptor set layout (main)!");
 		return -1;
 	}
 
-	// Descriptor set (main)
+	// Descriptor set layout (quad)
+	descriptorBindingSampler.binding = 0;
+	descriptorLayoutInfo.bindings.clear();
+	descriptorLayoutInfo.emplace_back(descriptorBindingSampler);
+	vtek::DescriptorSetLayout* descriptorSetLayoutQuad =
+		vtek::descriptor_set_layout_create(&descriptorLayoutInfo, device);
+	if (descriptorSetLayoutQuad == nullptr)
+	{
+		log_error("Failed to create descriptor set layout (quad)!");
+		return -1;
+	}
+
+	// Descriptor sets (main)
 	// TODO: Multiple sets "alloc_sets", for each swapchain image?
 	// NOTE: Count should be for kMaxFramesInFlight !!
-	vtek::DescriptorSet* descriptorSetLayoutMain =
-		vtek::descriptor_pool_alloc_set();
+	vtek::DescriptorSet* descriptorSetMain =
+		vtek::descriptor_pool_alloc_sets(descriptorPool, );
 
 	// Descriptor set (quad)
 	// TODO: Multiple sets "alloc_sets", for each swapchain image?
 	// NOTE: Count should be for kMaxFramesInFlight !!
+
+	// Camera
+	vtek::CameraProjectionInfo cameraProjInfo{};
+	cameraProjInfo.projection = vtek::CameraProjection::perspective;
+	cameraProjInfo.viewportSize = windowSize;
+	cameraProjInfo.clipPlanes = { 0.1f, 100.0f };
+	cameraProjInfo.fovDegrees = 45.0f;
+	vtek::CameraInfo cameraInfo{};
+	cameraInfo.mode = vtek::CameraMode::freeform;
+	cameraInfo.worldSpaceHandedness = vtek::CameraHandedness::right_handed;
+	cameraInfo.position = glm::vec3(-2.0968692f, -2.5813563f, -1.4253441f);
+	cameraInfo.front = {0.5990349f, 0.7475561f, 0.28690946f};
+	cameraInfo.up = {-0.18743359f, -0.21744627f, 0.95790696f};
+	cameraInfo.projectionInfo = &cameraProjInfo;
+	gCamera = vtek::camera_create(&cameraInfo);
+	if (gCamera == nullptr)
+	{
+		log_error("Failed to create camera!");
+		return -1;
+	}
+
+	// Model
+	const char* modeldirstr = "../models/viking_room/";
+	// TODO: `directory_open` might check if the directory is relative,
+	// and in such case open it from executable directory instead of root! (?)
+	vtek::Directory* modeldir = vtek::directory_open(modeldirstr);
+	if (modeldir == nullptr)
+	{
+		log_error("Failed to open model directory!");
+		return -1;
+	}
+	vtek::ModelInfo modelInfo{};
+	modelInfo.keepVertexDataInMemory = false; // Preferred usage
+	modelInfo.loadNormals = true;
+	modelInfo.loadTextureCoordinates = true;
+	modelInfo.flipUVs = true;
+	vtek::Model* model = vtek::model_load_obj(
+		&modelInfo, modeldir, "viking_room.obj", device);
+	if (model == nullptr)
+	{
+		log_error("Failed to load obj model!");
+		return -1;
+	}
+
+	// Model diffuse texture
+	vtek::Image2DLoadInfo textureInfo{};
+	textureInfo.loadSRGB = true;
+	textureInfo.forceAlphaPremultiply = false; // TODO: Would be cool to test!
+	textureInfo.createMipmaps = false; // TODO: We DEFINITELY want this!
+	textureInfo.baseMipLevel = 0;
+	vtek::Image2D* texture = vtek::image2d_load(
+		&textureInfo, modeldir, "viking_room.png", device);
+	if (texture == nullptr)
+	{
+		log_error("Failed to load texture for model!");
+		return -1;
+	}
+
+	// Texture sampler
+	vtek::SamplerInfo samplerInfo{};
+	samplerInfo.addressMode = vtek::SamplerAddressMode::clamp_to_edge;
+	samplerInfo.anisotropicFiltering = false; // NOTE: Don't really need this yet
+	samplerInfo.minFilter = vtek::SamplerFilterMode::linear;
+	samplerInfo.magFilter = vtek::SamplerFilterMode::linear;
+	vtek::Sampler* sampler = vtek::sampler_create(&samplerInfo, device);
+	if (sampler == nullptr)
+	{
+		log_error("Failed to create texture sampler!");
+		return -1;
+	}
+
+	// Uniform buffer (Camera transform)
+	vtek::BufferInfo uniformBufferInfoCamera{};
+	uniformBufferInfoCamera.size = gCameraUniform.size();
+	uniformBufferInfoCamera.requireHostVisibleStorage = true;
+	uniformBufferInfoCamera.writePolicy = vtek::BufferWritePolicy::overwrite_often;
+	uniformBufferInfoCamera.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::uniform_buffer;
+	vtek::Buffer* uniformBufferCamera =
+		vtek::buffer_create(&uniformBufferInfoCamera, device);
+	if (uniformBufferCamera == nullptr)
+	{
+		log_error("Failed to create uniform buffer (camera)!");
+		return -1;
+	}
+	if (!update_camera_uniform(uniformBufferCamera, device))
+	{
+		log_error("Failed to fill uniform buffer!");
+		return -1;
+	}
+
+
 
 	// Graphics pipeline for main render pass
 	vtek::ViewportState viewport{
@@ -636,14 +788,20 @@ int main()
 
 	vtek::graphics_pipeline_destroy(pipelineWireframe, device);
 	vtek::graphics_pipeline_destroy(pipeline, device);
+
+
 	vtek::buffer_destroy(uniformBufferCamera);
-	vtek::descriptor_set_layout_destroy(descriptorSetLayout, device);
-	vtek::descriptor_pool_destroy(descriptorPool, device);
 	vtek::sampler_destroy(sampler, device);
 	vtek::image2d_destroy(texture, device);
 	vtek::model_destroy(model, device);
-	vtek::graphics_shader_destroy(shader, device);
 	vtek::camera_destroy(gCamera);
+	vtek::descriptor_set_layout_destroy(descriptorSetLayoutQuad, device);
+	vtek::descriptor_set_layout_destroy(descriptorSetLayoutMain, device);
+	vtek::descriptor_pool_destroy(descriptorPool, device);
+	// vtek::directory_close(shaderdirMain); // TODO: Not implemented
+	// vtek::directory_close(shaderdirQuad); // TODO: Not implemented
+	vtek::graphics_shader_destroy(shaderQuad, device);
+	vtek::graphics_shader_destroy(shaderMain, device);
 	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device);
 	vtek::command_pool_destroy(graphicsCommandPool, device);
 	vtek::framebuffer_destroy(framebuffers, device);
