@@ -252,5 +252,5 @@ bool vtek::command_pool_reset_buffer(
 	}
 
 	buffer->state = CBState::initial;
-	return false;
+	return true;
 }

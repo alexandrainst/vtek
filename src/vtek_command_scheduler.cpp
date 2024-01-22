@@ -142,7 +142,8 @@ vtek::CommandBuffer* vtek::command_scheduler_begin_transfer(
 		return nullptr;
 	}
 
-	if (!vtek::command_buffer_begin(buffer))
+	vtek::CommandBufferBeginInfo beginInfo{};
+	if (!vtek::command_buffer_begin(buffer, &beginInfo))
 	{
 		vtek_log_error(
 			"Failed to begin recording on single-use transfer command buffer!");

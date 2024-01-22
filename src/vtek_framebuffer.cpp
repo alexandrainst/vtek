@@ -362,10 +362,26 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	return framebuffer;
 }
 
+std::vector<vtek::Framebuffer*> vtek::framebuffer_create(
+	const vtek::FramebufferInfo* info, uint32_t count, vtek::Device* device)
+{
+	// TODO: This can be optimized by performing internal checks only once!
+	std::vector<vtek::Framebuffer*> framebuffers;
+	for (uint32_t i = 0; i < count; i++)
+	{
+		auto fb = vtek::framebuffer_create(info, device);
+		if (fb == nullptr) { return {}; } // return empty vector!
+
+		framebuffers.push_back(fb);
+	}
+
+	return framebuffers; // RVO
+}
+
 void vtek::framebuffer_destroy(
 	vtek::Framebuffer* framebuffer, vtek::Device* device)
 {
-	if (framebuffer == nullptr) { return; }
+	if (device == nullptr || framebuffer == nullptr) { return; }
 
 	for (auto& att : framebuffer->colorAttachments)
 	{
@@ -386,6 +402,19 @@ void vtek::framebuffer_destroy(
 		vkDestroyFramebuffer(dev, framebuffer->handle, nullptr);
 		framebuffer->handle = VK_NULL_HANDLE;
 	}
+}
+
+void vtek::framebuffer_destroy(
+	std::vector<vtek::Framebuffer*>& framebuffers, vtek::Device* device)
+{
+	if (device == nullptr) { return; }
+
+	for (auto fb : framebuffers)
+	{
+		vtek::framebuffer_destroy(fb, device);
+	}
+
+	framebuffers.clear();
 }
 
 bool vtek::framebuffer_dynamic_rendering_only(vtek::Framebuffer* framebuffer)

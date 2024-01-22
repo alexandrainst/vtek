@@ -205,7 +205,8 @@ bool record_command_buffers(
 		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
 		VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
-		if (!vtek::command_buffer_begin(commandBuffer))
+		vtek::CommandBufferBeginInfo beginInfo{};
+		if (!vtek::command_buffer_begin(commandBuffer, &beginInfo))
 		{
 			log_error("Failed to begin command buffer {} recording!", i);
 			return false;

@@ -86,7 +86,9 @@ bool recordCommandBuffer(
 	auto framebuffer = info->framebuffers[imageIndex];
 
 	// 1) begin recording on the command buffer
-	if (!vtek::command_buffer_begin(commandBuffer))
+	vtek::CommandBufferBeginInfo beginInfo{};
+	beginInfo.oneTimeSubmit = true;
+	if (!vtek::command_buffer_begin(commandBuffer, &beginInfo))
 	{
 		log_error("Failed to begin command buffer {} recording!", imageIndex);
 		return false;
@@ -285,7 +287,7 @@ int main()
 		return -1;
 	}
 
-	// Framebuffer
+	// Framebuffers
 	vtek::FramebufferAttachmentInfo colorAttachment{};
 	colorAttachment.supportedFormat = colorFormat;
 	colorAttachment.clearValue.setColorFloat(0.2f, 0.2f, 0.2f, 1.0f);
@@ -302,32 +304,32 @@ int main()
 	framebufferInfo.renderPass = nullptr;
 	framebufferInfo.useDynamicRendering = true;
 
-	// TODO: Multiple framebuffers, 1 per swapchain image!
-	vtek::Framebuffer* framebuffer = vtek::framebuffer_create(
-		&framebufferInfo, device);
-	if (framebuffer == nullptr)
+	// Multiple framebuffers, same number as max frames in flight!
+	std::vector<vtek::Framebuffer*> framebuffers = vtek::framebuffer_create(
+		&framebufferInfo, vtek::kMaxFramesInFlight, device);
+	if (framebuffers.empty() || framebuffers.size() != vtek::kMaxFramesInFlight)
 	{
 		log_error("Failed to create framebuffer!");
 		return -1;
 	}
-	if (!vtek::framebuffer_dynamic_rendering_only(framebuffer))
+	for (auto fb : framebuffers)
 	{
-		log_error("Framebuffer not properly created for dynamic rendering!");
-		return -1;
-	}
-	for (vtek::Format fmt : vtek::framebuffer_get_color_formats(framebuffer))
-	{
-		if (fmt == vtek::Format::undefined)
-		{
-			log_error("Framebuffer color attachment has undefined format!");
+		if (!vtek::framebuffer_dynamic_rendering_only(fb)) {
+			log_error("Framebuffer not properly created for dynamic rendering!");
 			return -1;
 		}
-	}
-	if (vtek::framebuffer_get_depth_stencil_format(framebuffer) ==
-	    vtek::Format::undefined)
-	{
-		log_error("Framebuffer depth/stencil attachment has undefined format!");
-		return -1;
+		for (vtek::Format fmt : vtek::framebuffer_get_color_formats(fb)) {
+			if (fmt == vtek::Format::undefined)
+			{
+				log_error("Framebuffer color attachment has undefined format!");
+				return -1;
+			}
+		}
+		if (vtek::framebuffer_get_depth_stencil_format(fb) ==
+		    vtek::Format::undefined) {
+			log_error("Framebuffer depth/stencil attachment has undefined format!");
+			return -1;
+		}
 	}
 
 	// Graphics command pool
@@ -377,7 +379,6 @@ int main()
 	}
 
 	// Descriptor pool
-	constexpr uint32_t descriptorCount = vtek::kMaxFramesInFlight;
 	vtek::DescriptorPoolInfo descriptorPoolInfo{};
 	descriptorPoolInfo.allowIndividualFree = false; // TODO: Needed?
 	descriptorPoolInfo.allowUpdateAfterBind = false;
@@ -390,6 +391,24 @@ int main()
 	if (descriptorPool == nullptr)
 	{
 		log_error("Failed to create descriptor pool!");
+		return -1;
+	}
+
+	// Command buffers
+	// TODO: Length same as max frames in flight instead of swapchain length?
+	const uint32_t commandBufferCount = vtek::swapchain_get_length(swapchain);
+	std::vector<vtek::CommandBuffer*> commandBuffers =
+		vtek::command_pool_alloc_buffers(
+			graphicsCommandPool, vtek::CommandBufferUsage::primary,
+			commandBufferCount, device);
+	if (commandBuffers.empty())
+	{
+		log_error("Failed to create command buffers!");
+		return -1;
+	}
+	if (commandBufferCount != commandBuffers.size())
+	{
+		log_error("Number of command buffers created not same as number asked!");
 		return -1;
 	}
 
@@ -430,11 +449,10 @@ int main()
 	colorBlending.attachments.emplace_back(
 		vtek::ColorBlendAttachment::GetDefault());
 	vtek::PipelineRendering pipelineRendering{};
-	// TODO: Get formats from framebuffer instead!
 	pipelineRendering.colorAttachmentFormats =
-		vtek::framebuffer_get_color_formats(framebuffer);
+		vtek::framebuffer_get_color_formats(framebuffers[0]);
 	pipelineRendering.depthAttachmentFormat =
-		vtek::framebuffer_get_depth_stencil_format(framebuffer);
+		vtek::framebuffer_get_depth_stencil_format(framebuffers[0]);
 
 	vtek::GraphicsPipelineInfo pipelineInfo{};
 	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
@@ -455,7 +473,7 @@ int main()
 		= vtek::PipelineDynamicState::viewport
 		| vtek::PipelineDynamicState::scissor;
 	// TODO: Create the descriptor set!
-	//pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutMain);
+	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutMain);
 	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
 	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
 
@@ -494,9 +512,150 @@ int main()
 
 
 
+	// Error tolerance
+	int errors = 10;
+
+	while (vtek::window_get_should_close(gWindow) && errors > 0)
+	{
+		// React to incoming input events
+		vtek::window_poll_events();
+
+		// To avoid excessive GPU work we wait until we may begin the frame
+		auto beginStatus = vtek::swapchain_wait_begin_frame(swapchain, device);
+		if (beginStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait begin frame - swapchain timeout!");
+			errors--; continue;
+		}
+		else if (beginStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait begin frame - swapchain error!");
+			errors = -1; continue;
+		}
+
+		// Acquire the next available image in the swapchain
+		uint32_t imageIndex;
+		auto acquireStatus =
+			vtek::swapchain_acquire_next_image(swapchain, device, &imageIndex);
+		if (acquireStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_error("Failed to acquire image - swapchain outofdate!");
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (acquireStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to acquire image - swapchain error!");
+			errors = -1; continue;
+		}
+
+		// Successfully acquired image, now update uniforms before rendering
+		// TODO: Update after bind no longer needed!
+		update_movement();
+		vtek::camera_update(gCamera);
+		if (!update_camera_uniform(uniformBufferCamera, device))
+		{
+			log_error("Failed to update uniform buffer (Camera)!");
+			return -1;
+		}
+		// if (gLightChanged)
+		// {
+		// 	if (!update_light_uniform(descriptorSetLight, uniformBufferLight, device))
+		// 	{
+		// 		log_error("Failed to update uniform buffer (Light)!");
+		// 		return -1;
+		// 	}
+		// 	gLightChanged = false;
+		// }
+
+		// Record command buffer for next frame
+		vtek::CommandBuffer* commandBuffer = commandBuffers[imageIndex];
+		if (!vtek::command_pool_reset_buffer(graphicsCommandPool, commandBuffer))
+		{
+			log_error("Failed to reset command buffer prior to re-recording it!");
+			errors--; continue;
+		}
+		vtek::GraphicsPipeline* nextPipeline =
+			(gRenderWireframe) ? pipelineWireframe : pipeline;
+		bool record = recordCommandBuffer(
+			commandBuffer, nextPipeline, swapchain, imageIndex, model,
+			descriptorSet);
+		if (!record)
+		{
+			log_error("Failed to record command buffer!");
+			errors--; continue;
+		}
+
+		// Wait until any previous operations are finished using this image, for either read or write.
+		// NOTE: We can do command buffer recording or other operations before calling this function.
+		auto readyStatus =
+			vtek::swapchain_wait_image_ready(swapchain, device, imageIndex);
+		if (readyStatus == vtek::SwapchainStatus::timeout)
+		{
+			log_error("Failed to wait image ready - swapchain timeout!");
+			errors--; continue;
+		}
+		else if (readyStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to wait image ready - swapchain error!");
+			errors = -1; continue;
+		}
+
+		// Submit the current command buffer for execution on the graphics queue
+		vtek::SubmitInfo submitInfo{};
+		vtek::swapchain_fill_queue_submit_info(swapchain, &submitInfo);
+		if (!vtek::queue_submit(
+			    graphicsQueue, commandBuffers[imageIndex], &submitInfo))
+		{
+			log_error("Failed to submit to queue!");
+			errors--; continue;
+		}
+
+		// Wait for command buffer to finish execution, and present frame to screen.
+		auto presentStatus = vtek::swapchain_present_frame(swapchain, imageIndex);
+		if (presentStatus == vtek::SwapchainStatus::outofdate)
+		{
+			log_error("Failed to present frame - swapchain outofdate!");
+			// TODO: Rebuild swapchain
+			// NOTE: Swapchain _may_ indeed change length!
+		}
+		else if (presentStatus == vtek::SwapchainStatus::error)
+		{
+			log_error("Failed to present frame - swapchain error!");
+			errors = -1; continue;
+		}
+
+		// NOTE: This may be adjusted based on machine CPU speed.. (no timer created yet!)
+		std::this_thread::sleep_for(std::chrono::milliseconds(16));
+	}
 
 
 
+	// Cleanup
+	vtek::device_wait_idle(device);
+
+	vtek::graphics_pipeline_destroy(pipelineWireframe, device);
+	vtek::graphics_pipeline_destroy(pipeline, device);
+	vtek::buffer_destroy(uniformBufferCamera);
+	vtek::descriptor_set_layout_destroy(descriptorSetLayout, device);
+	vtek::descriptor_pool_destroy(descriptorPool, device);
+	vtek::sampler_destroy(sampler, device);
+	vtek::image2d_destroy(texture, device);
+	vtek::model_destroy(model, device);
+	vtek::graphics_shader_destroy(shader, device);
+	vtek::camera_destroy(gCamera);
+	vtek::command_pool_free_buffers(graphicsCommandPool, commandBuffers, device);
+	vtek::command_pool_destroy(graphicsCommandPool, device);
+	vtek::framebuffer_destroy(framebuffers, device);
+	vtek::swapchain_destroy(swapchain, device);
+	vtek::device_destroy(device);
+	vtek::physical_device_release(physicalDevice);
+	vtek::window_surface_destroy(surface, instance);
+	vtek::instance_destroy(instance);
+	vtek::window_destroy(gWindow);
+
+	log_info("Program Success!");
+	vtek::terminate();
 
 	return 0;
 }

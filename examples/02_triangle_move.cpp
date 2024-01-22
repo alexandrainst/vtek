@@ -94,7 +94,8 @@ bool recordCommandBuffer(
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(graphicsPipeline);
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(graphicsPipeline);
 
-	if (!vtek::command_buffer_begin(commandBuffer))
+	vtek::CommandBufferBeginInfo beginInfo{};
+	if (!vtek::command_buffer_begin(commandBuffer, &beginInfo))
 	{
 		log_error("Failed to begin command buffer recording!");
 		return false;

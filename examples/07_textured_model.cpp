@@ -173,7 +173,8 @@ bool recordCommandBuffer(
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
-	if (!vtek::command_buffer_begin(commandBuffer))
+	vtek::CommandBufferBeginInfo beginInfo{};
+	if (!vtek::command_buffer_begin(commandBuffer, &beginInfo))
 	{
 		log_error("Failed to begin command buffer {} recording!", imageIndex);
 		return false;
@@ -353,6 +354,7 @@ int main()
 	// Graphics command pool
 	vtek::CommandPoolInfo commandPoolInfo{};
 	commandPoolInfo.allowIndividualBufferReset = true;
+	commandPoolInfo.hintRerecordOften = true;
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
 		&commandPoolInfo, device, graphicsQueue);
 	if (graphicsCommandPool == nullptr)
@@ -688,6 +690,11 @@ int main()
 
 		// Record command buffer for next frame
 		vtek::CommandBuffer* commandBuffer = commandBuffers[imageIndex];
+		if (!vtek::command_pool_reset_buffer(graphicsCommandPool, commandBuffer))
+		{
+			log_error("Failed to reset command buffer prior to re-recording it!");
+			errors--; continue;
+		}
 		vtek::GraphicsPipeline* nextPipeline =
 			(gRenderWireframe) ? pipelineWireframe : pipeline;
 		bool record = recordCommandBuffer(

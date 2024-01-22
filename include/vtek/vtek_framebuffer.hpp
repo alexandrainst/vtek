@@ -39,10 +39,23 @@ namespace vtek
 		bool useDynamicRendering {false};
 	};
 
+	// Create/destroy a single framebuffer
 	Framebuffer* framebuffer_create(
 		const FramebufferInfo* info, Device* device);
+
+	// Create multiple framebuffers with the same settings. They will each have
+	// their own attachments, but otherwise all framebuffers will be identical.
+	// This is an ideal solution e.g. for creating gbuffers.
+	std::vector<Framebuffer*> framebuffer_create(
+		const FramebufferInfo* info, uint32_t count, Device* device);
+
 	void framebuffer_destroy(Framebuffer* framebuffer, Device* device);
 
+	void framebuffer_destroy(
+		std::vector<Framebuffer*>& framebuffers, Device* device);
+
+	// If a framebuffer supported only dynamic rendering, then into cannot be
+	// used with the old Vulkan render pass setup during rendering.
 	bool framebuffer_dynamic_rendering_only(Framebuffer* framebuffer);
 
 
