@@ -69,4 +69,6 @@ namespace vtek
 	// Properties
 	std::vector<Format> framebuffer_get_color_formats(Framebuffer* framebuffer);
 	Format framebuffer_get_depth_stencil_format(Framebuffer* framebuffer);
+
+	Image2D* framebuffer_
 }

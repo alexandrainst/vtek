@@ -95,9 +95,52 @@ bool update_uniform(vtek::Buffer* buffer, vtek::Device* device)
 	return true;
 }
 
-bool update_descriptor_sets(std::vector<vtek::DescriptorSet*> mainSets)
+bool update_descriptor_sets_main(
+	std::vector<vtek::DescriptorSet*>& sets,
+	std::vector<vtek::Framebuffer*>& framebuffers,
+	vtek::Buffer* uniformBuffer,
+	vtek::Image2D* image, vtek::Sampler* sampler,
+	vtek::Device* device)
 {
-	return false;
+	for (uint32_t i = 0; i < sets.size(); i++)
+	{
+		// descriptor for camera uniform
+		if (!vtek::descriptor_set_bind_uniform_buffer(
+			    sets[i], 0, uniformBuffer, gCameraUniform.type()))
+		{
+			log_error(
+				"Failed to add camera uniform buffer to the descriptor set!");
+			return false;
+		}
+
+		// TODO: Missing to bind framebuffer target !
+
+		if (!vtek::descriptor_set_bind_combined_image2d_sampler(
+			    sets[i], 1, sampler, image,
+			    vtek::ImageLayout::shader_readonly_optimal))
+		{
+			log_error("Failed to add image sampler uniform to descriptor set!");
+			return false;
+		}
+		vtek::descriptor_set_update(sets[i], device);
+	}
+
+	return true;
+}
+
+bool update_descriptor_sets_quad(
+	std::vector<vtek::DescriptorSet*> sets,
+	std::vector<vtek::Framebuffer*>& framebuffers,
+	vtek::Sampler* sampler)
+{
+	for (uint32_t i = 0; i < sets.size(); i++)
+	{
+		if (!vtek::descriptor_set_bind_combined_image2d_sampler(
+			    sets[i], 0, sampler, 
+))
+	}
+
+	return true;
 }
 
 struct RenderingInfo
@@ -110,6 +153,7 @@ struct RenderingInfo
 	vtek::DescriptorSet* quadDescriptorSet {nullptr};
 	vtek::Swapchain* swapchain {nullptr};
 	glm::uvec2 windowSize {0U, 0U};
+	vtek::Buffer* quadBuffer {nullptr};
 };
 
 bool recordCommandBuffer(
@@ -136,10 +180,17 @@ bool recordCommandBuffer(
 
 	// 3) bind pipeline and set dynamic states
 	vtek::cmd_bind_graphics_pipeline(commandBuffer, info->mainPipeline);
-
 	vtek::cmd_set_viewport_scissor(commandBuffer, info->windowSize, {0.0f, 0.0f});
 
-	// 4) bind and render each model, including descriptor sets and push constants
+	// 4) bind and render model, including descriptor sets and push constants
+	vtek::cmd_bind_descriptor_set_graphics(
+		commandBuffer, info->mainPipeline, info->mainDescriptorSet);
+	vtek::PushConstant_m4 pc{};
+	pc.m1 = glm::mat4(1.0f); // unit matrix
+	vtek::cmd_push_constant_graphics(
+		commandBuffer, info->mainPipeline, &pc, vtek::ShaderStageGraphics::vertex);
+	uint32_t numVertices = vtek::model_get_num_vertices(model);
+	vtek::cmd_draw_vertices(commandBuffer, numVertices);
 
 	// 5) end dynamic rendering on the framebuffer
 	vtek::framebuffer_dynrender_end(framebuffer, commandBuffer);
@@ -150,14 +201,12 @@ bool recordCommandBuffer(
 		info->swapchain, imageIndex, commandBuffer, clearColor);
 
 	// 7) bind framebuffer targets for reading (descriptor sets?)
-	vtek::PushConstant_m4 pc{};
-	pc.m1 = glm::mat4(1.0f);
-	vtek::EnumBitmask<vtek::ShaderStageGraphics> pcStages =
-		vtek::ShaderStageGraphics::vertex;
-	vtek::cmd_push_constant_graphics(
-		commandBuffer, info->mainPipeline, &pc, pcStages);
+	vtek::cmd_bind_descriptor_set_graphics(
+		commandBuffer, info->quadPipeline, info->quadDescriptorSet);
 
 	// 8) draw fullscreen quad
+	vtek::cmd_bind_vertex_buffer(commandBuffer, info->quadBuffer, 0);
+	vtek::cmd_draw_vertices(commandBuffer, 6);
 
 	// 9) end dynamic rendering on the swapchain
 	vtek::swapchain_dynamic_rendering_end(
@@ -182,6 +231,7 @@ int main()
 	initInfo.disableLogging = false;
 	initInfo.applicationTitle = "07_textured_model";
 	initInfo.useGLFW = true;
+	initInfo.loadShadersFromGLSL = true;
 	if (!vtek::initialize(&initInfo))
 	{
 		std::cerr << "Failed to initialize vtek!" << std::endl;
@@ -405,7 +455,7 @@ int main()
 	shaderInfo.vertex = true;
 	shaderInfo.fragment = true;
 	vtek::GraphicsShader* shaderMain =
-		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdirMain, device);
+		vtek::graphics_shader_load_glsl(&shaderInfo, shaderdirMain, device);
 	if (shaderMain == nullptr)
 	{
 		log_error("Failed to load graphics shader (main)!");
@@ -421,7 +471,7 @@ int main()
 		return -1;
 	}
 	vtek::GraphicsShader* shaderQuad =
-		vtek::graphics_shader_load_spirv(&shaderInfo, shaderdirQuad, device);
+		vtek::graphics_shader_load_glsl(&shaderInfo, shaderdirQuad, device);
 	if (shaderQuad == nullptr)
 	{
 		log_error("Failed to load graphics shader (quad)!");
@@ -468,9 +518,13 @@ int main()
 	}
 
 	// Descriptor set layout (quad)
-	descriptorBindingSampler.binding = 0;
+	vtek::DescriptorLayoutBinding descriptorBindingGbuffer{};
+	descriptorBindingGbuffer.type = vtek::DescriptorType::combined_image_sampler;
+	descriptorBindingGbuffer.binding = 0;
+	descriptorBindingGbuffer.shaderStages = vtek::ShaderStage::fragment;
+	descriptorBindingGbuffer.updateAfterBind = false;
 	descriptorLayoutInfo.bindings.clear();
-	descriptorLayoutInfo.bindings.emplace_back(descriptorBindingSampler);
+	descriptorLayoutInfo.bindings.emplace_back(descriptorBindingGbuffer);
 	vtek::DescriptorSetLayout* descriptorSetLayoutQuad =
 		vtek::descriptor_set_layout_create(&descriptorLayoutInfo, device);
 	if (descriptorSetLayoutQuad == nullptr)
@@ -533,7 +587,7 @@ int main()
 	}
 	vtek::ModelInfo modelInfo{};
 	modelInfo.keepVertexDataInMemory = false; // Preferred usage
-	modelInfo.loadNormals = true;
+	modelInfo.loadNormals = false;
 	modelInfo.loadTextureCoordinates = true;
 	modelInfo.flipUVs = true;
 	vtek::Model* model = vtek::model_load_obj(
@@ -591,6 +645,49 @@ int main()
 		log_error("Failed to fill uniform buffer!");
 		return -1;
 	}
+	if (!update_descriptor_sets_main(
+		    descriptorSetsMain, framebuffers, uniformBufferCamera,
+		    texture, sampler, device))
+	{
+		log_error("Failed to update descriptor sets (main)!");
+		return -1;
+	}
+
+	// Vertex data for fullscreen quad
+	std::vector<float> quadVertices = {
+		-1.0f, -1.0f, 0.0f, 1.0f, // upper-left
+		1.0f, -1.0f, 1.0f, 1.0f,  // upper-right
+		-1.0f, 1.0f, 0.0f, 0.0f,  // lower-left
+
+		-1.0f, 1.0f, 0.0f, 0.0f,  // lower-left
+		1.0f, -1.0f, 1.0f, 1.0f,  // upper-right
+		1.0f, 1.0f, 1.0f, 0.0f    // lower-right
+	};
+
+	// Vertex buffer for fullscreen quad
+	vtek::BufferInfo quadBufferInfo{};
+	quadBufferInfo.size = quadVertices.size() * sizeof(float);
+	quadBufferInfo.requireHostVisibleStorage = false;
+	quadBufferInfo.writePolicy = vtek::BufferWritePolicy::write_once;
+	quadBufferInfo.usageFlags
+		= vtek::BufferUsageFlag::transfer_dst
+		| vtek::BufferUsageFlag::vertex_buffer;
+	vtek::Buffer* quadBuffer = vtek::buffer_create(&quadBufferInfo, device);
+	if (quadBuffer == nullptr)
+	{
+		log_error("Failed to create quad vertex buffer!");
+		return -1;
+	}
+	vtek::BufferRegion quadBufferRegion{
+		.offset = 0,
+		.size = quadBufferInfo.size
+	};
+	if (!buffer_write_data(
+		    quadBuffer, quadVertices.data(), &quadBufferRegion, device))
+	{
+		log_error("Failed to write quad data to vertex buffer!");
+		return -1;
+	}
 
 	// Graphics pipeline for main render pass
 	vtek::ViewportState viewport{
@@ -599,16 +696,14 @@ int main()
 			.extent = {gFramebufferWidth, gFramebufferHeight}
 		},
 	};
-	// Buffer bindings: Vertex, Normal, TexCoord
+	// Buffer bindings: Vertex, TexCoord
 	vtek::VertexBufferBindings bindings{};
-	bindings.add_buffer(
-		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex);
 	bindings.add_buffer(
 		vtek::VertexAttributeType::vec3, vtek::VertexInputRate::per_vertex);
 	bindings.add_buffer(
 		vtek::VertexAttributeType::vec2, vtek::VertexInputRate::per_vertex);
 	vtek::RasterizationState rasterizer{};
-	rasterizer.cullMode = vtek::CullMode::none; // enable back-face culling
+	rasterizer.cullMode = vtek::CullMode::none; // no back-face culling
 	rasterizer.polygonMode = vtek::PolygonMode::fill;
 	rasterizer.frontFace = vtek::FrontFace::clockwise;
 	vtek::MultisampleState multisampling{};
@@ -662,13 +757,13 @@ int main()
 		vtek::VertexInputRate::per_vertex);
 	depthStencil.depthTestEnable = false;
 	depthStencil.depthWriteEnable = false;
-	pipelineRendering.colorAttachmentFormats.push_back(
-		vtek::swapchain_get_image_format(swapchain));
+	pipelineRendering.colorAttachmentFormats = {
+		vtek::swapchain_get_image_format(swapchain)
+	};
 	pipelineRendering.depthAttachmentFormat = vtek::Format::undefined;
 	pipelineInfo.shader = shaderQuad;
 	pipelineInfo.vertexInputBindings = &quadBindings;
 	pipelineInfo.dynamicStateFlags = {}; // reset
-	// TODO: Create the descriptor set!
 	pipelineInfo.descriptorSetLayouts = { descriptorSetLayoutQuad };
 	pipelineInfo.pushConstantType = vtek::PushConstantType::none;
 	pipelineInfo.pushConstantShaderStages = {}; // reset
@@ -679,8 +774,6 @@ int main()
 		log_error("Failed to create graphics pipeline (quad)!");
 		return -1;
 	}
-
-
 
 	// Error tolerance
 	int errors = 10;
@@ -745,6 +838,7 @@ int main()
 		renderingInfo.quadDescriptorSet = descriptorSetsQuad[imageIndex];
 		renderingInfo.swapchain = swapchain;
 		renderingInfo.windowSize = windowSize;
+		renderingInfo.quadBuffer = quadBuffer;
 		bool record = recordCommandBuffer(&renderingInfo, imageIndex, model);
 		if (!record)
 		{

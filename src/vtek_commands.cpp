@@ -2,7 +2,9 @@
 #include "vtek_commands.hpp"
 
 #include "impl/vtek_queue_struct.hpp"
+#include "vtek_buffer.hpp"
 #include "vtek_command_buffer.hpp"
+#include "vtek_descriptor_set.hpp"
 #include "vtek_format_support.hpp"
 #include "vtek_graphics_pipeline.hpp"
 #include "vtek_image.hpp"
@@ -112,6 +114,27 @@ void vtek::cmd_push_constant_graphics(
 		vtek::get_shader_stage_flags_graphics(stages);
 
 	vkCmdPushConstants(cmdBuf, pipLayout, stageFlags, 0, size, data);
+}
+
+void vtek::cmd_bind_vertex_buffer(
+	vtek::CommandBuffer* commandBuffer, vtek::Buffer* buffer, uint64_t offset)
+{
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	VkBuffer buffers[1] = { vtek::buffer_get_handle(buffer) };
+	VkDeviceSize offsets[1] = { static_cast<VkDeviceSize>(offset) };
+	vkCmdBindVertexBuffers(cmdBuf, 0, 1, buffers, offsets);
+}
+
+void vtek::cmd_bind_descriptor_set_graphics(
+	vtek::CommandBuffer* commandBuffer, vtek::GraphicsPipeline* pipeline,
+	vtek::DescriptorSet* descriptorSet)
+{
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	VkDescriptorSet descrSet = vtek::descriptor_set_get_handle(descriptorSet);
+	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
+	vkCmdBindDescriptorSets(
+		cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipLayout, 0, 1,
+		&descrSet, 0, nullptr); // NOTE: Dynamic offset unused
 }
 
 void vtek::cmd_draw_vertices(

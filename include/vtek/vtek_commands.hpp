@@ -49,7 +49,13 @@ namespace vtek
 	// ========================= //
 	// === Resource bindings === //
 	// ========================= //
+	void cmd_bind_vertex_buffer(
+		CommandBuffer* commandBuffer, Buffer* buffer, uint64_t offset);
 	void cmd_bind_vertex_buffers();
+
+	void cmd_bind_descriptor_set_graphics(
+		CommandBuffer* commandBuffer, GraphicsPipeline* pipeline,
+		DescriptorSet* descriptorSet);
 
 	// ======================== //
 	// === Drawing commands === //
