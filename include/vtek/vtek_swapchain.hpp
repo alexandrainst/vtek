@@ -73,7 +73,14 @@ namespace vtek
 		uint32_t framebufferWidth, uint32_t framebufferHeight);
 	void swapchain_destroy(Swapchain* swapchain, Device* device);
 
+	// Return the number of images in the swapchain.
 	uint32_t swapchain_get_length(Swapchain* swapchain);
+
+	// Return the number of allowed frames in-flight, which may not be the
+	// same as the swapchain length. Use this number instead when creating
+	// arrays of framebuffers, command buffers, uniform buffers, etc., for
+	// each frame.
+	uint32_t swapchain_get_num_frames_in_flight(Swapchain* swapchain);
 
 	VkImage swapchain_get_image(Swapchain* swapchain, uint32_t index);
 	VkImageView swapchain_get_image_view(Swapchain* swapchain, uint32_t index);
@@ -104,6 +111,10 @@ namespace vtek
 	// of swapchain images array, which can be used to pick the right data
 	// for the frame. This can include looking up into arrays of
 	// command buffers, uniform buffers, etc.
+	// NOTE: The index returned is wrapped around by the number of allowed
+	// frames in flight, and NOT by the swapchain length. So it's perfectly
+	// safe for applications to create number of framebuffers, command buffers,
+	// etc., corresponding to `kMaxFramesInFlight` (defined top of file).
 	SwapchainStatus swapchain_acquire_next_image(
 		Swapchain* swapchain, Device* device,
 		uint32_t* imageIndex, uint64_t timeout = UINT64_MAX);

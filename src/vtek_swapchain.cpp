@@ -1342,6 +1342,11 @@ uint32_t vtek::swapchain_get_length(vtek::Swapchain* swapchain)
 	return swapchain->length;
 }
 
+uint32_t vtek::swapchain_get_num_frames_in_flight(vtek::Swapchain* swapchain)
+{
+	return swapchain->numFramesInFlight;
+}
+
 VkImage vtek::swapchain_get_image(vtek::Swapchain* swapchain, uint32_t index)
 {
 	return swapchain->images[index];

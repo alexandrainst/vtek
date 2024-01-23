@@ -7,6 +7,9 @@ uint32_t gFramebufferWidth = 0U;
 uint32_t gFramebufferHeight = 0U;
 vtek::KeyboardMap gKeyboardMap;
 glm::vec2 gMoveOffset {0.0f, 0.0f};
+vtek::Camera* gCamera = nullptr;
+vtek::Uniform_m4 gCameraUniform;
+uint32_t gNumFramesInFlight = 0U;
 
 /* input handling */
 void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
@@ -63,8 +66,6 @@ bool update_camera_uniform(vtek::Buffer* buffer, vtek::Device* device)
 	// Packed data
 	gCameraUniform.m4 = *(vtek::camera_get_projection_matrix(gCamera));
 	gCameraUniform.m4 *= *(vtek::camera_get_view_matrix(gCamera));
-	gCameraUniform.v4 = glm::vec4(
-		vtek::camera_get_position(gCamera), gCameraExposure.get());
 
 	// Update uniform buffer
 	vtek::BufferRegion region{
@@ -94,22 +95,28 @@ bool update_uniform(vtek::Buffer* buffer, vtek::Device* device)
 	return true;
 }
 
+bool update_descriptor_sets(std::vector<vtek::DescriptorSet*> mainSets)
+{
+	return false;
+}
+
 struct RenderingInfo
 {
-	std::vector<vtek::CommandBuffer*> commandBuffers;
-	std::vector<vtek::Framebuffer*> framebuffers;
+	vtek::CommandBuffer* commandBuffer;
+	vtek::Framebuffer* framebuffer;
 	vtek::GraphicsPipeline* mainPipeline {nullptr};
 	vtek::GraphicsPipeline* quadPipeline {nullptr};
+	vtek::DescriptorSet* mainDescriptorSet {nullptr};
+	vtek::DescriptorSet* quadDescriptorSet {nullptr};
 	vtek::Swapchain* swapchain {nullptr};
 	glm::uvec2 windowSize {0U, 0U};
 };
 
 bool recordCommandBuffer(
-	RenderingInfo* info, uint32_t imageIndex,
-	vtek::Model* model, vtek::DescriptorSet* descriptorSet)
+	RenderingInfo* info, uint32_t imageIndex, vtek::Model* model)
 {
-	auto commandBuffer = info->commandBuffers[imageIndex];
-	auto framebuffer = info->framebuffers[imageIndex];
+	auto commandBuffer = info->commandBuffer;
+	auto framebuffer = info->framebuffer;
 
 	// 1) begin recording on the command buffer
 	vtek::CommandBufferBeginInfo beginInfo{};
@@ -278,6 +285,7 @@ int main()
 		log_error("Failed to create swapchain!");
 		return -1;
 	}
+	gNumFramesInFlight = vtek::swapchain_get_num_frames_in_flight(swapchain);
 
 	// Framebuffer attachment formats
 	std::vector<vtek::Format> prioritizedColorFormats = {
@@ -332,8 +340,8 @@ int main()
 
 	// Multiple framebuffers, same number as max frames in flight!
 	std::vector<vtek::Framebuffer*> framebuffers = vtek::framebuffer_create(
-		&framebufferInfo, vtek::kMaxFramesInFlight, device);
-	if (framebuffers.empty() || framebuffers.size() != vtek::kMaxFramesInFlight)
+		&framebufferInfo, gNumFramesInFlight, device);
+	if (framebuffers.empty() || framebuffers.size() != gNumFramesInFlight)
 	{
 		log_error("Failed to create framebuffer!");
 		return -1;
@@ -373,13 +381,13 @@ int main()
 	std::vector<vtek::CommandBuffer*> commandBuffers =
 		vtek::command_pool_alloc_buffers(
 			graphicsCommandPool, vtek::CommandBufferUsage::primary,
-			vtek::kMaxFramesInFlight, device);
+			gNumFramesInFlight, device);
 	if (commandBuffers.empty())
 	{
 		log_error("Failed to create command buffers!");
 		return -1;
 	}
-	if (commandBuffers.size() != vtek::kMaxFramesInFlight)
+	if (commandBuffers.size() != gNumFramesInFlight)
 	{
 		log_error("Number of command buffers created not same as number asked!");
 		return -1;
@@ -462,7 +470,7 @@ int main()
 	// Descriptor set layout (quad)
 	descriptorBindingSampler.binding = 0;
 	descriptorLayoutInfo.bindings.clear();
-	descriptorLayoutInfo.emplace_back(descriptorBindingSampler);
+	descriptorLayoutInfo.bindings.emplace_back(descriptorBindingSampler);
 	vtek::DescriptorSetLayout* descriptorSetLayoutQuad =
 		vtek::descriptor_set_layout_create(&descriptorLayoutInfo, device);
 	if (descriptorSetLayoutQuad == nullptr)
@@ -472,14 +480,26 @@ int main()
 	}
 
 	// Descriptor sets (main)
-	// TODO: Multiple sets "alloc_sets", for each swapchain image?
-	// NOTE: Count should be for kMaxFramesInFlight !!
-	vtek::DescriptorSet* descriptorSetMain =
-		vtek::descriptor_pool_alloc_sets(descriptorPool, );
+	std::vector<vtek::DescriptorSet*> descriptorSetsMain =
+		vtek::descriptor_pool_alloc_sets(
+			descriptorPool, descriptorSetLayoutMain, gNumFramesInFlight, device);
+	if (descriptorSetsMain.empty() ||
+	    descriptorSetsMain.size() != gNumFramesInFlight)
+	{
+		log_error("Failed to create descriptor sets (main)!");
+		return -1;
+	}
 
 	// Descriptor set (quad)
-	// TODO: Multiple sets "alloc_sets", for each swapchain image?
-	// NOTE: Count should be for kMaxFramesInFlight !!
+	std::vector<vtek::DescriptorSet*> descriptorSetsQuad =
+		vtek::descriptor_pool_alloc_sets(
+			descriptorPool, descriptorSetLayoutQuad, gNumFramesInFlight, device);
+	if (descriptorSetsQuad.empty() ||
+	    descriptorSetsQuad.size() != gNumFramesInFlight)
+	{
+		log_error("Failed to create descriptor sets (quad)!");
+		return -1;
+	}
 
 	// Camera
 	vtek::CameraProjectionInfo cameraProjInfo{};
@@ -572,8 +592,6 @@ int main()
 		return -1;
 	}
 
-
-
 	// Graphics pipeline for main render pass
 	vtek::ViewportState viewport{
 		.viewportRegion = {
@@ -625,7 +643,7 @@ int main()
 		= vtek::PipelineDynamicState::viewport
 		| vtek::PipelineDynamicState::scissor;
 	// TODO: Create the descriptor set!
-	pipelineInfo.descriptorSetLayouts.push_back(descriptorSetLayoutMain);
+	pipelineInfo.descriptorSetLayouts = { descriptorSetLayoutMain };
 	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
 	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;
 
@@ -651,7 +669,7 @@ int main()
 	pipelineInfo.vertexInputBindings = &quadBindings;
 	pipelineInfo.dynamicStateFlags = {}; // reset
 	// TODO: Create the descriptor set!
-	pipelineInfo.descriptorSetLayout.push_back(descriptorSetLayoutQuad);
+	pipelineInfo.descriptorSetLayouts = { descriptorSetLayoutQuad };
 	pipelineInfo.pushConstantType = vtek::PushConstantType::none;
 	pipelineInfo.pushConstantShaderStages = {}; // reset
 	vtek::GraphicsPipeline* quadPipeline =
@@ -686,6 +704,7 @@ int main()
 		}
 
 		// Acquire the next available image in the swapchain
+		// TODO: Should it be renamed `frameIndex`?
 		uint32_t imageIndex;
 		auto acquireStatus =
 			vtek::swapchain_acquire_next_image(swapchain, device, &imageIndex);
@@ -702,7 +721,6 @@ int main()
 		}
 
 		// Successfully acquired image, now update uniforms before rendering
-		// TODO: Update after bind no longer needed!
 		update_movement();
 		vtek::camera_update(gCamera);
 		if (!update_camera_uniform(uniformBufferCamera, device))
@@ -710,15 +728,6 @@ int main()
 			log_error("Failed to update uniform buffer (Camera)!");
 			return -1;
 		}
-		// if (gLightChanged)
-		// {
-		// 	if (!update_light_uniform(descriptorSetLight, uniformBufferLight, device))
-		// 	{
-		// 		log_error("Failed to update uniform buffer (Light)!");
-		// 		return -1;
-		// 	}
-		// 	gLightChanged = false;
-		// }
 
 		// Record command buffer for next frame
 		vtek::CommandBuffer* commandBuffer = commandBuffers[imageIndex];
@@ -727,11 +736,16 @@ int main()
 			log_error("Failed to reset command buffer prior to re-recording it!");
 			errors--; continue;
 		}
-		vtek::GraphicsPipeline* nextPipeline =
-			(gRenderWireframe) ? pipelineWireframe : pipeline;
-		bool record = recordCommandBuffer(
-			commandBuffer, nextPipeline, swapchain, imageIndex, model,
-			descriptorSet);
+		RenderingInfo renderingInfo{};
+		renderingInfo.commandBuffer = commandBuffer;
+		renderingInfo.framebuffer = framebuffers[imageIndex];
+		renderingInfo.mainPipeline = mainPipeline;
+		renderingInfo.quadPipeline = quadPipeline;
+		renderingInfo.mainDescriptorSet = descriptorSetsMain[imageIndex];
+		renderingInfo.quadDescriptorSet = descriptorSetsQuad[imageIndex];
+		renderingInfo.swapchain = swapchain;
+		renderingInfo.windowSize = windowSize;
+		bool record = recordCommandBuffer(&renderingInfo, imageIndex, model);
 		if (!record)
 		{
 			log_error("Failed to record command buffer!");
@@ -786,8 +800,8 @@ int main()
 	// Cleanup
 	vtek::device_wait_idle(device);
 
-	vtek::graphics_pipeline_destroy(pipelineWireframe, device);
-	vtek::graphics_pipeline_destroy(pipeline, device);
+	vtek::graphics_pipeline_destroy(quadPipeline, device);
+	vtek::graphics_pipeline_destroy(mainPipeline, device);
 
 
 	vtek::buffer_destroy(uniformBufferCamera);
