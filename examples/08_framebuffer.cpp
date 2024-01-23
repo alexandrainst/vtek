@@ -113,8 +113,7 @@ bool update_descriptor_sets_main(
 			return false;
 		}
 
-		// TODO: Missing to bind framebuffer target !
-
+		// Texture for model albedo color
 		if (!vtek::descriptor_set_bind_combined_image2d_sampler(
 			    sets[i], 1, sampler, image,
 			    vtek::ImageLayout::shader_readonly_optimal))
@@ -122,6 +121,7 @@ bool update_descriptor_sets_main(
 			log_error("Failed to add image sampler uniform to descriptor set!");
 			return false;
 		}
+
 		vtek::descriptor_set_update(sets[i], device);
 	}
 
@@ -129,15 +129,25 @@ bool update_descriptor_sets_main(
 }
 
 bool update_descriptor_sets_quad(
-	std::vector<vtek::DescriptorSet*> sets,
+	std::vector<vtek::DescriptorSet*>& sets,
 	std::vector<vtek::Framebuffer*>& framebuffers,
-	vtek::Sampler* sampler)
+	vtek::Sampler* sampler, vtek::Device* device)
 {
 	for (uint32_t i = 0; i < sets.size(); i++)
 	{
+		std::vector<vtek::Image2D*> fbImages =
+			vtek::framebuffer_get_color_images(framebuffers[i]);
+
+		// NOTE: We only care about fbImages[0] since there is only 1 attachment!
 		if (!vtek::descriptor_set_bind_combined_image2d_sampler(
-			    sets[i], 0, sampler, 
-))
+			    sets[i], 0, sampler, fbImages[0],
+			    vtek::ImageLayout::shader_readonly_optimal))
+		{
+			log_error(
+				"Failed to add framebuffer image sampler to descriptor set!");
+			return false;
+		}
+		vtek::descriptor_set_update(sets[i], device);
 	}
 
 	return true;
@@ -181,6 +191,15 @@ bool recordCommandBuffer(
 	// 3) bind pipeline and set dynamic states
 	vtek::cmd_bind_graphics_pipeline(commandBuffer, info->mainPipeline);
 	vtek::cmd_set_viewport_scissor(commandBuffer, info->windowSize, {0.0f, 0.0f});
+
+	// Bind stuff for model
+	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+	VkBuffer buffers[2] = {
+		vtek::buffer_get_handle(vtek::model_get_vertex_buffer(model)),
+		vtek::buffer_get_handle(vtek::model_get_texcoord_buffer(model))
+	};
+	VkDeviceSize offsets[2] = { 0, 0 };
+	vkCmdBindVertexBuffers(cmdBuf, 0, 2, buffers, offsets);
 
 	// 4) bind and render model, including descriptor sets and push constants
 	vtek::cmd_bind_descriptor_set_graphics(
@@ -340,7 +359,8 @@ int main()
 	// Framebuffer attachment formats
 	std::vector<vtek::Format> prioritizedColorFormats = {
 		vtek::Format::r8g8b8_unorm,
-		vtek::Format::r8g8b8a8_unorm
+		//vtek::Format::r8g8b8a8_unorm
+		vtek::Format::b8g8r8a8_unorm
 	};
 	vtek::FormatInfo framebufferFormatInfo{};
 	framebufferFormatInfo.tiling = vtek::ImageTiling::optimal;
@@ -354,6 +374,18 @@ int main()
 	{
 		log_error("Failed to find a supported framebuffer color format!");
 		return -1;
+	}
+	if (colorFormat.get() == vtek::Format::r8g8b8_unorm)
+	{
+		log_debug("color format: vtek::Format::r8g8b8_unorm");
+	}
+	else if (colorFormat.get() == vtek::Format::b8g8r8a8_unorm)
+	{
+		log_debug("color format: vtek::Format::b8g8r8a8_unorm");
+	}
+	else
+	{
+		log_debug("INVALID color format!");
 	}
 	std::vector<vtek::Format> prioritizedDepthStencilFormats = {
 		vtek::Format::d24_unorm_s8_uint,
@@ -523,8 +555,7 @@ int main()
 	descriptorBindingGbuffer.binding = 0;
 	descriptorBindingGbuffer.shaderStages = vtek::ShaderStage::fragment;
 	descriptorBindingGbuffer.updateAfterBind = false;
-	descriptorLayoutInfo.bindings.clear();
-	descriptorLayoutInfo.bindings.emplace_back(descriptorBindingGbuffer);
+	descriptorLayoutInfo.bindings = { descriptorBindingGbuffer };
 	vtek::DescriptorSetLayout* descriptorSetLayoutQuad =
 		vtek::descriptor_set_layout_create(&descriptorLayoutInfo, device);
 	if (descriptorSetLayoutQuad == nullptr)
@@ -645,11 +676,19 @@ int main()
 		log_error("Failed to fill uniform buffer!");
 		return -1;
 	}
+
+	// Update descriptor sets
 	if (!update_descriptor_sets_main(
 		    descriptorSetsMain, framebuffers, uniformBufferCamera,
 		    texture, sampler, device))
 	{
 		log_error("Failed to update descriptor sets (main)!");
+		return -1;
+	}
+	if (!update_descriptor_sets_quad(
+		    descriptorSetsQuad, framebuffers, sampler, device))
+	{
+		log_error("Failed to update descriptor sets (quad)!");
 		return -1;
 	}
 
@@ -721,7 +760,7 @@ int main()
 
 	vtek::GraphicsPipelineInfo pipelineInfo{};
 	pipelineInfo.renderPassType = vtek::RenderPassType::dynamic;
-	pipelineInfo.renderPass = nullptr; // Nice!
+	pipelineInfo.renderPass = nullptr;
 	pipelineInfo.pipelineRendering = &pipelineRendering;
 	pipelineInfo.shader = shaderMain;
 	// TODO: Rename to `vertexBufferBindings`
@@ -737,7 +776,6 @@ int main()
 	pipelineInfo.dynamicStateFlags
 		= vtek::PipelineDynamicState::viewport
 		| vtek::PipelineDynamicState::scissor;
-	// TODO: Create the descriptor set!
 	pipelineInfo.descriptorSetLayouts = { descriptorSetLayoutMain };
 	pipelineInfo.pushConstantType = vtek::PushConstantType::mat4;
 	pipelineInfo.pushConstantShaderStages = vtek::ShaderStageGraphics::vertex;

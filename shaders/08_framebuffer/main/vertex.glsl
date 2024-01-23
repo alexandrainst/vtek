@@ -7,7 +7,6 @@ layout (location = 0) out vec2 texCoord;
 layout (set = 0, binding = 0) uniform CameraUniform
 {
 	mat4 viewProjection;
-	vec4 viewPosition; // {x,y,z}: pos; w: unused
 };
 
 void main()

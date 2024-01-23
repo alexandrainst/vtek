@@ -163,7 +163,7 @@ static void color_memory_barrier_end(
 	barrier.subresourceRange.layerCount = 1;
 
 	vkCmdPipelineBarrier(
-		cmdBuf, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // TODO: BOTTOM ?
+		cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
 		0, nullptr, 1, &barrier);
 }
@@ -451,14 +451,16 @@ bool vtek::framebuffer_dynrender_begin(
 		attachInfo.pNext = nullptr;
 		attachInfo.imageView = vtek::image2d_get_view_handle(att.image);
 		attachInfo.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL; // TODO: Always?
-		attachInfo.resolveMode = VK_RESOLVE_MODE_NONE; // TODO: Multisampled framebuffer!
-		attachInfo.resolveImageView = VK_NULL_HANDLE; // TODO: Multisampled framebuffer!
-		attachInfo.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO: Multisampling!
+		// TODO: Multisampled framebuffer
+		attachInfo.resolveMode = VK_RESOLVE_MODE_NONE;
+		attachInfo.resolveImageView = VK_NULL_HANDLE;
+		attachInfo.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
 		attachInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		attachInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		attachInfo.clearValue = att.clearValue.get();
 
-		colorAttachmentInfos.emplace_back(std::move(attachInfo)); // TODO: std::forward?
+		colorAttachmentInfos.push_back(std::move(attachInfo)); // TODO: std::forward?
 	}
 
 	// Begin dynamic rendering
@@ -492,12 +494,12 @@ void vtek::framebuffer_dynrender_end(
 
 	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
+	vkCmdEndRendering(cmdBuf);
+
 	// "applications must ensure that all memory writes have been made available
 	// before a layout transition is executed."
 	// NOTE: This probably means we need a fence!?
 
-
-	// TODO: Transition for each color attachment
 	std::vector<VkRenderingAttachmentInfo> colorAttachmentInfos{};
 
 	// Transition attachments into read
@@ -508,8 +510,6 @@ void vtek::framebuffer_dynrender_end(
 		uint32_t queueFamilyIndex = framebuffer->graphicsQueueFamilyIndex;
 		color_memory_barrier_end(cmdBuf, att, queueFamilyIndex, queueFamilyIndex);
 	}
-
-	vkCmdEndRendering(cmdBuf);
 }
 
 std::vector<vtek::Format> vtek::framebuffer_get_color_formats(
@@ -534,4 +534,21 @@ vtek::Format vtek::framebuffer_get_depth_stencil_format(
 	}
 
 	return vtek::image2d_get_format(img);
+}
+
+glm::uvec2 vtek::framebuffer_get_resolution(vtek::Framebuffer* framebuffer)
+{
+	return framebuffer->resolution;
+}
+
+std::vector<vtek::Image2D*> vtek::framebuffer_get_color_images(
+	vtek::Framebuffer* framebuffer)
+{
+	std::vector<vtek::Image2D*> images;
+	for (auto& att : framebuffer->colorAttachments)
+	{
+		images.push_back(att.image);
+	}
+
+	return images; // RVO
 }
