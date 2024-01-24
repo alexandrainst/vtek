@@ -35,25 +35,52 @@ void key_callback(vtek::KeyboardKey key, vtek::InputAction action)
 	}
 }
 
+void mouse_move_callback(double x, double y)
+{
+	vtek::camera_on_mouse_move(gCamera, x, y);
+}
+
+void mouse_scroll_callback(double x, double y)
+{
+	vtek::camera_on_mouse_scroll(gCamera, x, y);
+}
+
 void update_movement()
 {
 	using vtek::KeyboardKey;
 	constexpr float moveSpeed = 0.05f;
+	constexpr float rotateSpeed = 0.025f;
 
 	// left / right
-	if (gKeyboardMap.get_key(KeyboardKey::left)) {
-		gMoveOffset.x -= moveSpeed;
+	if (gKeyboardMap.get_key(KeyboardKey::a)) {
+		vtek::camera_move_right(gCamera, moveSpeed);
 	}
-	else if (gKeyboardMap.get_key(KeyboardKey::right)) {
-		gMoveOffset.x += moveSpeed;
+	else if (gKeyboardMap.get_key(KeyboardKey::d)) {
+		vtek::camera_move_left(gCamera, moveSpeed);
+	}
+
+	// forward / backward
+	if (gKeyboardMap.get_key(KeyboardKey::w)) {
+		vtek::camera_move_forward(gCamera, moveSpeed);
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::s)) {
+		vtek::camera_move_backward(gCamera, moveSpeed);
 	}
 
 	// up / down
-	if (gKeyboardMap.get_key(KeyboardKey::up)) {
-		gMoveOffset.y -= moveSpeed;
+	if (gKeyboardMap.get_key(KeyboardKey::space)) {
+		vtek::camera_move_up(gCamera, moveSpeed);
 	}
-	else if (gKeyboardMap.get_key(KeyboardKey::down)) {
-		gMoveOffset.y += moveSpeed;
+	else if (gKeyboardMap.get_key(KeyboardKey::c)) {
+		vtek::camera_move_down(gCamera, moveSpeed);
+	}
+
+	// rotate
+	if (gKeyboardMap.get_key(KeyboardKey::q)) {
+		vtek::camera_roll_left_radians(gCamera, rotateSpeed);
+	}
+	else if (gKeyboardMap.get_key(KeyboardKey::e)) {
+		vtek::camera_roll_right_radians(gCamera, rotateSpeed);
 	}
 }
 
@@ -73,20 +100,6 @@ bool update_camera_uniform(vtek::Buffer* buffer, vtek::Device* device)
 		.size = gCameraUniform.size()
 	};
 	if (!vtek::buffer_write_data(buffer, &gCameraUniform, &region, device))
-	{
-		log_error("Failed to write data to the uniform buffer!");
-		return false;
-	}
-
-	return true;
-}
-
-bool update_uniform(vtek::Buffer* buffer, vtek::Device* device)
-{
-	vtek::Uniform_v2 uniform {.v2 = gMoveOffset};
-	vtek::BufferRegion region {.offset = 0, .size = uniform.size()};
-
-	if (!vtek::buffer_write_data(buffer, &uniform, &region, device))
 	{
 		log_error("Failed to write data to the uniform buffer!");
 		return false;
@@ -215,23 +228,26 @@ bool recordCommandBuffer(
 	vtek::framebuffer_dynrender_end(framebuffer, commandBuffer);
 
 	// 6) begin dynamic rendering on the swapchain
-	glm::vec3 clearColor(0.15f, 0.15f, 0.15f);
+	glm::vec3 clearColor(0.0f, 0.0f, 0.0f);
 	vtek::swapchain_dynamic_rendering_begin(
 		info->swapchain, imageIndex, commandBuffer, clearColor);
 
-	// 7) bind framebuffer targets for reading (descriptor sets?)
+	// 7) bind the quad pipeline
+	vtek::cmd_bind_graphics_pipeline(commandBuffer, info->quadPipeline);
+
+	// 8) bind framebuffer targets for reading (descriptor sets?)
 	vtek::cmd_bind_descriptor_set_graphics(
 		commandBuffer, info->quadPipeline, info->quadDescriptorSet);
 
-	// 8) draw fullscreen quad
+	// 9) draw fullscreen quad
 	vtek::cmd_bind_vertex_buffer(commandBuffer, info->quadBuffer, 0);
 	vtek::cmd_draw_vertices(commandBuffer, 6);
 
-	// 9) end dynamic rendering on the swapchain
+	// 10) end dynamic rendering on the swapchain
 	vtek::swapchain_dynamic_rendering_end(
 		info->swapchain, imageIndex, commandBuffer);
 
-	// 10) end recording on the command buffer
+	// 11) end recording on the command buffer
 	if (!vtek::command_buffer_end(commandBuffer))
 	{
 		log_error("Failed to end command buffer {} recording!", imageIndex);
@@ -248,7 +264,7 @@ int main()
 	// Initialize vtek
 	vtek::InitInfo initInfo{};
 	initInfo.disableLogging = false;
-	initInfo.applicationTitle = "07_textured_model";
+	initInfo.applicationTitle = "08_framebuffer";
 	initInfo.useGLFW = true;
 	initInfo.loadShadersFromGLSL = true;
 	if (!vtek::initialize(&initInfo))
@@ -262,7 +278,7 @@ int main()
 
 	// Create window
 	vtek::WindowInfo windowInfo{};
-	windowInfo.title = "vtek example 07: Drawing a textured model";
+	windowInfo.title = "vtek example 08: Deferred rendering with framebuffer";
 	windowInfo.resizeable = false;
 	windowInfo.cursorDisabled = true;
 	windowInfo.width = 1024;
@@ -275,10 +291,12 @@ int main()
 		return -1;
 	}
 	vtek::window_set_key_handler(gWindow, key_callback);
+	vtek::window_set_mouse_move_handler(gWindow, mouse_move_callback);
+	vtek::window_set_mouse_scroll_handler(gWindow, mouse_scroll_callback);
 
 	// Vulkan instance
 	vtek::InstanceInfo instanceInfo{};
-	instanceInfo.applicationName = "07_textured_model";
+	instanceInfo.applicationName = "08_framebuffer";
 	instanceInfo.applicationVersion = vtek::VulkanVersion(1, 0, 0); // TODO: vtek::AppVersion
 	instanceInfo.enableValidationLayers = true;
 	auto instance = vtek::instance_create(&instanceInfo);
@@ -302,11 +320,7 @@ int main()
 	physicalDeviceInfo.requirePresentQueue = true;
 	physicalDeviceInfo.requireSwapchainSupport = true;
 	physicalDeviceInfo.requireDynamicRendering = true;
-	physicalDeviceInfo.requiredFeatures.depthBounds = true;
-	physicalDeviceInfo.requiredFeatures.fillModeNonSolid = true;
-	// Allows us to change the uniform without re-recording the command buffers:
-	physicalDeviceInfo.updateAfterBindFeatures
-		= vtek::UpdateAfterBindFeature::uniform_buffer;
+	//physicalDeviceInfo.requiredFeatures.depthBounds = true;
 	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
 		&physicalDeviceInfo, instance, surface);
 	if (physicalDevice == nullptr)
@@ -354,7 +368,7 @@ int main()
 		log_error("Failed to create swapchain!");
 		return -1;
 	}
-	gNumFramesInFlight = vtek::swapchain_get_num_frames_in_flight(swapchain);
+	gNumFramesInFlight = vtek::kMaxFramesInFlight;
 
 	// Framebuffer attachment formats
 	std::vector<vtek::Format> prioritizedColorFormats = {
@@ -406,7 +420,7 @@ int main()
 	// Framebuffers
 	vtek::FramebufferAttachmentInfo colorAttachment{};
 	colorAttachment.supportedFormat = colorFormat;
-	colorAttachment.clearValue.setColorFloat(0.2f, 0.2f, 0.2f, 1.0f);
+	colorAttachment.clearValue.setColorFloat(0.7f, 0.2f, 0.2f, 1.0f);
 	vtek::FramebufferAttachmentInfo depthStencilAttachment{};
 	depthStencilAttachment.supportedFormat = depthStencilFormat;
 	depthStencilAttachment.clearValue.setDepthStencil();
@@ -694,13 +708,13 @@ int main()
 
 	// Vertex data for fullscreen quad
 	std::vector<float> quadVertices = {
-		-1.0f, -1.0f, 0.0f, 1.0f, // upper-left
-		1.0f, -1.0f, 1.0f, 1.0f,  // upper-right
-		-1.0f, 1.0f, 0.0f, 0.0f,  // lower-left
+		-1.0f, -1.0f, 0.0f, 0.0f, // top-left
+		1.0f, -1.0f, 1.0f, 0.0f,  // top-right
+		-1.0f, 1.0f, 0.0f, 1.0f,  // bottom-left
 
-		-1.0f, 1.0f, 0.0f, 0.0f,  // lower-left
-		1.0f, -1.0f, 1.0f, 1.0f,  // upper-right
-		1.0f, 1.0f, 1.0f, 0.0f    // lower-right
+		-1.0f, 1.0f, 0.0f, 1.0f,  // bottom-left
+		1.0f, -1.0f, 1.0f, 0.0f,  // top-right
+		1.0f, 1.0f, 1.0f, 1.0f    // bottom-right
 	};
 
 	// Vertex buffer for fullscreen quad
@@ -812,6 +826,8 @@ int main()
 		log_error("Failed to create graphics pipeline (quad)!");
 		return -1;
 	}
+
+
 
 	// Error tolerance
 	int errors = 10;
@@ -934,8 +950,7 @@ int main()
 
 	vtek::graphics_pipeline_destroy(quadPipeline, device);
 	vtek::graphics_pipeline_destroy(mainPipeline, device);
-
-
+	vtek::buffer_destroy(quadBuffer);
 	vtek::buffer_destroy(uniformBufferCamera);
 	vtek::sampler_destroy(sampler, device);
 	vtek::image2d_destroy(texture, device);
