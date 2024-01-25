@@ -536,7 +536,7 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 	// ========================= //
 	// === Dynamic rendering === // -- alternative to providing a render pass.
 	// ========================= //
-	VkPipelineRenderingCreateInfo renderingCreateInfo;
+	VkPipelineRenderingCreateInfo renderingCreateInfo{};
 	bool useDynamicRendering = (info->renderPassType == vtek::RenderPassType::dynamic);
 	std::vector<VkFormat> dynRenderFormats;
 	if (useDynamicRendering)
@@ -573,22 +573,50 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 			return nullptr;
 		}
 
-		bool depthSpecified =
-			(pipRender->depthAttachmentFormat != vtek::Format::undefined);
-		if (!depthSpecified && dsState.depthWriteEnable.get())
+		// TODO: This would be far easier and more elegant if a `vtek::SupportedFormat`
+		// TODO: struct was provided!
+
+		// Does format enable depth/stencil testing
+		FormatDepthStencilTest depthStencilSupport =
+			vtek::get_format_depth_stencil_test(pipRender->depthStencilAttachmentFormat);
+		bool depthTest = dsState.depthTestEnable.get();
+		bool depthWrite = dsState.depthWriteEnable.get();
+		bool stencilWrite = dsState.stencilTestEnable.get();
+
+		if (depthStencilSupport == vtek::FormatDepthStencilTest::none &&
+		    (depthWrite || stencilWrite))
 		{
-			vtek_log_error("No depth attachment format provided for dynamic rendering.");
-			vtek_log_error("--> But was specified for color blending state.");
+			vtek_log_error("Depth/stencil write enabled, {}",
+			               "but invalid format for dynamic rendering.");
 			vtek_log_error("--> Cannot create graphics pipeline!");
 			return nullptr;
 		}
 
-		bool stencilSpecified =
-			(pipRender->stencilAttachmentFormat != vtek::Format::undefined);
-		if (!stencilSpecified && dsState.stencilTestEnable.get())
+		if ((depthWrite && stencilWrite) &&
+		    depthStencilSupport != vtek::FormatDepthStencilTest::depth_and_stencil)
 		{
-			vtek_log_error("No stencil attachment format provided for dynamic rendering.");
-			vtek_log_error("--> But was specified for color blending state.");
+			vtek_log_error("Both depth and stencil write enabled, {}",
+			               "but depth/stencil attachment format does not support both.");
+			vtek_log_error("--> Cannot create graphics pipeline!");
+			return nullptr;
+		}
+
+		if (stencilWrite &&
+		    ((depthStencilSupport == vtek::FormatDepthStencilTest::none) ||
+		     (depthStencilSupport == vtek::FormatDepthStencilTest::depth)))
+		{
+			vtek_log_error("Stencil write enabled, {}",
+			               "but depth/stencil format does not support stencil.");
+			vtek_log_error("--> Cannot create graphics pipeline!");
+			return nullptr;
+		}
+
+		if (depthWrite &&
+		    ((depthStencilSupport == vtek::FormatDepthStencilTest::none) ||
+		     (depthStencilSupport == vtek::FormatDepthStencilTest::stencil)))
+		{
+			vtek_log_error("Depth write enabled, {}",
+			               "but depth/stencil format does not support depth.");
 			vtek_log_error("--> Cannot create graphics pipeline!");
 			return nullptr;
 		}
@@ -604,10 +632,15 @@ vtek::GraphicsPipeline* vtek::graphics_pipeline_create(
 		renderingCreateInfo.colorAttachmentCount =
 			static_cast<uint32_t>(dynRenderFormats.size());
 		renderingCreateInfo.pColorAttachmentFormats = dynRenderFormats.data();
-		renderingCreateInfo.depthAttachmentFormat =
-			vtek::get_format(pipRender->depthAttachmentFormat);
-		renderingCreateInfo.stencilAttachmentFormat =
-			vtek::get_format(pipRender->stencilAttachmentFormat);
+
+		if (depthTest || depthWrite) {
+			renderingCreateInfo.depthAttachmentFormat =
+				vtek::get_format(pipRender->depthStencilAttachmentFormat);
+		}
+		if (stencilWrite) {
+			renderingCreateInfo.stencilAttachmentFormat =
+				vtek::get_format(pipRender->depthStencilAttachmentFormat);
+		}
 	}
 	else
 	{

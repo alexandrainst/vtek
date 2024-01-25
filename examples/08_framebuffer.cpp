@@ -320,7 +320,7 @@ int main()
 	physicalDeviceInfo.requirePresentQueue = true;
 	physicalDeviceInfo.requireSwapchainSupport = true;
 	physicalDeviceInfo.requireDynamicRendering = true;
-	//physicalDeviceInfo.requiredFeatures.depthBounds = true;
+	physicalDeviceInfo.requiredFeatures.depthBounds = true;
 	vtek::PhysicalDevice* physicalDevice = vtek::physical_device_pick(
 		&physicalDeviceInfo, instance, surface);
 	if (physicalDevice == nullptr)
@@ -423,11 +423,11 @@ int main()
 	colorAttachment.clearValue.setColorFloat(0.7f, 0.2f, 0.2f, 1.0f);
 	vtek::FramebufferAttachmentInfo depthStencilAttachment{};
 	depthStencilAttachment.supportedFormat = depthStencilFormat;
-	depthStencilAttachment.clearValue.setDepthStencil();
+	depthStencilAttachment.clearValue.setDepthStencil(0.0f, 0);
 	vtek::FramebufferInfo framebufferInfo{};
 	framebufferInfo.colorAttachments.emplace_back(colorAttachment);
 	framebufferInfo.depthStencilAttachment = depthStencilAttachment;
-	framebufferInfo.useDepthStencil = true;
+	framebufferInfo.depthStencil = vtek::DepthStencilMode::depth;
 	framebufferInfo.resolution = windowSize;
 	 // TODO: When multisampling implemented in vtek, try it out?
 	framebufferInfo.multisampling = vtek::MultisampleType::none;
@@ -763,13 +763,15 @@ int main()
 	vtek::DepthStencilState depthStencil{};
 	depthStencil.depthTestEnable = true;
 	depthStencil.depthWriteEnable = true;
+	depthStencil.depthCompareOp = vtek::DepthCompareOp::greater_equal;
+	depthStencil.stencilTestEnable = false;
 	vtek::ColorBlendState colorBlending{};
 	colorBlending.attachments.emplace_back(
 		vtek::ColorBlendAttachment::GetDefault());
 	vtek::PipelineRendering pipelineRendering{};
 	pipelineRendering.colorAttachmentFormats =
 		vtek::framebuffer_get_color_formats(framebuffers[0]);
-	pipelineRendering.depthAttachmentFormat =
+	pipelineRendering.depthStencilAttachmentFormat =
 		vtek::framebuffer_get_depth_stencil_format(framebuffers[0]);
 
 	vtek::GraphicsPipelineInfo pipelineInfo{};
@@ -809,10 +811,11 @@ int main()
 		vtek::VertexInputRate::per_vertex);
 	depthStencil.depthTestEnable = false;
 	depthStencil.depthWriteEnable = false;
+	rasterizer.cullMode = vtek::CullMode::front;
 	pipelineRendering.colorAttachmentFormats = {
 		vtek::swapchain_get_image_format(swapchain)
 	};
-	pipelineRendering.depthAttachmentFormat = vtek::Format::undefined;
+	pipelineRendering.depthStencilAttachmentFormat = vtek::Format::undefined;
 	pipelineInfo.shader = shaderQuad;
 	pipelineInfo.vertexInputBindings = &quadBindings;
 	pipelineInfo.dynamicStateFlags = {}; // reset

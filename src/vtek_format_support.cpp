@@ -2694,17 +2694,17 @@ static void get_format_compressed(
 
 
 /* supported format class */
-constexpr uint32_t kChannelBits      = 0x0003;
-constexpr uint32_t kAlphaBit         = 0x0004;
-constexpr uint32_t kSrgbBit          = 0x0008;
-constexpr uint32_t kCompressedBit    = 0x0010;
-constexpr uint32_t kLinearTilingBit  = 0x0020;
-constexpr uint32_t kBlueEndianBit    = 0x0040;
-constexpr uint32_t kAlphaFirstBit    = 0x0080;
-constexpr uint32_t kDepthBit         = 0x0100;
-constexpr uint32_t kStencilBit       = 0x0200;
+constexpr uint32_t kChannelBits      = 0x0003U;
+constexpr uint32_t kAlphaBit         = 0x0004U;
+constexpr uint32_t kSrgbBit          = 0x0008U;
+constexpr uint32_t kCompressedBit    = 0x0010U;
+constexpr uint32_t kLinearTilingBit  = 0x0020U;
+constexpr uint32_t kBlueEndianBit    = 0x0040U;
+constexpr uint32_t kAlphaFirstBit    = 0x0080U;
+constexpr uint32_t kDepthBit         = 0x0100U;
+constexpr uint32_t kStencilBit       = 0x0200U;
 constexpr uint32_t kDepthStencilBits = kDepthBit | kStencilBit;
-constexpr uint32_t kPlanarBit        = 0x0400;
+constexpr uint32_t kPlanarBit        = 0x0400U;
 
 // static construction methods
 bool vtek::SupportedFormat::FindFormat(

@@ -7,6 +7,14 @@
 
 namespace vtek
 {
+	// Description of depth/stencil mode, used for variety of purposes such
+	// as setting up framebuffer attachments.
+	enum class DepthStencilMode
+	{
+		none, depth, stencil, depth_and_stencil
+	};
+
+
 	// Image tiling specifies the tiling arrangement of texel blocks in an
 	// image. This is used for querying for supported image formats, and for
 	// creating images and framebuffer attachments.

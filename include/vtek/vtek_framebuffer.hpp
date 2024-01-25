@@ -22,9 +22,14 @@ namespace vtek
 	{
 		std::vector<FramebufferAttachmentInfo> colorAttachments;
 		FramebufferAttachmentInfo depthStencilAttachment {};
-		bool useDepthStencil {false};
 		glm::uvec2 resolution {1,1};
-		vtek::MultisampleType multisampling {vtek::MultisampleType::none};
+		MultisampleType multisampling {MultisampleType::none};
+
+		// How the framebuffer handles depth/stencil, which per default
+		// is none (no attachments created). If this value is anything other
+		// than `none`, a valid format must be provided in the depth/stencil
+		// attachment info.
+		DepthStencilMode depthStencil {DepthStencilMode::none};
 
 		// A list of queues which need access to the framebuffer attachments.
 		// If empty, only the device's graphics queue is considered.

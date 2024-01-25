@@ -251,8 +251,7 @@ namespace vtek
 	struct PipelineRendering
 	{
 		std::vector<Format> colorAttachmentFormats;
-		Format depthAttachmentFormat {Format::undefined};
-		Format stencilAttachmentFormat {Format::undefined};
+		Format depthStencilAttachmentFormat {Format::undefined};
 	};
 
 

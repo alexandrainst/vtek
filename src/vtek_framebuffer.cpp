@@ -17,6 +17,7 @@ struct FramebufferAttachment
 	// TODO: Should we?
 	vtek::Image2D* image {nullptr};
 	vtek::ClearValue clearValue {};
+	vtek::SupportedFormat supportedFormat {};
 };
 
 /* struct implementation */
@@ -25,6 +26,8 @@ struct vtek::Framebuffer
 	VkFramebuffer handle {VK_NULL_HANDLE};
 	std::vector<FramebufferAttachment> colorAttachments {};
 	FramebufferAttachment depthStencilAttachment {};
+	bool useDepth {false};
+	bool useStencil {false};
 	glm::uvec2 resolution {1,1};
 	uint32_t graphicsQueueFamilyIndex {0};
 	bool dynamicRenderingOnly {false};
@@ -34,9 +37,12 @@ struct vtek::Framebuffer
 
 
 /* helper functions */
-static bool validate_framebuffer_info(const vtek::FramebufferInfo* info)
+static bool validate_framebuffer_info(
+	const vtek::FramebufferInfo* info, bool useDepth, bool useStencil)
 {
-	if (info->colorAttachments.empty() && !info->useDepthStencil)
+	auto dsfmt = info->depthStencilAttachment.supportedFormat;
+
+	if (info->colorAttachments.empty() && !(useDepth || useStencil))
 	{
 		vtek_log_error(
 			"No attachments specified -- cannot create empty framebuffer!");
@@ -53,15 +59,15 @@ static bool validate_framebuffer_info(const vtek::FramebufferInfo* info)
 	{
 		if (!att.supportedFormat.is_valid())
 		{
-			vtek_log_error("Unsupported color attachment format -- {}!",
+			vtek_log_error("Unsupported color attachment format -- {}",
 			               "cannot create framebuffer!");
 			return false;
 		}
 	}
-	if (info->useDepthStencil &&
-	    !info->depthStencilAttachment.supportedFormat.is_valid())
+	if ((info->depthStencil != vtek::DepthStencilMode::none) &&
+	    !(dsfmt.is_valid()))
 	{
-		vtek_log_error("Unsupported depth/stencil attachment format -- {}!",
+		vtek_log_error("Unsupported depth/stencil attachment format -- {}",
 		               "cannot create framebuffer!");
 		return false;
 	}
@@ -74,6 +80,58 @@ static bool validate_framebuffer_info(const vtek::FramebufferInfo* info)
 		return false;
 	}
 
+	if (useDepth && !dsfmt.has_depth())
+	{
+		vtek_log_error(
+			"Depth buffer specified, {} -- {}",
+			"but depth/stencil format doesn't support depth",
+			"cannot create framebuffer!");
+		return false;
+	}
+	if (useStencil && !dsfmt.has_stencil())
+	{
+		vtek_log_error(
+			"Stencil buffer specified, {} -- {}",
+			"but depth/stencil format doesn't support stencil",
+			"cannot create framebuffer!");
+		return false;
+	}
+
+	return true;
+}
+
+static bool check_multisample_support(
+	const vtek::FramebufferInfo* info, vtek::Device* device,
+	bool useDepth, bool useStencil, vtek::MultisampleType& targetMsaa)
+{
+	vtek::SampleCountQuery msaaQuery{};
+	msaaQuery.color = !info->colorAttachments.empty();
+	if (info->depthStencil != vtek::DepthStencilMode::none)
+	{
+		const auto& fmt = info->depthStencilAttachment.supportedFormat;
+		if (!fmt.is_depth_stencil())
+		{
+			vtek_log_error("Invalid depth/stencil attachment format -- {}",
+			               "cannot create framebuffer!");
+			return false;
+		}
+		msaaQuery.depth = fmt.has_depth() && useDepth;
+		msaaQuery.stencil = fmt.has_stencil() && useStencil;
+	}
+
+	auto supportedMsaa = vtek::device_get_max_sample_count(device, &msaaQuery);
+	auto requestedMsaa = vtek::get_multisample_count(info->multisampling);
+	if (requestedMsaa > supportedMsaa)
+	{
+		vtek_log_warn(
+			"{} Device supports {} but {} requested. Number will be clamped!",
+			"Exceeded multisample count for framebuffer creation.",
+			static_cast<uint32_t>(requestedMsaa),
+			static_cast<uint32_t>(supportedMsaa));
+		requestedMsaa = supportedMsaa;
+	}
+
+	targetMsaa = vtek::get_multisample_enum(requestedMsaa);
 	return true;
 }
 
@@ -146,10 +204,7 @@ static void color_memory_barrier_end(
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.pNext = nullptr;
 	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	barrier.dstAccessMask
-		//= VK_ACCESS_UNIFORM_READ_BIT
-		//| VK_ACCESS_SHADER_READ_BIT
-		= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT; // NOTE: Probably the best!?
+	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	// TODO: Attachments can have had explicit queue ownership transfers!
@@ -175,15 +230,45 @@ static void depth_stencil_memory_barrier_begin(
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.pNext = nullptr;
-	barrier.srcAccessMask = 0;
-	barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	barrier.srcAccessMask = 0; //VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask
+		//= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
+		= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	// TODO: Attachments can have had explicit queue ownership transfers!
 	barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
 	barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+	barrier.image = vtek::image2d_get_handle(attachment.image);
+	barrier.subresourceRange.aspectMask = 0;
+	if (attachment.supportedFormat.has_depth()) {
+		barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+	}
+	if (attachment.supportedFormat.has_stencil()) {
+		barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+	}
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	// const VkPipelineStageFlags srcStageMask
+	// 	= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+	// 	| VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	const VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	const VkPipelineStageFlags dstStageMask
+		= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		//| VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+
+	vkCmdPipelineBarrier(
+		cmdBuf, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	// vkCmdPipelineBarrier(
+	// 	cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+	// 	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr,
+	// 	0, nullptr, 1, &barrier);
 }
 
+/*
 static void depth_stencil_memory_barrier_end(
 	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment,
 	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex)
@@ -198,7 +283,15 @@ static void depth_stencil_memory_barrier_end(
 	// TODO: Attachments can have had explicit queue ownership transfers!
 	barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
 	barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+	barrier.image = vtek::image2d_get_handle(attachment.image);
+	if (attachment.supportedFormat.has_depth()) {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	}
+	if (attachment.supportedFormat.has_stencil()) {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+	}
 }
+*/
 
 
 
@@ -206,8 +299,16 @@ static void depth_stencil_memory_barrier_end(
 vtek::Framebuffer* vtek::framebuffer_create(
 	const vtek::FramebufferInfo* info, vtek::Device* device)
 {
+	// Depth/stencil check
+	const bool useDepth =
+		(info->depthStencil == vtek::DepthStencilMode::depth) ||
+		(info->depthStencil == vtek::DepthStencilMode::depth_and_stencil);
+	const bool useStencil =
+		(info->depthStencil == vtek::DepthStencilMode::stencil) ||
+		(info->depthStencil == vtek::DepthStencilMode::depth_and_stencil);
+
 	// Input validation
-	if (!validate_framebuffer_info(info)) { return nullptr; }
+	if (!validate_framebuffer_info(info, useDepth, useStencil)) { return nullptr; }
 
 	// Image createInfo for the attachments
 	vtek::Image2DInfo imageInfo{};
@@ -217,32 +318,13 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	imageInfo.useMipmaps = false; // default
 
 	// check multisampling support
-	vtek::SampleCountQuery msaaQuery{};
-	msaaQuery.color = !info->colorAttachments.empty();
-	if (info->useDepthStencil)
+	MultisampleType targetMsaa = vtek::MultisampleType::none;
+	if (!check_multisample_support(
+		    info, device, useDepth, useStencil, targetMsaa))
 	{
-		const auto& fmt = info->depthStencilAttachment.supportedFormat;
-		if (!fmt.is_depth_stencil())
-		{
-			vtek_log_error("Invalid depth/stencil attachment format -- {}",
-			               "cannot create framebuffer!");
-			return nullptr;
-		}
-		msaaQuery.depth = fmt.has_depth();
-		msaaQuery.stencil = fmt.has_stencil();
+		return nullptr;
 	}
-	auto supportedMsaa = vtek::device_get_max_sample_count(device, &msaaQuery);
-	auto requestedMsaa = vtek::get_multisample_count(info->multisampling);
-	if (requestedMsaa > supportedMsaa)
-	{
-		vtek_log_warn(
-			"{} Device supports {} but {} requested. Number will be clamped!",
-			"Exceeded multisample count for framebuffer creation.",
-			static_cast<uint32_t>(requestedMsaa),
-			static_cast<uint32_t>(supportedMsaa));
-		requestedMsaa = supportedMsaa;
-	}
-	imageInfo.multisampling = vtek::get_multisample_enum(requestedMsaa);
+	imageInfo.multisampling = targetMsaa;
 
 	// TODO: Do we need more usage flags?
 	vtek::ImageUsageFlag sharedUsageFlags = vtek::ImageUsageFlag::sampled;
@@ -300,11 +382,15 @@ vtek::Framebuffer* vtek::framebuffer_create(
 			return nullptr;
 		}
 
-		framebuffer->colorAttachments.push_back({ image, att.clearValue });
+		framebuffer->colorAttachments.push_back({
+				image, att.clearValue, att.supportedFormat });
+		if (!att.supportedFormat.is_valid()) {
+			vtek_log_error("Invalid color format!");
+		}
 	}
 
 	// Create depth/stencil attachment
-	if (info->useDepthStencil)
+	if (useDepth || useStencil)
 	{
 		const FramebufferAttachmentInfo& attInfo = info->depthStencilAttachment;
 		imageInfo.supportedFormat = attInfo.supportedFormat;
@@ -312,12 +398,13 @@ vtek::Framebuffer* vtek::framebuffer_create(
 			sharedUsageFlags | vtek::ImageUsageFlag::depth_stencil_attachment;
 		imageInfo.imageViewInfo.aspectFlags = 0U;
 
-		const auto& fmt = info->depthStencilAttachment.supportedFormat;
-		if (fmt.has_depth()) {
+		if (useDepth) {
 			imageInfo.imageViewInfo.aspectFlags |= vtek::ImageAspectFlag::depth;
+			framebuffer->useDepth = true;
 		}
-		if (fmt.has_stencil()) {
+		if (useStencil) {
 			imageInfo.imageViewInfo.aspectFlags |= vtek::ImageAspectFlag::stencil;
+			framebuffer->useStencil = true;
 		}
 
 		vtek::Image2D* image = vtek::image2d_create(&imageInfo, device);
@@ -329,7 +416,8 @@ vtek::Framebuffer* vtek::framebuffer_create(
 			return nullptr;
 		}
 
-		framebuffer->depthStencilAttachment = { image, attInfo.clearValue };
+		const auto& fmt = info->depthStencilAttachment.supportedFormat;
+		framebuffer->depthStencilAttachment = { image, attInfo.clearValue, fmt };
 	}
 
 	// Fill in data
@@ -436,7 +524,9 @@ bool vtek::framebuffer_dynrender_begin(
 
 	// TODO: Transition for each color attachment
 	std::vector<VkRenderingAttachmentInfo> colorAttachmentInfos{};
+	VkRenderingAttachmentInfo depthStencilAttachmentInfo{};
 
+	// Create attachment info structs for each color attachment
 	for (auto& att : framebuffer->colorAttachments)
 	{
 		// Image memory barrier for each color attachment
@@ -463,7 +553,7 @@ bool vtek::framebuffer_dynrender_begin(
 		colorAttachmentInfos.push_back(std::move(attachInfo)); // TODO: std::forward?
 	}
 
-	// Begin dynamic rendering
+	// Dynamic rendering struct
 	VkRenderingInfo renderingInfo{};
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
@@ -478,6 +568,42 @@ bool vtek::framebuffer_dynrender_begin(
 	renderingInfo.pDepthAttachment = nullptr;
 	renderingInfo.pStencilAttachment = nullptr;
 
+	// Create attachment info for depth/stencil attachment if such exists
+	const bool useDepth = framebuffer->useDepth;
+	const bool useStencil = framebuffer->useStencil;
+	if (useDepth || useStencil)
+	{
+		auto& att = framebuffer->depthStencilAttachment;
+
+		// TODO: Attachments can have had explicit queue ownership transfers!
+		uint32_t queueFamilyIndex = framebuffer->graphicsQueueFamilyIndex;
+		depth_stencil_memory_barrier_begin(
+			cmdBuf, att, queueFamilyIndex, queueFamilyIndex);
+
+		VkRenderingAttachmentInfo& info = depthStencilAttachmentInfo;
+
+		info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		info.pNext = nullptr;
+		info.imageView = vtek::image2d_get_view_handle(att.image);
+		info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		// TODO: Multisampled framebuffer
+		info.resolveMode = VK_RESOLVE_MODE_NONE;
+		info.resolveImageView = VK_NULL_HANDLE;
+		info.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		info.clearValue = att.clearValue.get();
+
+		if (useDepth) {
+			renderingInfo.pDepthAttachment = &depthStencilAttachmentInfo;
+		}
+		if (useStencil) {
+			renderingInfo.pStencilAttachment = &depthStencilAttachmentInfo;
+		}
+	}
+
+	// Begin dynamic rendering
 	vkCmdBeginRendering(cmdBuf, &renderingInfo);
 	return true;
 }
