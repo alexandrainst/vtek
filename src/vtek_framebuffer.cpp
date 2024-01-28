@@ -474,7 +474,7 @@ bool vtek::framebuffer_dynamic_rendering_only(vtek::Framebuffer* framebuffer)
 	return framebuffer->dynamicRenderingOnly;
 }
 
-bool vtek::framebuffer_dynrender_begin(
+bool vtek::framebuffer_dynamic_rendering_begin(
 	vtek::Framebuffer* framebuffer, vtek::CommandBuffer* commandBuffer)
 {
 	if (!vtek::command_buffer_is_recording(commandBuffer))
@@ -572,7 +572,7 @@ bool vtek::framebuffer_dynrender_begin(
 	return true;
 }
 
-void vtek::framebuffer_dynrender_end(
+void vtek::framebuffer_dynamic_rendering_end(
 	vtek::Framebuffer* framebuffer, vtek::CommandBuffer* commandBuffer)
 {
 	if (!vtek::command_buffer_is_recording(commandBuffer))

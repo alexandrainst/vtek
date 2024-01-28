@@ -13,12 +13,15 @@ namespace vtek
 	// No more frames than this numbers shall be rendered on the GPU
 	// at any given time. The actual number of frames in flight depends
 	// on whether or not the swapchain was created for triple buffering.
-	// If triple buffering then swapchain length is 3, and else 2.
+	// If triple buffering then swapchain length is 3, and else probably 2.
+	//
+	// Use this number when creating arrays of framebuffers, command buffers,
+	// uniform buffers, etc., one of each for each frame.
 	//
 	// The number of _actual_ frames in flight is then obtained by
-	// subtracting 1 from the swapchain length.
+	// calling `swapchain_get_num_frames_in_flight()`.
 	//
-	// NOTE: There is no performance gain in making a swapchain longer,
+	// NOTE: There are no performance gains in making a swapchain longer,
 	// since we allow for max 2 simultaneous frames in flight. And even
 	// if higher number of frames in flight were allowed, it would only
 	// reduce rendering latency and increase memory usage.
@@ -76,10 +79,8 @@ namespace vtek
 	// Return the number of images in the swapchain.
 	uint32_t swapchain_get_length(Swapchain* swapchain);
 
-	// Return the number of allowed frames in-flight, which may not be the
-	// same as the swapchain length. Use this number instead when creating
-	// arrays of framebuffers, command buffers, uniform buffers, etc., for
-	// each frame.
+	// Return the number of simultaneous frames in-flight, which may not be the
+	// same as the swapchain length.
 	uint32_t swapchain_get_num_frames_in_flight(Swapchain* swapchain);
 
 	VkImage swapchain_get_image(Swapchain* swapchain, uint32_t index);

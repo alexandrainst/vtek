@@ -67,6 +67,8 @@ namespace vtek
 	// ======================== //
 	// === Drawing commands === //
 	// ======================== //
-	void cmd_draw_vertices(CommandBuffer* commandBuffer, uint32_t numVertices);
 
+	// Issue a draw command, explicitly setting number of vertices and assuming
+	// bound vertex buffer(s). Instances are ignored / not assumed.
+	void cmd_draw_vertices(CommandBuffer* commandBuffer, uint32_t numVertices);
 }

@@ -65,9 +65,9 @@ namespace vtek
 
 
 	// Dynamic rendering
-	bool framebuffer_dynrender_begin(
+	bool framebuffer_dynamic_rendering_begin(
 		Framebuffer* framebuffer, CommandBuffer* commandBuffer);
-	void framebuffer_dynrender_end(
+	void framebuffer_dynamic_rendering_end(
 		Framebuffer* framebuffer, CommandBuffer* commandBuffer);
 
 

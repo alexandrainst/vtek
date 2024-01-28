@@ -110,8 +110,7 @@ bool update_camera_uniform(vtek::Buffer* buffer, vtek::Device* device)
 
 bool update_descriptor_sets_main(
 	std::vector<vtek::DescriptorSet*>& sets,
-	std::vector<vtek::Framebuffer*>& framebuffers,
-	vtek::Buffer* uniformBuffer,
+	std::vector<vtek::Buffer*> uniformBuffers,
 	vtek::Image2D* image, vtek::Sampler* sampler,
 	vtek::Device* device)
 {
@@ -119,7 +118,7 @@ bool update_descriptor_sets_main(
 	{
 		// descriptor for camera uniform
 		if (!vtek::descriptor_set_bind_uniform_buffer(
-			    sets[i], 0, uniformBuffer, gCameraUniform.type()))
+			    sets[i], 0, uniformBuffers[i], gCameraUniform.type()))
 		{
 			log_error(
 				"Failed to add camera uniform buffer to the descriptor set!");
@@ -195,7 +194,7 @@ bool recordCommandBuffer(
 	}
 
 	// 2) begin dynamic rendering on the framebuffer
-	if (!vtek::framebuffer_dynrender_begin(framebuffer, commandBuffer))
+	if (!vtek::framebuffer_dynamic_rendering_begin(framebuffer, commandBuffer))
 	{
 		log_error("Failed to begin dynamic rendering on framebuffer!");
 		return false;
@@ -225,7 +224,7 @@ bool recordCommandBuffer(
 	vtek::cmd_draw_vertices(commandBuffer, numVertices);
 
 	// 5) end dynamic rendering on the framebuffer
-	vtek::framebuffer_dynrender_end(framebuffer, commandBuffer);
+	vtek::framebuffer_dynamic_rendering_end(framebuffer, commandBuffer);
 
 	// 6) begin dynamic rendering on the swapchain
 	glm::vec3 clearColor(0.0f, 0.0f, 0.0f);
@@ -671,6 +670,7 @@ int main()
 	}
 
 	// Uniform buffer (Camera transform)
+	// TODO: We need multiple uniform buffers, one for each frame-in-flight!
 	vtek::BufferInfo uniformBufferInfoCamera{};
 	uniformBufferInfoCamera.size = gCameraUniform.size();
 	uniformBufferInfoCamera.requireHostVisibleStorage = true;
@@ -678,23 +678,25 @@ int main()
 	uniformBufferInfoCamera.usageFlags
 		= vtek::BufferUsageFlag::transfer_dst
 		| vtek::BufferUsageFlag::uniform_buffer;
-	vtek::Buffer* uniformBufferCamera =
-		vtek::buffer_create(&uniformBufferInfoCamera, device);
-	if (uniformBufferCamera == nullptr)
+	std::vector<vtek::Buffer*> uniformBuffersCamera =
+		vtek::buffer_create(&uniformBufferInfoCamera, gNumFramesInFlight, device);
+	if (uniformBuffersCamera.size() != gNumFramesInFlight)
 	{
-		log_error("Failed to create uniform buffer (camera)!");
+		log_error("Failed to create uniform buffers (camera)!");
 		return -1;
 	}
-	if (!update_camera_uniform(uniformBufferCamera, device))
+	for (uint32_t i = 0; i < gNumFramesInFlight; i++)
 	{
-		log_error("Failed to fill uniform buffer!");
-		return -1;
+		if (!update_camera_uniform(uniformBuffersCamera[i], device))
+		{
+			log_error("Failed to fill uniform buffer!");
+			return -1;
+		}
 	}
 
 	// Update descriptor sets
 	if (!update_descriptor_sets_main(
-		    descriptorSetsMain, framebuffers, uniformBufferCamera,
-		    texture, sampler, device))
+		    descriptorSetsMain, uniformBuffersCamera, texture, sampler, device))
 	{
 		log_error("Failed to update descriptor sets (main)!");
 		return -1;
@@ -873,7 +875,7 @@ int main()
 		// Successfully acquired image, now update uniforms before rendering
 		update_movement();
 		vtek::camera_update(gCamera);
-		if (!update_camera_uniform(uniformBufferCamera, device))
+		if (!update_camera_uniform(uniformBuffersCamera[imageIndex], device))
 		{
 			log_error("Failed to update uniform buffer (Camera)!");
 			return -1;
@@ -954,7 +956,7 @@ int main()
 	vtek::graphics_pipeline_destroy(quadPipeline, device);
 	vtek::graphics_pipeline_destroy(mainPipeline, device);
 	vtek::buffer_destroy(quadBuffer);
-	vtek::buffer_destroy(uniformBufferCamera);
+	vtek::buffer_destroy(uniformBuffersCamera);
 	vtek::sampler_destroy(sampler, device);
 	vtek::image2d_destroy(texture, device);
 	vtek::model_destroy(model, device);

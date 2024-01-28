@@ -21,7 +21,7 @@ namespace vtek
 	enum class ImageTiling
 	{
 		// In almost all cases, optimal tiling is preferred. The internal
-		// arrangement of texels is implementation-dependent for more
+		// arrangement of texels is implementation-defined for more
 		// efficient memory access.
 		optimal,
 
