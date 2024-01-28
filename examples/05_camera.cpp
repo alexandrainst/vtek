@@ -540,9 +540,9 @@ int main()
 	{
 		depthStencil.depthTestEnable = true;
 		depthStencil.depthWriteEnable = true;
-		depthStencil.depthBoundsTestEnable = false; // TODO: ?
+		depthStencil.depthBoundsTestEnable = false;
 
-		pipelineRendering.depthAttachmentFormat =
+		pipelineRendering.depthStencilAttachmentFormat =
 			vtek::swapchain_get_depth_image_format(swapchain);
 	}
 

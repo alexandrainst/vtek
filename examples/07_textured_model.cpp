@@ -587,7 +587,7 @@ int main()
 	vtek::PipelineRendering pipelineRendering{};
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
-	pipelineRendering.depthAttachmentFormat =
+	pipelineRendering.depthStencilAttachmentFormat =
 		vtek::swapchain_get_depth_image_format(swapchain);
 
 	vtek::GraphicsPipelineInfo pipelineInfo{};

@@ -39,8 +39,15 @@ namespace vtek
 	void cmd_bind_graphics_pipeline(
 		CommandBuffer* commandBuffer, GraphicsPipeline* pipeline);
 
+	// Set viewport/scissor with explicit size only. Upper-left corner is
+	// assumed {0,0}, and depth-range is assumed [0,1].
+	void cmd_set_viewport_scissor(CommandBuffer* commandBuffer, glm::uvec2 size);
+
+	// Set viewport/scissor with explicit upper-left corner, size, and
+	// depth range.
 	void cmd_set_viewport_scissor(
-		CommandBuffer* commandBuffer, glm::uvec2 size, glm::vec2 depthBounds);
+		CommandBuffer* commandBuffer, glm::vec2 upperLeftCorner,
+		glm::uvec2 size, glm::vec2 depthRange = {0.0f, 1.0f});
 
 	void cmd_push_constant_graphics(
 		CommandBuffer* commandBuffer, GraphicsPipeline* pipeline,

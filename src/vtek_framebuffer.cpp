@@ -13,8 +13,6 @@
 /* attachment helper struct */
 struct FramebufferAttachment
 {
-	// TODO: Can we have 1D or 3D or 4D framebuffer attachment?
-	// TODO: Should we?
 	vtek::Image2D* image {nullptr};
 	vtek::ClearValue clearValue {};
 	vtek::SupportedFormat supportedFormat {};
@@ -230,9 +228,8 @@ static void depth_stencil_memory_barrier_begin(
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.pNext = nullptr;
-	barrier.srcAccessMask = 0; //VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask
-		//= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
 		= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -252,46 +249,13 @@ static void depth_stencil_memory_barrier_begin(
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = 1;
 
-	// const VkPipelineStageFlags srcStageMask
-	// 	= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
-	// 	| VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 	const VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 	const VkPipelineStageFlags dstStageMask
 		= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		//| VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 
 	vkCmdPipelineBarrier(
 		cmdBuf, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-	// vkCmdPipelineBarrier(
-	// 	cmdBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-	// 	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr,
-	// 	0, nullptr, 1, &barrier);
 }
-
-/*
-static void depth_stencil_memory_barrier_end(
-	VkCommandBuffer cmdBuf, FramebufferAttachment& attachment,
-	uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex)
-{
-	VkImageMemoryBarrier barrier{};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.pNext = nullptr;
-	barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-	barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-	// TODO: Attachments can have had explicit queue ownership transfers!
-	barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
-	barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
-	barrier.image = vtek::image2d_get_handle(attachment.image);
-	if (attachment.supportedFormat.has_depth()) {
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-	}
-	if (attachment.supportedFormat.has_stencil()) {
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-	}
-}
-*/
 
 
 
@@ -326,7 +290,7 @@ vtek::Framebuffer* vtek::framebuffer_create(
 	}
 	imageInfo.multisampling = targetMsaa;
 
-	// TODO: Do we need more usage flags?
+	// Usage flag for all attachments, also depth/stencil buffers
 	vtek::ImageUsageFlag sharedUsageFlags = vtek::ImageUsageFlag::sampled;
 
 	// Check if any of the queues that need to access the framebuffer are from
@@ -524,7 +488,6 @@ bool vtek::framebuffer_dynrender_begin(
 
 	// TODO: Transition for each color attachment
 	std::vector<VkRenderingAttachmentInfo> colorAttachmentInfos{};
-	VkRenderingAttachmentInfo depthStencilAttachmentInfo{};
 
 	// Create attachment info structs for each color attachment
 	for (auto& att : framebuffer->colorAttachments)
@@ -540,7 +503,7 @@ bool vtek::framebuffer_dynrender_begin(
 		attachInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		attachInfo.pNext = nullptr;
 		attachInfo.imageView = vtek::image2d_get_view_handle(att.image);
-		attachInfo.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL; // TODO: Always?
+		attachInfo.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 		// TODO: Multisampled framebuffer
 		attachInfo.resolveMode = VK_RESOLVE_MODE_NONE;
 		attachInfo.resolveImageView = VK_NULL_HANDLE;
@@ -550,7 +513,7 @@ bool vtek::framebuffer_dynrender_begin(
 		attachInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		attachInfo.clearValue = att.clearValue.get();
 
-		colorAttachmentInfos.push_back(std::move(attachInfo)); // TODO: std::forward?
+		colorAttachmentInfos.push_back(std::move(attachInfo));
 	}
 
 	// Dynamic rendering struct
@@ -564,13 +527,14 @@ bool vtek::framebuffer_dynrender_begin(
 	renderingInfo.viewMask = 0;
 	renderingInfo.colorAttachmentCount = colorAttachmentInfos.size();
 	renderingInfo.pColorAttachments = colorAttachmentInfos.data();
-	// TODO: Check depth/stencil attachments!
 	renderingInfo.pDepthAttachment = nullptr;
 	renderingInfo.pStencilAttachment = nullptr;
 
 	// Create attachment info for depth/stencil attachment if such exists
+	VkRenderingAttachmentInfo depthStencilAttachmentInfo{};
 	const bool useDepth = framebuffer->useDepth;
 	const bool useStencil = framebuffer->useStencil;
+
 	if (useDepth || useStencil)
 	{
 		auto& att = framebuffer->depthStencilAttachment;

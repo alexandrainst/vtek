@@ -203,7 +203,7 @@ bool recordCommandBuffer(
 
 	// 3) bind pipeline and set dynamic states
 	vtek::cmd_bind_graphics_pipeline(commandBuffer, info->mainPipeline);
-	vtek::cmd_set_viewport_scissor(commandBuffer, info->windowSize, {0.0f, 0.0f});
+	vtek::cmd_set_viewport_scissor(commandBuffer, info->windowSize);
 
 	// Bind stuff for model
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
@@ -420,10 +420,10 @@ int main()
 	// Framebuffers
 	vtek::FramebufferAttachmentInfo colorAttachment{};
 	colorAttachment.supportedFormat = colorFormat;
-	colorAttachment.clearValue.setColorFloat(0.7f, 0.2f, 0.2f, 1.0f);
+	colorAttachment.clearValue.setColorFloat(0.5f, 0.16f, 0.14f, 1.0f);
 	vtek::FramebufferAttachmentInfo depthStencilAttachment{};
 	depthStencilAttachment.supportedFormat = depthStencilFormat;
-	depthStencilAttachment.clearValue.setDepthStencil(0.0f, 0);
+	depthStencilAttachment.clearValue.setDepthStencil(1.0f, 0);
 	vtek::FramebufferInfo framebufferInfo{};
 	framebufferInfo.colorAttachments.emplace_back(colorAttachment);
 	framebufferInfo.depthStencilAttachment = depthStencilAttachment;
@@ -756,14 +756,14 @@ int main()
 	bindings.add_buffer(
 		vtek::VertexAttributeType::vec2, vtek::VertexInputRate::per_vertex);
 	vtek::RasterizationState rasterizer{};
-	rasterizer.cullMode = vtek::CullMode::none; // no back-face culling
+	rasterizer.cullMode = vtek::CullMode::back; // no back-face culling
 	rasterizer.polygonMode = vtek::PolygonMode::fill;
 	rasterizer.frontFace = vtek::FrontFace::clockwise;
 	vtek::MultisampleState multisampling{};
 	vtek::DepthStencilState depthStencil{};
 	depthStencil.depthTestEnable = true;
 	depthStencil.depthWriteEnable = true;
-	depthStencil.depthCompareOp = vtek::DepthCompareOp::greater_equal;
+	depthStencil.depthCompareOp = vtek::DepthCompareOp::less_equal;
 	depthStencil.stencilTestEnable = false;
 	vtek::ColorBlendState colorBlending{};
 	colorBlending.attachments.emplace_back(

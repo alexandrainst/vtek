@@ -81,7 +81,7 @@ void vtek::cmd_bind_graphics_pipeline(
 }
 
 void vtek::cmd_set_viewport_scissor(
-	vtek::CommandBuffer* commandBuffer, glm::uvec2 size, glm::vec2 depthBounds)
+	vtek::CommandBuffer* commandBuffer, glm::uvec2 size)
 {
 	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
@@ -89,11 +89,35 @@ void vtek::cmd_set_viewport_scissor(
 	viewport.x = 0.0f; viewport.y = 0.0f; // upper-left corner
 	viewport.width = static_cast<float>(size.x);
 	viewport.height = static_cast<float>(size.y);
-	viewport.minDepth = depthBounds.x;
-	viewport.maxDepth = depthBounds.y;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
+	scissor.extent = { size.x, size.y };
+
+	vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+	vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+}
+
+void vtek::cmd_set_viewport_scissor(
+	vtek::CommandBuffer* commandBuffer, glm::vec2 upperLeftCorner,
+	glm::uvec2 size, glm::vec2 depthRange)
+{
+	auto cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
+
+	VkViewport viewport{};
+	viewport.x = upperLeftCorner.x;
+	viewport.y = upperLeftCorner.y;
+	viewport.width = static_cast<float>(size.x);
+	viewport.height = static_cast<float>(size.y);
+	viewport.minDepth = depthRange.x;
+	viewport.maxDepth = depthRange.y;
+
+	VkRect2D scissor{};
+	scissor.offset = {
+		static_cast<int32_t>(upperLeftCorner.x),
+		static_cast<int32_t>(upperLeftCorner.y)};
 	scissor.extent = { size.x, size.y };
 
 	vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
