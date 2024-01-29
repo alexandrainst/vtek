@@ -135,7 +135,7 @@ std::vector<vtek::Buffer*> vtek::buffer_create(
 	// TODO: This could possibly be optimized, e.g. by creating 1 large
 	// memory region with offsets for each buffer!
 	// NOTE: This would depend on `requireDedicatedAllocation` being false.
-	std::vector<vtek::Buffer*> buffers(numBuffers, nullptr);
+	std::vector<vtek::Buffer*> buffers;
 	for (uint32_t i = 0; i < numBuffers; i++)
 	{
 		auto buf = vtek::buffer_create(info, device);
@@ -154,7 +154,11 @@ std::vector<vtek::Buffer*> vtek::buffer_create(
 // Destroy multiple buffers at the same time.
 void vtek::buffer_destroy(std::vector<Buffer*>& buffers)
 {
-
+	for (auto buf : buffers)
+	{
+		vtek::buffer_destroy(buf);
+	}
+	buffers.clear();
 }
 
 VkBuffer vtek::buffer_get_handle(const vtek::Buffer* buffer)
