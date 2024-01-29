@@ -16,7 +16,8 @@ VkCommandBuffer vtek::command_buffer_get_handle(vtek::CommandBuffer* commandBuff
 	return commandBuffer->vulkanHandle;
 }
 
-bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
+bool vtek::command_buffer_begin(
+	vtek::CommandBuffer* commandBuffer, const vtek::CommandBufferBeginInfo* beginInfo)
 {
 	if (commandBuffer->state == CBState::pending) // TODO: How do we measure this?
 	{
@@ -52,8 +53,13 @@ bool vtek::command_buffer_begin(vtek::CommandBuffer* commandBuffer)
 	// VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT:
 	//  - Specifies that the command buffer can be resubmitted to a queue while in
 	//    pending state, and recorded into multiple primary command buffers.
-	// TODO: Add support for these flags?
 	info.flags = 0;
+	info.flags |= (beginInfo->oneTimeSubmit)
+		? VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT : 0;
+	info.flags |= (beginInfo->renderPassContinue)
+		? VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT : 0;
+	info.flags |= (beginInfo->simultaneousUse)
+		? VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT : 0;
 	info.pInheritanceInfo = nullptr;
 
 	VkCommandBufferInheritanceInfo inheritanceInfo{};
@@ -104,4 +110,9 @@ bool vtek::command_buffer_end(vtek::CommandBuffer* commandBuffer)
 
 	commandBuffer->state = CBState::executable;
 	return true;
+}
+
+bool vtek::command_buffer_is_recording(vtek::CommandBuffer* commandBuffer)
+{
+	return commandBuffer->state == CBState::recording;
 }

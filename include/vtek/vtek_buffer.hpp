@@ -73,6 +73,15 @@ namespace vtek
 	Buffer* buffer_create(const BufferInfo* info, Device* device);
 	void buffer_destroy(Buffer* buffer);
 
+	// Create multiple buffers at the same time, all sharing the same
+	// buffer usage and memory properties. This is e.g. useful for creating
+	// uniform buffers where 1 buffer for each frame-in-flight is desired.
+	std::vector<Buffer*> buffer_create(
+		const BufferInfo* info, uint32_t numBuffers, Device* device);
+
+	// Destroy multiple buffers at the same time.
+	void buffer_destroy(std::vector<Buffer*>& buffers);
+
 	// TODO: Alternative buffer creation, using a specific allocator
 	Buffer* buffer_create(const BufferInfo* info, Allocator* allocator);
 

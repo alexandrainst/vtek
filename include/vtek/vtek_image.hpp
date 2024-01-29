@@ -133,9 +133,10 @@ namespace vtek
 		VkExtent2D extent {0U, 0U};
 
 		// Format specification:
-		// 1) Directly specify a Vulkan format (not recommended, GPU support unsafe!)
+		// 1) Directly specify an image format (not recommended,
+		//    GPU support not guaranteed!)
 		// 2) Query a known supported format (recommended path)
-		VkFormat format {VK_FORMAT_UNDEFINED};
+		Format format {Format::undefined};
 		SupportedFormat supportedFormat {};
 
 		// Specify how the image should be used. At least one flag must be set.
@@ -151,7 +152,7 @@ namespace vtek
 		// queue families, in which case sharing mode should be `concurrent`.
 		// NOTE: When sharing mode is `exclusive`, the sharing queues are ignored.
 		ImageSharingMode sharingMode {ImageSharingMode::exclusive};
-		std::vector<Queue*> sharingQueues;
+		std::vector<const Queue*> sharingQueues;
 
 		// If an image view should be created automatically (avoid creating it
 		// later manually). This should be preferred for most cases, why its
@@ -195,5 +196,5 @@ namespace vtek
 
 	VkImage image2d_get_handle(const Image2D* image);
 	VkImageView image2d_get_view_handle(const Image2D* image);
-	VkFormat image2d_get_format(const Image2D* image);
+	Format image2d_get_format(const Image2D* image);
 }

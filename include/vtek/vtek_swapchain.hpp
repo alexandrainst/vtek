@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
+#include "vtek_format_support.hpp"
 #include "vtek_object_handles.hpp"
 #include "vtek_submit_info.hpp"
 
@@ -12,12 +13,15 @@ namespace vtek
 	// No more frames than this numbers shall be rendered on the GPU
 	// at any given time. The actual number of frames in flight depends
 	// on whether or not the swapchain was created for triple buffering.
-	// If triple buffering then swapchain length is 3, and else 2.
+	// If triple buffering then swapchain length is 3, and else probably 2.
+	//
+	// Use this number when creating arrays of framebuffers, command buffers,
+	// uniform buffers, etc., one of each for each frame.
 	//
 	// The number of _actual_ frames in flight is then obtained by
-	// subtracting 1 from the swapchain length.
+	// calling `swapchain_get_num_frames_in_flight()`.
 	//
-	// NOTE: There is no performance gain in making a swapchain longer,
+	// NOTE: There are no performance gains in making a swapchain longer,
 	// since we allow for max 2 simultaneous frames in flight. And even
 	// if higher number of frames in flight were allowed, it would only
 	// reduce rendering latency and increase memory usage.
@@ -72,15 +76,20 @@ namespace vtek
 		uint32_t framebufferWidth, uint32_t framebufferHeight);
 	void swapchain_destroy(Swapchain* swapchain, Device* device);
 
+	// Return the number of images in the swapchain.
 	uint32_t swapchain_get_length(Swapchain* swapchain);
+
+	// Return the number of simultaneous frames in-flight, which may not be the
+	// same as the swapchain length.
+	uint32_t swapchain_get_num_frames_in_flight(Swapchain* swapchain);
 
 	VkImage swapchain_get_image(Swapchain* swapchain, uint32_t index);
 	VkImageView swapchain_get_image_view(Swapchain* swapchain, uint32_t index);
-	VkFormat swapchain_get_image_format(Swapchain* swapchain);
+	Format swapchain_get_image_format(Swapchain* swapchain);
 	VkExtent2D swapchain_get_image_extent(const Swapchain* swapchain);
 
 	bool swapchain_has_depth_buffer(Swapchain* swapchain);
-	VkFormat swapchain_get_depth_image_format(Swapchain* swapchain);
+	Format swapchain_get_depth_image_format(Swapchain* swapchain);
 
 
 	// A status enum, returned by the frame functions below, to keep a client
@@ -103,6 +112,10 @@ namespace vtek
 	// of swapchain images array, which can be used to pick the right data
 	// for the frame. This can include looking up into arrays of
 	// command buffers, uniform buffers, etc.
+	// NOTE: The index returned is wrapped around by the number of allowed
+	// frames in flight, and NOT by the swapchain length. So it's perfectly
+	// safe for applications to create number of framebuffers, command buffers,
+	// etc., corresponding to `kMaxFramesInFlight` (defined top of file).
 	SwapchainStatus swapchain_acquire_next_image(
 		Swapchain* swapchain, Device* device,
 		uint32_t* imageIndex, uint64_t timeout = UINT64_MAX);

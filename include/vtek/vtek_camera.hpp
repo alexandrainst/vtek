@@ -23,7 +23,7 @@
 // Similarly, the quaternion rotor can be written in the form:
 // q = cos(t) + sin(t) * (xi + yj + zk)
 // The axis of rotation is defined by x,y,z; the angle of rotation by t.
-// To rotate a point p t degrees in this axis:
+// To rotate a point p t degrees around this axis:
 // f(p) = q * p * q^{-1}
 
 #pragma once
@@ -31,8 +31,6 @@
 #include "vtek_glm_includes.hpp"
 #include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
-
-#include <cstdint>
 
 
 namespace vtek
@@ -42,14 +40,15 @@ namespace vtek
 		left_handed, right_handed
 	};
 
+	enum class CameraProjection
+	{
+		perspective, orthographic
+	};
+
 	enum class CameraMode
 	{
-		// Represents the initial (invalid) state of a camera. A specific mode
-		// must be set before a camera can be used.
-		undefined,
-
-		// A freeform camera has no restrictions on pitch/roll, and can rotate
-		// freely with 3 degrees of freedom.
+		// A freeform camera has no restrictions on pitch/roll, and may perform
+		// arbitrary rotations within 3 degrees of freedom.
 		freeform,
 
 		// A first-person shooter (FPS) camera has roll disabled, pitch clamped
@@ -72,8 +71,80 @@ namespace vtek
 		orbit_fps
 	};
 
+
+	// The closest allowed distance between the camera location and its near
+	// clipping plane. Any lower (or negative) values will be clamped.
+	constexpr float kNearClippingPlaneMin = 0.1f;
+
+	// For clamping camera field-of-view (fov) to a sensible value [10,180].
+	using FovClamp = FloatClamp<10.0f, 135.0f>;
+	using FovClampRadians = FloatClamp<glm::radians(10.0f), glm::radians(135.0f)>;
+
+
+	struct CameraSensitivityInfo
+	{
+		float mouseMoveSpeed {0.001f};
+		float mouseScrollSpeed {0.1f};
+	};
+
+	struct CameraProjectionInfo
+	{
+		// Fields are documented in `CameraInfo`.
+		CameraProjection projection {CameraProjection::perspective};
+
+		// Size of the viewport, in pixels.
+		glm::uvec2 viewportSize {1, 1};
+
+		// Camera's near and far clip planes.
+		glm::vec2 clipPlanes {0.1f, 100.0f};
+
+		// Camera's field of view (FOV). Applies only to perspective projection.
+		// 45 is considered the canonical value.
+		FovClamp fovDegrees {45.0f};
+
+		// TODO: Could alternatively provide float fov and an explicit clamp range!
+		// float fovDegrees {45.0f};
+		// glm::vec2 fovClampDegrees {10.0f, 135.0f};
+
+		// Instead of explicit FOV, calculate it from the viewport aspect ratio.
+		// This will result in the scene getting stretched according to viewport
+		// dimensions, so that objects will always take up the same amount of
+		// screen percentage.
+		// NOTE: For quadratic viewports, fov=45, for larger widths smaller.
+		bool fovFromAspectRatio {false};
+
+		// As an alternative to explicitly providing a field of view, a sensor
+		// width and a lens focal length may be provided instead, both in mm.
+		// This will internally convert to FOV using this formula:
+		// fov = 2 * atan(sensor_width / (2*focal_length)).
+		// NOTE: Default parameters provided will result in an FOV of 45 degrees.
+		bool useFocalLength {false};
+		float focalLengthMm {12.071067823f};
+		float sensorWidthMm {10.0f};
+	};
+
+	struct CameraOrbitInfo
+	{
+		// Initial distance between the camera and the orbiting point.
+		float orbitDistance {1.0f};
+
+		// Permitted distance range between camera and orbiting point.
+		vtek::FloatRange orbitRange {vtek::FloatRange(0.1f, 100.0f)};
+	};
+
+	struct CameraFpsInfo
+	{
+		// Specifies range in which to clamp the camera pitch. No matter the
+		// provided values, min and max will always be the [-89,89] range,
+		// with min being the down angle and max being the up angle.
+		vtek::FloatRange pitchRange {vtek::FloatRange(-89.0f, 89.0f)};
+	};
+
 	struct CameraInfo
 	{
+		// The camera mode, ie. the type of camera to simulate.
+		CameraMode mode {CameraMode::freeform};
+
 		// In order to suit the needs of various rendering platforms, we may
 		// specify the handedness of the world space coordinate system in which
 		// the camera is placed. This does not change the internal behaviour of
@@ -84,10 +155,28 @@ namespace vtek
 		// the point-of-interest being looked at, instead of the actual camera
 		// location which is computed automatically.
 		glm::vec3 position {0.0f, 0.0f, 0.0f};
+
+		// Front-facing direction of the camera.
+		glm::vec3 front {1.0f, 0.0f, 0.0f};
+
+		// Up-vector for the camera rotation. For fps-style cameras, this vector
+		// is used as the "up"-axis (need not be axis-aligned).
+		glm::vec3 up {0.0f, 0.0f, 1.0f};
+
+		// Sensitivity info for how camera reacts to input. When not provided,
+		// default values will be applied.
+		CameraSensitivityInfo* sensitivityInfo {nullptr};
+
+		// Camera projection, ie. internal matrix. When not provided, default
+		// values will be applied.
+		CameraProjectionInfo* projectionInfo {nullptr};
+
+		// When camera mode is set to orbit, orbiting behaviour will be applied
+		// from this struct, unless not provided in which case defaults will be
+		// applied. Ignored for non-orbiting cameras.
+		CameraOrbitInfo* orbitInfo {nullptr};
 	};
 
-	// NOTE: The created camera is not valid until one of the `camera_set_mode_*`
-	// functions has been called.
 	Camera* camera_create(const CameraInfo* info);
 	void camera_destroy(Camera* camera);
 
@@ -96,6 +185,9 @@ namespace vtek
 	// =================== //
 	// === Camera mode === //
 	// =================== //
+
+
+
 	void camera_set_mode_freeform(Camera* camera, glm::vec3 up, glm::vec3 front);
 	void camera_set_mode_fps(Camera* camera, glm::vec3 upAxis, glm::vec3 front);
 	void camera_set_mode_fps_grounded(
@@ -111,27 +203,19 @@ namespace vtek
 		Camera* camera, glm::vec3 upAxis, glm::vec3 front,
 		glm::vec2 pitchClampDegrees);
 
-	CameraMode camera_get_mode(Camera* camera);
 
-	// ========================= //
-	// === Camera projection === //
-	// ========================= //
+	// ===================== //
+	// === Camera matrix === //
+	// ===================== //
 
-	// The closest allowed distance between the camera location and its near
-	// clipping plane. Any lower (or negative) values will be clamped.
-	constexpr float kNearClippingPlaneMin = 0.1f;
+	// TODO: Not implemented!
+	void camera_change_projection(Camera* camera, const CameraProjectionInfo* info);
 
-	// For clamping camera field-of-view (fov) to a sensible value [40,70].
-	using FovClamp = FloatClamp<40.0f, 70.0f>;
+	// TODO: Not implemented!
+	// TODO: Specify interface?
+	void camera_change_mode(Camera* camera, CameraMode mode);
 
-	// With fov unspecified, windowSize.y/windowSize.x will be used.
-	void camera_set_perspective(
-		Camera* camera, glm::uvec2 windowSize, float near, float far,
-		FovClamp fovDegrees = 45.0f);
 
-	// TODO: Implement
-	void camera_set_orthographic(
-		Camera* camera, glm::uvec2 windowSize, float near, float far);
 
 	// ===================== //
 	// === Camera update === //
@@ -185,6 +269,7 @@ namespace vtek
 	void camera_translate(Camera* camera, glm::vec3 offset);
 
 	void camera_on_mouse_move(Camera* camera, double x, double y);
+	void camera_on_mouse_scroll(Camera* camera, double x, double y);
 
 	// ======================= //
 	// === Angular offsets === //
@@ -210,4 +295,6 @@ namespace vtek
 	glm::vec3 camera_get_position(Camera* camera);
 	glm::vec3 camera_get_front(Camera* camera);
 	glm::vec3 camera_get_up(Camera* camera);
+
+	CameraMode camera_get_mode(Camera* camera);
 }

@@ -205,7 +205,8 @@ bool record_command_buffers(
 		vtek::CommandBuffer* commandBuffer = commandBuffers[i];
 		VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
-		if (!vtek::command_buffer_begin(commandBuffer))
+		vtek::CommandBufferBeginInfo beginInfo{};
+		if (!vtek::command_buffer_begin(commandBuffer, &beginInfo))
 		{
 			log_error("Failed to begin command buffer {} recording!", i);
 			return false;
@@ -233,32 +234,32 @@ bool record_command_buffers(
 		// Cube 0 - located at Origo
 		vtek::PushConstant_m4 pc{};
 		pc.m1 = glm::mat4(1.0f); // unit matrix
-		pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc.cmdPush(cmdBuf, pipLayout);
+		vtek::cmd_push_constant_graphics(
+			commandBuffer, pipeline, &pc, vtek::ShaderStageGraphics::vertex);
 		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		// Cube 1 - translated along the X-axis
 		vtek::PushConstant_m4 pc1{};
 		pc1.m1 = glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 0.0f, 0.0f));
-		pc1.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc1.cmdPush(cmdBuf, pipLayout);
+		vtek::cmd_push_constant_graphics(
+			commandBuffer, pipeline, &pc1, vtek::ShaderStageGraphics::vertex);
 		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		// Cube 2 - translated along the Y-axis
 		vtek::PushConstant_m4 pc2{};
 		pc2.m1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.25f, 0.0f));
-		pc2.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc2.cmdPush(cmdBuf, pipLayout);
+		vtek::cmd_push_constant_graphics(
+			commandBuffer, pipeline, &pc2, vtek::ShaderStageGraphics::vertex);
 		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
 		// Cube 3 - translated along the Z-axis
 		vtek::PushConstant_m4 pc3{};
 		pc3.m1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 3.0f));
-		pc3.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-		pc3.cmdPush(cmdBuf, pipLayout);
+		vtek::cmd_push_constant_graphics(
+			commandBuffer, pipeline, &pc3, vtek::ShaderStageGraphics::vertex);
 		//
 		vkCmdDraw(cmdBuf, gCubeVertices.size(), 1, 0, 0);
 
@@ -477,19 +478,22 @@ int main()
 	}
 
 	// Camera
+	vtek::CameraProjectionInfo cameraProjInfo{};
+	cameraProjInfo.projection = vtek::CameraProjection::perspective;
+	cameraProjInfo.viewportSize = windowSize;
 	vtek::CameraInfo cameraInfo{};
+	cameraInfo.mode = vtek::CameraMode::freeform;
+	cameraInfo.worldSpaceHandedness = vtek::CameraHandedness::right_handed;
 	cameraInfo.position = glm::vec3(8.0f, 0.0f, 0.0f);
+	cameraInfo.front = {-1.0f, 0.0f, 0.0f};
+	cameraInfo.up = {0.0f, 0.0f, 1.0f};
+	cameraInfo.projectionInfo = &cameraProjInfo;
 	gCamera = vtek::camera_create(&cameraInfo);
 	if (gCamera == nullptr)
 	{
 		log_error("Failed to create camera!");
 		return -1;
 	}
-	glm::vec3 camFront {-1.0f, 0.0f, 0.0f};
-	glm::vec3 camUp {0.0f, 0.0f, 1.0f};
-	vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
-	float camFov = 45.0f; // NOTE: Experiment.
-	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
 
 	// Uniform buffer
 	vtek::BufferInfo uniformBufferInfo{};
@@ -536,9 +540,9 @@ int main()
 	{
 		depthStencil.depthTestEnable = true;
 		depthStencil.depthWriteEnable = true;
-		depthStencil.depthBoundsTestEnable = false; // TODO: ?
+		depthStencil.depthBoundsTestEnable = false;
 
-		pipelineRendering.depthAttachmentFormat =
+		pipelineRendering.depthStencilAttachmentFormat =
 			vtek::swapchain_get_depth_image_format(swapchain);
 	}
 

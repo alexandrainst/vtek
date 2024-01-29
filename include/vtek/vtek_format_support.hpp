@@ -2,9 +2,11 @@
 
 #include <vulkan/vulkan.h>
 #include <cstdint>
+#include <string_view>
 
 #include "vtek_object_handles.hpp"
 #include "vtek_types.hpp"
+#include "vtek_vulkan_types.hpp"
 
 
 namespace vtek
@@ -209,6 +211,22 @@ namespace vtek
 		astc_12x12_sfloat_block
 	};
 
+	// Convert a `vtek::Format` into a `VkFormat`.
+	VkFormat get_format(Format format);
+
+	// Convert a `VkFormat` into a `vtek::Format`
+	Format get_format_from_native(VkFormat fmt);
+
+
+	// Get depth/stencil test configuration from format
+	enum class FormatDepthStencilTest
+	{
+		none, depth, stencil, depth_and_stencil
+	};
+
+	FormatDepthStencilTest get_format_depth_stencil_test(Format format);
+
+
 	enum class FormatCompression : uint8_t
 	{
 		// no compression (default)
@@ -239,7 +257,7 @@ namespace vtek
 		astc_12x10, astc_12x12,
 	};
 
-	enum class FormatStorageType
+	enum class FormatStorageType : uint8_t
 	{
 		srgb,    // encoded sRGB color; storage type not applicable
 
@@ -337,25 +355,20 @@ namespace vtek
 		sampled_image_filter_minmax = 0x00400000U
 	};
 
+	// Get format feature flags
+	VkFormatFeatureFlags get_format_features(EnumBitmask<FormatFeature> features);
+
 
 	// ============================== //
 	// === Supported format query === //
 	// ============================== //
 
-	// Forward-declaration, defined further below
-	class SupportedFormat;
-
-	struct FormatQuery
+	struct FormatInfo
 	{
-		Format format {Format::undefined};
-		bool linearTiling {false};
+		// Features and tiling describing the usage scenarios of the format.
+		ImageTiling tiling {ImageTiling::optimal};
 		EnumBitmask<FormatFeature> features {};
 	};
-
-	bool has_format_support(
-		const FormatQuery* query, const Device* device,
-		SupportedFormat* outSupport);
-
 
 	// Specify how vtek should search for a suitable Vulkan image format.
 	// The restrictions are prioritized as such:
@@ -365,8 +378,9 @@ namespace vtek
 	// 4) channel size
 	// 5) storage type
 	// 6) swizzled channels
-	struct FormatInfo
+	struct FormatQuery
 	{
+		// query info regarding the format
 		FormatChannels channels {FormatChannels::channels_4};
 		bool sRGB {false};
 		bool swizzleBGR {false}; // TODO: When, why, and how?
@@ -374,13 +388,6 @@ namespace vtek
 		FormatChannelSize channelSize {FormatChannelSize::channel_8};
 		FormatCompression compression {FormatCompression::none};
 	};
-
-	// Check if the device supports a given image format, specified by overloads:
-	// - ImageFormatInfo: Specific number of channels, sRGB, compression, etc.
-	// - FormatQuery
-	bool has_format_support(
-		const FormatInfo* info, const FormatQuery* query,
-		const Device* device, SupportedFormat* outSupport);
 
 
 	// ======================== //
@@ -390,11 +397,37 @@ namespace vtek
 	class SupportedFormat
 	{
 	public:
-		inline SupportedFormat() {}
-		bool operator==(Format _format) const;
+		// Returns true is the specified format is supported.
+		static bool FindFormat(
+			const FormatInfo* info, Format format,
+			const Device* device, SupportedFormat& out);
 
-		// Get the underlying Vulkan format
-		VkFormat get() const;
+		// Returns true if any of the specified formats are supported.
+		// The first supported format in the list is selected.
+		static bool FindFormat(
+			const FormatInfo* info, const std::vector<Format>& formats,
+			const Device* device, SupportedFormat& out);
+
+		// Query for a supported color format which has the properties
+		// specified in the FormatQuery struct. Returns false if no
+		// supported format satisfies those properties, and true otherwise.
+		static bool QueryColorFormat(
+			const FormatQuery* query, const FormatInfo* info,
+			const Device* device, SupportedFormat& out);
+
+		// Public empty constructor: Creates an invalid object.
+		inline SupportedFormat() {}
+		bool operator==(Format format) const;
+
+		// Check validity
+		inline bool is_valid() const { return mFormat != Format::undefined; }
+
+		// Get the underlying (Vulkan) format
+		Format get() const;
+		VkFormat get_native() const;
+
+		// Get format string for print debugging or visual display
+		std::string_view get_format_string() const;
 
 		// Retrieve format properties
 		FormatChannels get_num_channels() const;
@@ -414,49 +447,22 @@ namespace vtek
 		FormatStorageType get_storage_type() const;
 		EnumBitmask<FormatFeature> get_supported_features() const;
 
-		inline bool has_feature(FormatFeature feature) {
-			return features.has_flag(feature);
+		// Check if the format supports feature usage
+		inline bool has_feature(FormatFeature feature) const {
+			return mFeatures.has_flag(feature);
 		}
 
 	private:
-		// Only the friend function may properly construct this object
-		friend bool vtek::has_format_support(
-			const FormatQuery*,const Device*,SupportedFormat*);
-		SupportedFormat(Format _format, VkFormat _fmt, bool linearTiling);
+		// Private constructor only
+		SupportedFormat(Format format, bool linearTiling);
 
-		Format format {Format::undefined};
-		VkFormat fmt {VK_FORMAT_UNDEFINED};
+		// 16+8+8 = 32 bits
+		Format mFormat {Format::undefined};
+		FormatCompression mCompression {FormatCompression::none};
+		FormatStorageType mStorage {FormatStorageType::unorm};
 
-		FormatCompression compression {FormatCompression::none};
-		FormatStorageType storage {FormatStorageType::unorm};
-		EnumBitmask<FormatFeature> features {};
-		uint32_t propertyMask {0U};
-		// TODO: Store VkFormatFeatureFlags ?
+		// 2*32 = 64 bits
+		EnumBitmask<FormatFeature> mFeatures {};
+		uint32_t mPropertyMask {0U};
 	};
-
-
-
-
-
-
-
-	// REVIEW: We might still want to use this class as a global format database
-	class FormatSupport
-	{
-	public:
-		FormatSupport(const Device* device);
-
-		inline bool sRGB_channel_1() { return mSRGB & 0x01; }
-		inline bool sRGB_channel_2() { return mSRGB & 0x02; }
-		inline bool sRGB_channel_3() { return mSRGB & 0x04; }
-
-		//bool
-
-	private:
-		VkPhysicalDevice physicalDevice {VK_NULL_HANDLE};
-		uint8_t mSRGB {0U};
-	};
-
-	// NOTE: Implemented in src/imgutils/vtek_image_formats.cpp
-
 };

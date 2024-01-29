@@ -3,6 +3,7 @@
 
 #include "impl/vtek_vma_helpers.hpp" // Provides VMA include
 #include "vtek_device.hpp"
+#include "vtek_format_support.hpp"
 #include "vtek_instance.hpp"
 #include "vtek_logging.hpp"
 #include "vtek_queue.hpp"
@@ -292,14 +293,17 @@ bool vtek::allocator_image2d_create(
 	imageInfo.samples = vtek::get_multisample_count(info->multisampling);
 	imageInfo.usage = get_image_usage_flags(info->usageFlags);
 
-	if (info->format != VK_FORMAT_UNDEFINED) {
-		imageInfo.format = info->format;
+	if (info->format != vtek::Format::undefined) {
+		imageInfo.format = vtek::get_format(info->format);
+	}
+	else if (!info->supportedFormat.is_valid()) {
+		vtek_log_error("allocator_image2d_create(): {} -- {}",
+		               "No valid image format was provided",
+		               "cannot allocate image memory!");
+		return false;
 	}
 	else {
-		vtek_log_debug(
-			"vtek_allocator.cpp: allocator_image2d_create(): {}",
-			"vkFormat not specified, SupportedFormat might not be implemented!");
-		imageInfo.format = info->supportedFormat.get();
+		imageInfo.format = info->supportedFormat.get_native();
 	}
 
 	if (info->useMipmaps) {

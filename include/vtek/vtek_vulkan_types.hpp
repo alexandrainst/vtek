@@ -7,6 +7,37 @@
 
 namespace vtek
 {
+	// Description of depth/stencil mode, used for variety of purposes such
+	// as setting up framebuffer attachments.
+	enum class DepthStencilMode
+	{
+		none, depth, stencil, depth_and_stencil
+	};
+
+
+	// Image tiling specifies the tiling arrangement of texel blocks in an
+	// image. This is used for querying for supported image formats, and for
+	// creating images and framebuffer attachments.
+	enum class ImageTiling
+	{
+		// In almost all cases, optimal tiling is preferred. The internal
+		// arrangement of texels is implementation-defined for more
+		// efficient memory access.
+		optimal,
+
+		// Linear tiling specifies texels to be laid out in row-major order,
+		// possibly with some padding on each row. This makes it easier to
+		// read/write texel data to/from the CPU without performing image
+		// layout transition barriers, but makes for less efficient memory
+		// access during rendering.
+		// NOTE: Linear tiling has limited supported, so optimal tiling
+		// should be preferred.
+		linear
+	};
+
+	VkImageTiling get_image_tiling(ImageTiling tiling);
+
+
 	// Multisampling is one way to perform anti-aliasing, by sampling multiple
 	// fragments per-pixel, and then resolving those fragments. This smooths out
 	// polygon edges. Multisampling is not recommended for deferred rendering.
@@ -16,6 +47,7 @@ namespace vtek
 	};
 
 	VkSampleCountFlagBits get_multisample_count(MultisampleType sample);
+	MultisampleType get_multisample_enum(VkSampleCountFlagBits count);
 
 
 	// Cull mode determines if any face of rendered polygons should be culled
@@ -115,4 +147,73 @@ namespace vtek
 	};
 
 	VkAccessFlags get_access_mask(EnumBitmask<AccessMask> accessMask);
+
+
+	class ClearValue
+	{
+	public:
+		// Get the underlying Vulkan format
+		inline VkClearValue get() const { return _value; }
+
+		inline void setDepth(float d) {
+			_value = { .depthStencil = { .depth = d, .stencil = 0 }};
+		}
+		inline void setDepthStencil() {
+			_value = { .depthStencil = { .depth = 1.0f, .stencil = 0 }};
+		}
+		inline void setDepthStencil(float d, uint32_t s) {
+			_value = { .depthStencil = { .depth = d, .stencil = s } };
+		}
+
+		inline void setColorFloat() {
+			_value = { .color = { .float32 = {0.0f, 0.0f, 0.0f, 1.0f} }};
+		}
+		inline void setColorFloat(float r) {
+			_value = { .color = { .float32 = {r, 0.0f, 0.0f, 1.0f} }};
+		}
+		inline void setColorFloat(float r, float g) {
+			_value = { .color = { .float32 = {r, g, 0.0f, 1.0f} }};
+		}
+		inline void setColorFloat(float r, float g, float b) {
+			_value = { .color = { .float32 = {r, g, b, 1.0f} }};
+		}
+		inline void setColorFloat(float r, float g, float b, float a) {
+			_value = { .color = { .float32 = {r, g, b, a} }};
+		}
+
+		inline void setColorInt() {
+			_value = { .color = { .int32 = {0, 0, 0, 0} }};
+		}
+		inline void setColorInt(int32_t r) {
+			_value = { .color = { .int32 = {r, 0, 0, 0} }};
+		}
+		inline void setColorInt(int32_t r, int32_t g) {
+			_value = { .color = { .int32 = {r, g, 0, 0} }};
+		}
+		inline void setColorInt(int32_t r, int32_t g, int32_t b) {
+			_value = { .color = { .int32 = {r, g, b, 0} }};
+		}
+		inline void setColorInt(int32_t r, int32_t g, int32_t b, int32_t a) {
+			_value = { .color = { .int32 = {r, g, b, a} }};
+		}
+
+		inline void setColorUint() {
+			_value = { .color = { .uint32 = {0U, 0U, 0U, 0U} }};
+		}
+		inline void setColorUint(uint32_t r) {
+			_value = { .color = { .uint32 = {r, 0U, 0U, 0U} }};
+		}
+		inline void setColorUint(uint32_t r, uint32_t g) {
+			_value = { .color = { .uint32 = {r, g, 0U, 0U} }};
+		}
+		inline void setColorUint(uint32_t r, uint32_t g, uint32_t b) {
+			_value = { .color = { .uint32 = {r, g, b, 0U} }};
+		}
+		inline void setColorUint(uint32_t r, uint32_t g, uint32_t b, uint32_t a) {
+			_value = { .color = { .uint32 = {r, g, b, a} }};
+		}
+
+	private:
+		VkClearValue _value { .color = { .float32 = {0.0f, 0.0f, 0.0f, 1.0f}}};
+	};
 }

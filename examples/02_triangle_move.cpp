@@ -94,7 +94,8 @@ bool recordCommandBuffer(
 	VkPipeline pipl = vtek::graphics_pipeline_get_handle(graphicsPipeline);
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(graphicsPipeline);
 
-	if (!vtek::command_buffer_begin(commandBuffer))
+	vtek::CommandBufferBeginInfo beginInfo{};
+	if (!vtek::command_buffer_begin(commandBuffer, &beginInfo))
 	{
 		log_error("Failed to begin command buffer recording!");
 		return false;
@@ -155,7 +156,7 @@ bool recordCommandBuffer(
 
 	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipl);
 
-	// TODO: Viewport dynamic state
+	// Viewport dynamic state
 	VkViewport viewport{};
 	viewport.x = 0.0f; // upper-left corner
 	viewport.y = 0.0f; // upper-left corner
@@ -165,21 +166,18 @@ bool recordCommandBuffer(
 	viewport.maxDepth = 0.0f;
 	vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-	// TODO: Scissor dynamic state
+	// Scissor dynamic state
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
 	scissor.extent = { gFramebufferWidth, gFramebufferHeight };
 	vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
-	// TODO: Movement offset push constants
-	// glm::vec3 pushConstant = glm::vec3(gMoveOffset, gRotateAngle);
-	// vkCmdPushConstants(
-	// 	cmdBuf, pipLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-	// 	sizeof(glm::vec3), &pushConstant);
+	// Movement offset push constants
 	vtek::PushConstant_v3 pc{};
 	pc.v1 = glm::vec3(gMoveOffset.x, gMoveOffset.y, gRotateAngle);
-	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	pc.cmdPush(cmdBuf, pipLayout);
+	vtek::cmd_push_constant_graphics(
+		commandBuffer, graphicsPipeline, &pc,
+		vtek::ShaderStageGraphics::vertex | vtek::ShaderStageGraphics::fragment);
 
 	vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 

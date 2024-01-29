@@ -61,5 +61,5 @@ namespace vtek
 		DescriptorPool* pool, DescriptorSet* set, Device* device);
 
 	void descriptor_pool_free_sets(
-		DescriptorPool* pool, std::vector<DescriptorSet*>& sets);
+		DescriptorPool* pool, std::vector<DescriptorSet*>& sets, Device* device);
 }

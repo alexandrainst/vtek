@@ -37,6 +37,7 @@
 #include "vtek_descriptor_set_layout.hpp"
 #include "vtek_device.hpp"
 #include "vtek_format_support.hpp"
+#include "vtek_framebuffer.hpp"
 #include "vtek_graphics_pipeline.hpp"
 #include "vtek_image.hpp"
 #include "vtek_input.hpp"

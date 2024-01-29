@@ -144,6 +144,7 @@ set (src
     include/vtek/vtek_descriptor_type.hpp
     include/vtek/vtek_device.hpp
     include/vtek/vtek_fileio.hpp
+    include/vtek/vtek_framebuffer.hpp
     include/vtek/vtek_format_support.hpp
     include/vtek/vtek_glm_includes.hpp
     include/vtek/vtek_graphics_pipeline.hpp
@@ -168,7 +169,6 @@ set (src
     include/vtek/vtek_vulkan_types.hpp
     include/vtek/vtek_vulkan_version.hpp
 
-    src/imgutils/vtek_image_formats.hpp
     src/imgutils/vtek_image_load.hpp
     src/impl/vtek_command_buffer_struct.hpp
     src/impl/vtek_descriptor_set_struct.hpp
@@ -178,7 +178,6 @@ set (src
     src/impl/vtek_vma_helpers.hpp
     src/glsl/vtek_glsl_shader_utils.hpp
 
-    src/imgutils/vtek_image_formats.cpp
     src/imgutils/vtek_image_load.cpp
     src/glsl/vtek_glsl_shader_utils.cpp
     src/vtek_allocator.cpp
@@ -195,6 +194,7 @@ set (src
     src/vtek_descriptor_type.cpp
     src/vtek_device.cpp
     src/vtek_fileio.cpp
+    src/vtek_framebuffer.cpp
     src/vtek_format_support.cpp
     src/vtek_graphics_pipeline.cpp
     src/vtek_image.cpp
@@ -267,6 +267,7 @@ if(VTEK_CREATE_EXAMPLES)
         examples/05_camera.cpp
         examples/06_model.cpp
         examples/07_textured_model.cpp
+        examples/08_framebuffer.cpp
         )
 
     foreach(expath ${examples})
@@ -290,6 +291,7 @@ if(VTEK_CREATE_UNIT_TESTS)
     message(STATUS "Generate unit tests")
     set(unit_test_src
         tests/test_camera.cpp
+        tests/test_shaders.cpp
         # tests/test_formats.cpp
         # tests/test_ut.cpp
     )

@@ -91,7 +91,6 @@ namespace vtek
 	// were created.
 	Queue* device_get_graphics_queue(Device* device);
 	Queue* device_get_present_queue(Device* device);
-	// TODO: Return std::vector<>&&, or is that too advanced?
 	std::vector<Queue*> device_get_transfer_queues(Device* device);
 	std::vector<Queue*> device_get_compute_queues(Device* device);
 	bool device_get_graphics_present_same_family(const Device* device);

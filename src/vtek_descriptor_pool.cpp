@@ -161,10 +161,47 @@ vtek::DescriptorSet* vtek::descriptor_pool_alloc_set(
 	return set;
 }
 
+std::vector<vtek::DescriptorSet*> vtek::descriptor_pool_alloc_sets(
+	vtek::DescriptorPool* pool, vtek::DescriptorSetLayout* layout,
+	uint32_t numSets, vtek::Device* device)
+{
+	VkDevice dev = vtek::device_get_handle(device);
+
+	std::vector<VkDescriptorSetLayout> layouts(
+		numSets, vtek::descriptor_set_layout_get_handle(layout));
+
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = pool->vulkanHandle;
+	allocInfo.descriptorSetCount = numSets;
+	allocInfo.pSetLayouts = layouts.data();
+
+	std::vector<VkDescriptorSet> setsNative;
+	setsNative.resize(numSets);
+
+	VkResult result = vkAllocateDescriptorSets(
+		dev, &allocInfo, setsNative.data());
+	if (result != VK_SUCCESS)
+	{
+		vtek_log_error("Failed to allocate descriptor sets from pool!");
+		return {}; // empty vector
+	}
+
+	std::vector<vtek::DescriptorSet*> sets;
+	for (uint32_t i = 0U; i < numSets; i++)
+	{
+		auto set = new vtek::DescriptorSet;
+		set->vulkanHandle = setsNative[i];
+		sets.push_back(std::move(set));
+	}
+
+	return sets; // RVO
+}
+
 void vtek::descriptor_pool_free_set(
 	vtek::DescriptorPool* pool, vtek::DescriptorSet* set, vtek::Device* device)
 {
-	if (pool == nullptr || set == nullptr) { return; }
+	if (pool == nullptr || set == nullptr || device == nullptr) { return; }
 	if (!pool->individualFree)
 	{
 		vtek_log_error(
@@ -179,4 +216,37 @@ void vtek::descriptor_pool_free_set(
 	vkFreeDescriptorSets(dev, pool->vulkanHandle, 1, sets);
 	set->vulkanHandle = VK_NULL_HANDLE;
 	delete set;
+}
+
+void vtek::descriptor_pool_free_sets(
+	vtek::DescriptorPool* pool, std::vector<vtek::DescriptorSet*>& sets,
+	vtek::Device* device)
+{
+	if (pool == nullptr || device == nullptr) { return; }
+	const uint32_t count = sets.size();
+
+	// TODO: This is bad code! Should be revisited.
+	if (!pool->individualFree)
+	{
+		vtek_log_error(
+			"Descriptor pool was not created with `allowIndividualfree` flag {}",
+			"-- cannot free descriptor sets, only reset the entire pool!");
+		vtek_log_warn("Memory for the individual descriptor sets will be freed!");
+	}
+	else
+	{
+		VkDevice dev = vtek::device_get_handle(device);
+		std::vector<VkDescriptorSet> setsNative;
+		for (uint32_t i = 0U; i < count; i++)
+		{
+			setsNative.push_back(sets[i]->vulkanHandle);
+		}
+		vkFreeDescriptorSets(dev, pool->vulkanHandle, count, setsNative.data());
+	}
+
+	for (uint32_t i = 0U; i < count; i++)
+	{
+		delete sets[i];
+	}
+	sets.clear();
 }

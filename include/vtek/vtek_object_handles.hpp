@@ -16,6 +16,7 @@ namespace vtek
 	struct DescriptorSet;
 	struct DescriptorSetLayout;
 	struct Device;
+	struct Framebuffer;
 	struct GraphicsPipeline;
 	struct GraphicsShader;
 	struct Image2D;

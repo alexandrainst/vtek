@@ -129,6 +129,38 @@ void vtek::buffer_destroy(vtek::Buffer* buffer)
 	delete buffer;
 }
 
+std::vector<vtek::Buffer*> vtek::buffer_create(
+	const vtek::BufferInfo* info, uint32_t numBuffers, vtek::Device* device)
+{
+	// TODO: This could possibly be optimized, e.g. by creating 1 large
+	// memory region with offsets for each buffer!
+	// NOTE: This would depend on `requireDedicatedAllocation` being false.
+	std::vector<vtek::Buffer*> buffers;
+	for (uint32_t i = 0; i < numBuffers; i++)
+	{
+		auto buf = vtek::buffer_create(info, device);
+		if (buf == nullptr)
+		{
+			vtek::buffer_destroy(buffers);
+			vtek_log_error("Failed to create multiple buffers!");
+			return {}; // empty vector
+		}
+		buffers.push_back(buf);
+	}
+
+	return buffers; // RVO
+}
+
+// Destroy multiple buffers at the same time.
+void vtek::buffer_destroy(std::vector<Buffer*>& buffers)
+{
+	for (auto buf : buffers)
+	{
+		vtek::buffer_destroy(buf);
+	}
+	buffers.clear();
+}
+
 VkBuffer vtek::buffer_get_handle(const vtek::Buffer* buffer)
 {
 	return buffer->vulkanHandle;

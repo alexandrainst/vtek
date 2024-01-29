@@ -61,6 +61,11 @@ void mouse_move_callback(double x, double y)
 	vtek::camera_on_mouse_move(gCamera, x, y);
 }
 
+void mouse_scroll_callback(double x, double y)
+{
+	vtek::camera_on_mouse_scroll(gCamera, x, y);
+}
+
 void update_movement()
 {
 	using vtek::KeyboardKey;
@@ -111,8 +116,7 @@ void update_movement()
 }
 
 /* helper functions */
-bool update_camera_uniform(
-	vtek::Buffer* buffer, vtek::Device* device)
+bool update_camera_uniform(vtek::Buffer* buffer, vtek::Device* device)
 {
 	// Wait until the device is finished with all operations
 	vtek::device_wait_idle(device);
@@ -169,7 +173,8 @@ bool recordCommandBuffer(
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
-	if (!vtek::command_buffer_begin(commandBuffer))
+	vtek::CommandBufferBeginInfo beginInfo{};
+	if (!vtek::command_buffer_begin(commandBuffer, &beginInfo))
 	{
 		log_error("Failed to begin command buffer {} recording!", imageIndex);
 		return false;
@@ -203,8 +208,8 @@ bool recordCommandBuffer(
 	// Push constant for the model, ie. transformation matrix
 	vtek::PushConstant_m4 pc{};
 	pc.m1 = glm::mat4(1.0f); // unit matrix
-	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-	pc.cmdPush(cmdBuf, pipLayout);
+	vtek::cmd_push_constant_graphics(
+		commandBuffer, pipeline, &pc, vtek::ShaderStageGraphics::vertex);
 
 	// Draw the model
 	uint32_t numVertices = vtek::model_get_num_vertices(model);
@@ -255,8 +260,8 @@ int main()
 	windowInfo.title = "vtek example 07: Drawing a textured model";
 	windowInfo.resizeable = false;
 	windowInfo.cursorDisabled = true;
-	windowInfo.width = 1024;
-	windowInfo.height = 1024;
+	windowInfo.width = 1980;
+	windowInfo.height = 1080;
 	windowInfo.fullscreen = false;
 	gWindow = vtek::window_create(&windowInfo);
 	if (gWindow == nullptr)
@@ -266,6 +271,7 @@ int main()
 	}
 	vtek::window_set_key_handler(gWindow, key_callback);
 	vtek::window_set_mouse_move_handler(gWindow, mouse_move_callback);
+	vtek::window_set_mouse_scroll_handler(gWindow, mouse_scroll_callback);
 
 	// Vulkan instance
 	vtek::InstanceInfo instanceInfo{};
@@ -348,6 +354,7 @@ int main()
 	// Graphics command pool
 	vtek::CommandPoolInfo commandPoolInfo{};
 	commandPoolInfo.allowIndividualBufferReset = true;
+	commandPoolInfo.hintRerecordOften = true;
 	vtek::CommandPool* graphicsCommandPool = vtek::command_pool_create(
 		&commandPoolInfo, device, graphicsQueue);
 	if (graphicsCommandPool == nullptr)
@@ -374,19 +381,35 @@ int main()
 	}
 
 	// Camera
+	// NOTE: Experiment freely with these settings!
+	vtek::CameraSensitivityInfo cameraSensInfo{};
+	cameraSensInfo.mouseMoveSpeed = 0.001f;
+	cameraSensInfo.mouseScrollSpeed = 0.1f;
+	vtek::CameraProjectionInfo cameraProjInfo{};
+	cameraProjInfo.projection = vtek::CameraProjection::perspective;
+	cameraProjInfo.viewportSize = windowSize;
+	cameraProjInfo.clipPlanes = { 0.1f, 100.0f };
+	cameraProjInfo.fovDegrees = 45.0f;
+	cameraProjInfo.fovFromAspectRatio = false;
+	cameraProjInfo.useFocalLength = false;
+	vtek::CameraOrbitInfo cameraOrbitInfo{};
+	cameraOrbitInfo.orbitDistance = 3.0f;
+	cameraOrbitInfo.orbitRange = vtek::FloatRange(0.2f, 10.0f);
 	vtek::CameraInfo cameraInfo{};
+	cameraInfo.mode = vtek::CameraMode::orbit_free;
+	cameraInfo.worldSpaceHandedness = vtek::CameraHandedness::right_handed;
 	cameraInfo.position = glm::vec3(-2.0968692f, -2.5813563f, -1.4253441f);
+	cameraInfo.front = {0.5990349f, 0.7475561f, 0.28690946f};
+	cameraInfo.up = {-0.18743359f, -0.21744627f, 0.95790696f};
+	cameraInfo.sensitivityInfo = &cameraSensInfo;
+	cameraInfo.projectionInfo = &cameraProjInfo;
+	cameraInfo.orbitInfo = &cameraOrbitInfo;
 	gCamera = vtek::camera_create(&cameraInfo);
 	if (gCamera == nullptr)
 	{
 		log_error("Failed to create camera!");
 		return -1;
 	}
-	glm::vec3 camFront {0.5990349f, 0.7475561f, 0.28690946f};
-	glm::vec3 camUp {-0.18743359f, -0.21744627f, 0.95790696f};
-	vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
-	float camFov = 45.0f; // NOTE: Experiment.
-	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
 	// TODO: Maybe for this application, use FPS-game style camera instead?
 	// TODO: It's also a good opportunity to test if the camera supports it properly
 
@@ -564,7 +587,7 @@ int main()
 	vtek::PipelineRendering pipelineRendering{};
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
-	pipelineRendering.depthAttachmentFormat =
+	pipelineRendering.depthStencilAttachmentFormat =
 		vtek::swapchain_get_depth_image_format(swapchain);
 
 	vtek::GraphicsPipelineInfo pipelineInfo{};
@@ -667,6 +690,11 @@ int main()
 
 		// Record command buffer for next frame
 		vtek::CommandBuffer* commandBuffer = commandBuffers[imageIndex];
+		if (!vtek::command_pool_reset_buffer(graphicsCommandPool, commandBuffer))
+		{
+			log_error("Failed to reset command buffer prior to re-recording it!");
+			errors--; continue;
+		}
 		vtek::GraphicsPipeline* nextPipeline =
 			(gRenderWireframe) ? pipelineWireframe : pipeline;
 		bool record = recordCommandBuffer(

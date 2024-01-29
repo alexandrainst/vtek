@@ -193,7 +193,8 @@ bool recordCommandBuffer(
 	VkPipelineLayout pipLayout = vtek::graphics_pipeline_get_layout(pipeline);
 	VkCommandBuffer cmdBuf = vtek::command_buffer_get_handle(commandBuffer);
 
-	if (!vtek::command_buffer_begin(commandBuffer))
+	vtek::CommandBufferBeginInfo beginInfo{};
+	if (!vtek::command_buffer_begin(commandBuffer, &beginInfo))
 	{
 		log_error("Failed to begin command buffer {} recording!", imageIndex);
 		return false;
@@ -227,12 +228,10 @@ bool recordCommandBuffer(
 		descriptorSetHandles, 0, nullptr); // NOTE: Dynamic offset unused
 
 	// Push constant for the model, ie. transformation matrix
-	// TODO: Later also add vertex color
 	vtek::PushConstant_m4 pc{};
 	pc.m1 = glm::mat4(1.0f); // unit matrix
-	// TODO: Bitflag for also fragment shader access (vertex color)
-	pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // TODO: Hide away! (?)
-	pc.cmdPush(cmdBuf, pipLayout);
+	vtek::cmd_push_constant_graphics(
+		commandBuffer, pipeline, &pc, vtek::ShaderStageGraphics::vertex);
 
 	// Draw the model
 	uint32_t numVertices = vtek::model_get_num_vertices(model);
@@ -390,19 +389,22 @@ int main()
 	}
 
 	// Camera
+	vtek::CameraProjectionInfo cameraProjInfo{};
+	cameraProjInfo.projection = vtek::CameraProjection::perspective;
+	cameraProjInfo.viewportSize = windowSize;
 	vtek::CameraInfo cameraInfo{};
+	cameraInfo.mode = vtek::CameraMode::freeform;
+	cameraInfo.worldSpaceHandedness = vtek::CameraHandedness::right_handed;
 	cameraInfo.position = glm::vec3(8.0f, 0.0f, 0.0f);
+	cameraInfo.front = {-1.0f, 0.0f, 0.0f};
+	cameraInfo.up = {0.0f, 0.0f, 1.0f};
+	cameraInfo.projectionInfo = &cameraProjInfo;
 	gCamera = vtek::camera_create(&cameraInfo);
 	if (gCamera == nullptr)
 	{
 		log_error("Failed to create camera!");
 		return -1;
 	}
-	glm::vec3 camFront {-1.0f, 0.0f, 0.0f};
-	glm::vec3 camUp {0.0f, 0.0f, 1.0f};
-	vtek::camera_set_mode_freeform(gCamera, camUp, camFront);
-	float camFov = 45.0f; // NOTE: Experiment.
-	vtek::camera_set_perspective(gCamera, windowSize, 0.1f, 100.0f, camFov);
 	// TODO: Maybe for this application, use FPS-game style camera instead?
 	// TODO: It's also a good opportunity to test if the camera supports it properly
 
@@ -577,7 +579,7 @@ int main()
 	vtek::PipelineRendering pipelineRendering{};
 	pipelineRendering.colorAttachmentFormats.push_back(
 		vtek::swapchain_get_image_format(swapchain));
-	pipelineRendering.depthAttachmentFormat =
+	pipelineRendering.depthStencilAttachmentFormat =
 		vtek::swapchain_get_depth_image_format(swapchain);
 
 	vtek::GraphicsPipelineInfo pipelineInfo{};

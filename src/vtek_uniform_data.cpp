@@ -17,6 +17,7 @@ uint64_t vtek::get_uniform_buffer_size(vtek::UniformBufferType type)
 	// case UBType::mat4_vec4: return sizeof(glm::mat4)+sizeof(glm::vec4);
 	// case UBType::point_light: return 2*sizeof(glm::vec4);
 
+	case UBType::vec2:        return vtek::Uniform_v2::static_size();
 	case UBType::vec3:        return vtek::Uniform_v3::static_size();
 	case UBType::mat4:        return vtek::Uniform_m4::static_size();
 	case UBType::mat4_vec4:   return vtek::Uniform_m4_v4::static_size();
@@ -33,6 +34,10 @@ uint64_t vtek::get_uniform_buffer_size(vtek::UniformBufferType type)
 // ===================== //
 // === Memory checks === //
 // ===================== //
+static_assert(sizeof(vtek::Uniform_v2) == 16);
+static_assert(alignof(vtek::Uniform_v2) == 16);
+static_assert(offsetof(vtek::Uniform_v2, v2) == 0);
+
 static_assert(sizeof(vtek::Uniform_v3) == 16);
 static_assert(alignof(vtek::Uniform_v3) == 16);
 static_assert(offsetof(vtek::Uniform_v3, v3) == 0);
