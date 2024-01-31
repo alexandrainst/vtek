@@ -77,4 +77,7 @@ namespace vtek
 	glm::uvec2 framebuffer_get_resolution(Framebuffer* framebuffer);
 
 	std::vector<Image2D*> framebuffer_get_color_images(Framebuffer* framebuffer);
+
+	void framebuffer_set_clear_color(
+		Framebuffer* framebuffer, uint32_t attachmentIndex, ClearValue clearValue);
 }

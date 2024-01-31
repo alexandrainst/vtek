@@ -642,3 +642,18 @@ std::vector<vtek::Image2D*> vtek::framebuffer_get_color_images(
 
 	return images; // RVO
 }
+
+void vtek::framebuffer_set_clear_color(
+	vtek::Framebuffer* framebuffer, uint32_t attachmentIndex,
+	vtek::ClearValue clearValue)
+{
+	if (attachmentIndex >= framebuffer->colorAttachments.size())
+	{
+		vtek_log_error(
+			"Cannot set clear value on framebuffer attachment - {}",
+			"index is out of bounds!");
+		return;
+	}
+
+	framebuffer->colorAttachments[attachmentIndex].clearValue = clearValue;
+}
