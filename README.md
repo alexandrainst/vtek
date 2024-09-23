@@ -3,10 +3,7 @@
 vtek is a (light-weight) Vulkan library for applications to utilize the GPU for
 rendering/compute.
 
-_For now this is an internally managed code repository, but open-sourcing may be
-desired later, at which point a `LICENSE` file should be added documenting
-proper use of the code. The MIT license is probably the best suited for this
-purpose (GPL licenses have compatibility restrictions)._
+*vtek is not under active development. For questions regarding warranties, see the [LICENSE](./LICENSE.md)*
 
 
 ### How to build ###
@@ -180,3 +177,7 @@ The folder `tools/scripts/<OS>/` contains useful scripts that may e.g. print any
 leftover "`TODO`"'s in the code in a nicely formatted way. Certain features,
 e.g. of graphical nature, cannot easily be tested by automated scripting, and in
 such cases a test program _should_ be added to the `examples/` folder.
+
+### LICENSE ###
+
+vtek uses the CC BY-NC 4.0 license, which can be found [here](./LICENSE.md). For inquiries regarding commercial use, contact the Alexandra Institute. See [alexandra.dk](https://alexandra.dk/) for contact info.
